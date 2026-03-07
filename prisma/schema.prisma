@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  AGENT
+}
+
+enum IncidentStatus {
+  NEW
+  INVESTIGATING
+  MITIGATED
+  RESOLVED
+}
+
+enum IncidentSeverity {
+  P1
+  P2
+  P3
+}
+
+enum IncidentChannel {
+  EMAIL
+  CHAT
+  SLACK
+  API
+  OTHER
+}
+
+enum EventType {
+  CREATED
+  NOTE
+  STATUS_CHANGED
+  OWNER_CHANGED
+  TRIAGE_RUN
+  CUSTOMER_UPDATE
+  REMINDER
+}
+
+enum AiProvider {
+  OPENAI
+  GEMINI
+  ANTHROPIC
+}
+
+enum WorkflowType {
+  INCIDENT_TRIAGE
+  CUSTOMER_UPDATE
+}
+
+enum ReminderStatus {
+  QUEUED
+  PROCESSED
+  FAILED
+}
+
+model Workspace {
+  id               String           @id @default(cuid())
+  name             String
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  users            User[]
+  incidents        Incident[]
+  aiProviderKeys   AiProviderKey[]
+  workflowSettings WorkflowSetting[]
+  reminderJobs     ReminderJobLog[]
+}
+
+model User {
+  id            String          @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email         String
+  name          String
+  passwordHash  String
+  role          Role            @default(AGENT)
+  sessions      Session[]
+  ownedIncidents Incident[]     @relation("IncidentOwner")
+  events        IncidentEvent[] @relation("EventActor")
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Incident {
+  id                  String           @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title               String
+  description         String
+  customerName        String?
+  customerEmail       String?
+  channel             IncidentChannel  @default(EMAIL)
+  status              IncidentStatus   @default(NEW)
+  severity            IncidentSeverity @default(P3)
+  category            String?
+  ownerUserId         String?
+  owner               User?            @relation("IncidentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  modelVersion        String?
+  sourceTicketRef     String?
+  summary             String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  lastCustomerUpdateAt DateTime?
+  events              IncidentEvent[]
+  reminderJobs        ReminderJobLog[]
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, severity])
+  @@index([ownerUserId])
+}
+
+model IncidentEvent {
+  id           String    @id @default(cuid())
+  incidentId   String
+  incident     Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actorUserId  String?
+  actor        User?     @relation("EventActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  eventType    EventType
+  body         String
+  metadataJson String?
+  createdAt    DateTime  @default(now())
+
+  @@index([incidentId, createdAt])
+}
+
+model AiProviderKey {
+  id          String     @id @default(cuid())
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider    AiProvider
+  encryptedKey String
+  keyLast4    String
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([workspaceId, provider])
+  @@index([workspaceId])
+}
+
+model WorkflowSetting {
+  id           String       @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workflowType WorkflowType
+  provider     AiProvider
+  model        String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([workspaceId, workflowType])
+}
+
+model ReminderJobLog {
+  id            String         @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  incidentId    String
+  incident      Incident       @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  queueMessageId String?
+  status        ReminderStatus @default(QUEUED)
+  errorMessage  String?
+  createdAt     DateTime       @default(now())
+  processedAt   DateTime?
+
+  @@index([workspaceId, status])
+  @@index([incidentId])
+}
