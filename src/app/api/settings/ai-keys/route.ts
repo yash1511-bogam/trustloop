@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider } from "@prisma/client";
 import { z } from "zod";
-import { getAuth } from "@/lib/auth";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { encryptSecret, last4 } from "@/lib/encryption";
-import { badRequest, unauthorized } from "@/lib/http";
+import { badRequest } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
 const saveKeySchema = z.object({
@@ -13,10 +13,11 @@ const saveKeySchema = z.object({
 });
 
 export async function GET(): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const keys = await prisma.aiProviderKey.findMany({
     where: { workspaceId: auth.user.workspaceId },
@@ -33,10 +34,11 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const body = await request.json().catch(() => null);
   const parsed = saveKeySchema.safeParse(body);

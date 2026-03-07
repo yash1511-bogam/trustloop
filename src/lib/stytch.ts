@@ -1,6 +1,5 @@
-import "server-only";
 
-import stytch from "stytch";
+import stytch, { Client, envs } from "stytch";
 import {
   STYTCH_OTP_EXPIRATION_MINUTES,
   STYTCH_SESSION_DURATION_MINUTES,
@@ -8,7 +7,7 @@ import {
 
 function stytchEnvBaseUrl(): string {
   const env = (process.env.STYTCH_ENV ?? "test").toLowerCase();
-  return env === "live" ? stytch.envs.live : stytch.envs.test;
+  return env === "live" ? envs.live : envs.test;
 }
 
 function requiredValue(name: string): string {
@@ -20,7 +19,7 @@ function requiredValue(name: string): string {
 }
 
 const globalForStytch = globalThis as unknown as {
-  stytchClient?: stytch.Client;
+  stytchClient?: Client;
 };
 
 export const stytchClient =
@@ -45,6 +44,7 @@ export type OtpAuthResult = {
   stytchUserId: string;
   sessionToken: string;
   sessionJwt: string;
+  expiresAt: Date;
 };
 
 export async function sendEmailOtpLoginOrCreate(email: string): Promise<OtpStartResult> {
@@ -75,6 +75,9 @@ export async function authenticateEmailOtp(input: {
     stytchUserId: response.user_id,
     sessionToken: response.session_token,
     sessionJwt: response.session_jwt,
+    expiresAt: response.session?.expires_at
+      ? new Date(response.session.expires_at)
+      : new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000),
   };
 }
 
@@ -86,7 +89,10 @@ export async function authenticateSessionToken(sessionToken: string): Promise<{
     session_token: sessionToken,
   });
 
-  const expiresAt = new Date(response.session.expires_at);
+  const expiresAt = new Date(
+    response.session.expires_at ??
+      new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000).toISOString(),
+  );
 
   return {
     stytchUserId: response.session.user_id,

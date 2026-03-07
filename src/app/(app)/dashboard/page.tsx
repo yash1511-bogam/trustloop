@@ -3,6 +3,7 @@ import { IncidentSeverity, IncidentStatus } from "@prisma/client";
 import { CreateIncidentForm } from "@/components/create-incident-form";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getExecutiveDashboard, refreshWorkspaceReadModels } from "@/lib/read-models";
 
 function severityBadgeClass(severity: IncidentSeverity): string {
   if (severity === IncidentSeverity.P1) return "badge badge-p1";
@@ -13,21 +14,44 @@ function severityBadgeClass(severity: IncidentSeverity): string {
 export default async function DashboardPage() {
   const auth = await requireAuth();
 
-  const incidents = await prisma.incident.findMany({
-    where: { workspaceId: auth.user.workspaceId },
-    include: {
-      owner: { select: { name: true } },
-      _count: { select: { events: true } },
-    },
-    orderBy: [{ severity: "asc" }, { updatedAt: "desc" }],
-    take: 40,
-  });
+  const [incidents, executive] = await Promise.all([
+    prisma.incident.findMany({
+      where: { workspaceId: auth.user.workspaceId },
+      include: {
+        owner: { select: { name: true } },
+        _count: { select: { events: true } },
+      },
+      orderBy: [{ severity: "asc" }, { updatedAt: "desc" }],
+      take: 40,
+    }),
+    getExecutiveDashboard(auth.user.workspaceId),
+  ]);
 
-  const counts = {
-    total: incidents.length,
+  if (!executive.snapshot) {
+    await refreshWorkspaceReadModels(auth.user.workspaceId);
+  }
+
+  const executiveData = executive.snapshot
+    ? executive
+    : await getExecutiveDashboard(auth.user.workspaceId);
+
+  const fallbackCounts = {
     p1: incidents.filter((item) => item.severity === IncidentSeverity.P1).length,
     open: incidents.filter((item) => item.status !== IncidentStatus.RESOLVED).length,
     resolved: incidents.filter((item) => item.status === IncidentStatus.RESOLVED).length,
+  };
+
+  const snapshot = executiveData.snapshot;
+  const counts = {
+    total: incidents.length,
+    p1: snapshot?.p1OpenIncidents ?? fallbackCounts.p1,
+    open: snapshot?.openIncidents ?? fallbackCounts.open,
+    resolved:
+      snapshot?.incidentsResolvedLast7d !== undefined
+        ? snapshot.incidentsResolvedLast7d
+        : fallbackCounts.resolved,
+    created7d: snapshot?.incidentsCreatedLast7d ?? 0,
+    avgResolutionHours: snapshot?.avgResolutionHoursLast30d ?? 0,
   };
 
   return (
@@ -46,11 +70,54 @@ export default async function DashboardPage() {
           <p className="mt-2 text-3xl font-semibold">{counts.open}</p>
         </article>
         <article className="metric-card">
-          <p className="kicker">Resolved</p>
+          <p className="kicker">Resolved (7d)</p>
           <p className="mt-2 text-3xl font-semibold text-emerald-700">
             {counts.resolved}
           </p>
         </article>
+        <article className="metric-card">
+          <p className="kicker">Created (7d)</p>
+          <p className="mt-2 text-3xl font-semibold">{counts.created7d}</p>
+        </article>
+        <article className="metric-card">
+          <p className="kicker">Avg resolve (hrs, 30d)</p>
+          <p className="mt-2 text-3xl font-semibold">{counts.avgResolutionHours}</p>
+        </article>
+      </section>
+
+      <section className="surface p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-semibold">Executive read models</h2>
+            <p className="text-sm text-slate-600">
+              Cached analytics snapshot for operations leadership.
+            </p>
+          </div>
+          <Link className="btn btn-ghost" href="/executive">
+            Open full executive view
+          </Link>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <article className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="kicker">Triage coverage (30d)</p>
+            <p className="mt-1 text-2xl font-semibold">
+              {snapshot?.triageCoveragePct ?? 0}%
+            </p>
+          </article>
+          <article className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="kicker">Customer update coverage (30d)</p>
+            <p className="mt-1 text-2xl font-semibold">
+              {snapshot?.customerUpdateCoveragePct ?? 0}%
+            </p>
+          </article>
+          <article className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="kicker">Snapshot updated</p>
+            <p className="mt-1 text-sm font-medium">
+              {snapshot?.updatedAt ? new Date(snapshot.updatedAt).toLocaleString() : "N/A"}
+            </p>
+          </article>
+        </div>
       </section>
 
       <section className="surface p-5">

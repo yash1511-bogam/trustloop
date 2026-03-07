@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { ensureReminderQueue, reminderQueueUrl } from "../src/lib/queue";
 
 async function main(): Promise<void> {

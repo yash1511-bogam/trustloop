@@ -6,9 +6,11 @@ import {
   IncidentStatus,
 } from "@prisma/client";
 import { z } from "zod";
-import { getAuth } from "@/lib/auth";
-import { badRequest, unauthorized } from "@/lib/http";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { badRequest, quotaExceeded } from "@/lib/http";
+import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
+import { refreshWorkspaceReadModels } from "@/lib/read-models";
 
 const createIncidentSchema = z.object({
   title: z.string().min(3).max(180),
@@ -22,10 +24,11 @@ const createIncidentSchema = z.object({
 });
 
 export async function GET(): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const incidents = await prisma.incident.findMany({
     where: { workspaceId: auth.user.workspaceId },
@@ -44,16 +47,24 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const body = await request.json().catch(() => null);
   const parsed = createIncidentSchema.safeParse(body);
 
   if (!parsed.success) {
     return badRequest("Invalid incident payload.");
+  }
+
+  const quota = await enforceWorkspaceQuota(auth.user.workspaceId, "incidents");
+  if (!quota.allowed) {
+    return quotaExceeded(
+      `Daily incident creation quota reached (${quota.limit}/day).`,
+    );
   }
 
   const incident = await prisma.$transaction(async (tx) => {
@@ -84,6 +95,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return created;
   });
+
+  await consumeWorkspaceQuota(auth.user.workspaceId, "incidents", 1);
+  await refreshWorkspaceReadModels(auth.user.workspaceId);
 
   return NextResponse.json({ incident }, { status: 201 });
 }

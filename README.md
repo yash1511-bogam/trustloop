@@ -1,102 +1,158 @@
 # TrustLoop
 
-TrustLoop is a SaaS MVP for **AI software companies** that need to operate customer-facing AI incidents end-to-end.
+TrustLoop is a SaaS for **AI software companies** to run incident operations end-to-end.
 
-It provides:
-- incident intake and status workflow
-- AI-assisted triage (severity/category/next steps)
-- AI-generated customer update drafts
-- workspace-level encrypted API key management (OpenAI, Gemini, Anthropic)
-- LocalStack-backed reminder queue + worker for stale incidents
+This version implements the scaling path:
+- Postgres (replacing SQLite)
+- Redis for session/cache acceleration
+- Autoscaled worker service for SQS reminder jobs
+- Tenant-aware rate limiting + per-workspace quotas
+- Read models for incident analytics + executive dashboards
+- AWS production deployment via GitHub Actions
+- Auth via Stytch (OTP)
+- Email delivery via Resend
 
 ## Stack
 - Next.js 16 (App Router)
-- Prisma + SQLite (local)
-- AWS SDK v3 (SQS)
+- Prisma + PostgreSQL
+- Redis (`ioredis`)
+- Stytch (OTP auth + session validation)
+- Resend (operational email delivery)
+- AWS SQS (reminder queue)
 - LocalStack (local AWS emulation)
 
-## Security model for provider keys
-- keys are entered in-app and sent to server routes only
-- keys are encrypted at rest using AES-256-GCM (`KEY_ENCRYPTION_SECRET`)
-- full keys are never returned after save (only last4 shown)
-- key usage is server-side only for AI workflows
-- keys are never logged by app code
+## Security model for AI provider keys
+- Keys entered in-app and sent to server routes only
+- AES-256-GCM encrypted at rest (`KEY_ENCRYPTION_SECRET`)
+- Full keys never returned after save (only `last4`)
+- Keys never logged by app code
+- Keys used server-side only
 
-## Quick start
-1. Install dependencies:
+## Local development
 
+### 1) Install dependencies
 ```bash
 npm install
 ```
 
-2. Configure environment:
-
+### 2) Configure environment
 ```bash
 cp .env.example .env
 ```
 
-3. Run migrations:
+Set real values for:
+- `STYTCH_PROJECT_ID`
+- `STYTCH_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
+- `KEY_ENCRYPTION_SECRET`
 
-```bash
-npx prisma migrate dev --name init
-```
-
-4. Seed demo workspace and user:
-
-```bash
-npm run db:seed
-```
-
-5. Start app:
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-## Demo login
-- email: `demo@trustloop.local`
-- password: `demo12345`
-
-## LocalStack reminder queue (optional but recommended)
-1. Start LocalStack:
-
+### 3) Start local infrastructure (Postgres + Redis + LocalStack SQS)
 ```bash
 docker compose -f docker-compose.localstack.yml up -d
 ```
 
-2. Initialize queue:
+### 4) Apply migrations
+```bash
+npm run prisma:deploy
+```
 
+### 5) Seed demo data (optional)
+```bash
+npm run db:seed
+```
+
+### 6) Initialize LocalStack queue
 ```bash
 npm run localstack:init
 ```
 
-3. Run reminder worker:
+### 7) Run the app
+```bash
+npm run dev
+```
 
+### 8) Run worker (optional locally, required in production runner)
 ```bash
 npm run worker
 ```
 
-4. Stop LocalStack:
+Open `http://localhost:3000`.
 
-```bash
-docker compose -f docker-compose.localstack.yml down
-```
+## Auth flow (Stytch)
+- `/register`: email OTP challenge -> verify -> workspace + owner user created
+- `/login`: email OTP challenge -> verify -> session cookie minted
+- Session token validated against Stytch and cached in Redis
 
-## Key scripts
+## Quotas and rate limits
+Per workspace:
+- API requests/minute
+- incidents/day
+- triage runs/day
+- customer update drafts/day
+- reminder emails/day
+
+Configurable in Settings (`Workspace quotas`).
+
+## Executive analytics read models
+- `IncidentAnalyticsDaily`
+- `WorkspaceExecutiveSnapshot`
+
+Displayed at `/executive` and partially on `/dashboard`.
+
+## Scripts
 - `npm run dev` - run app
 - `npm run lint` - lint checks
 - `npm run build` - production build check
-- `npm run db:seed` - seed demo data
+- `npm run prisma:generate` - generate Prisma client
+- `npm run prisma:migrate` - local migration dev flow
+- `npm run prisma:deploy` - apply committed migrations
+- `npm run db:seed` - seed demo workspace
 - `npm run localstack:init` - create/check reminder queue
-- `npm run worker` - consume reminder queue
+- `npm run worker` - run queue worker loop
+- `npm run worker:once` - process one worker polling cycle
 
-## Core routes
-- UI: `/dashboard`, `/incidents/[id]`, `/settings`, `/login`, `/register`
-- APIs:
-  - `/api/auth/*`
-  - `/api/incidents/*`
-  - `/api/settings/ai-keys`
-  - `/api/settings/workflows`
-  - `/api/automation/enqueue-reminders`
+## Production deployment (AWS + GitHub Actions)
+Workflow file: `.github/workflows/deploy-aws.yml`
+
+Deployment provisions and updates:
+- VPC + subnets
+- ALB
+- ECS cluster + web service
+- ECS autoscaled worker service (queue-driven)
+- RDS PostgreSQL
+- ElastiCache Redis
+- SQS reminder queue
+- ECR image repository
+
+### Required GitHub secrets
+AWS auth:
+- `AWS_REGION`
+- either `AWS_ROLE_TO_ASSUME` (recommended OIDC)
+- or `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY`
+
+Terraform/app config:
+- `TF_VAR_PROJECT_NAME` (optional, defaults `trustloop`)
+- `TF_VAR_db_username`
+- `TF_VAR_db_password`
+- `TF_VAR_stytch_project_id`
+- `TF_VAR_stytch_secret`
+- `TF_VAR_stytch_env` (optional, defaults `live`)
+- `TF_VAR_key_encryption_secret`
+- `TF_VAR_resend_api_key`
+- `TF_VAR_resend_from_email`
+
+### Deployment behavior
+1. Lint/build app
+2. Bootstrap ECR via Terraform
+3. Build/push Docker image tagged with commit SHA
+4. Full Terraform apply with image tag
+5. Run `prisma migrate deploy` as one-off ECS task
+6. Emit deployed `app_url`
+
+## LocalStack assumptions
+For local AWS emulation:
+- endpoint: `http://localhost:4566`
+- access key: `test`
+- secret key: `test`
+- services: `sqs`

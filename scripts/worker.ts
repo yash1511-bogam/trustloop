@@ -1,74 +1,11 @@
-import { EventType, IncidentStatus, ReminderStatus } from "@prisma/client";
+import "dotenv/config";
+import { ReminderStatus } from "@prisma/client";
 import {
-  deleteReminderMessage,
-  receiveReminderMessages,
   ensureReminderQueue,
+  receiveReminderMessages,
 } from "../src/lib/queue";
+import { processReminderMessage } from "../src/lib/reminder-runner";
 import { prisma } from "../src/lib/prisma";
-
-type ReminderPayload = {
-  workspaceId: string;
-  incidentId: string;
-  queuedAt: string;
-};
-
-async function processMessage(rawMessage: {
-  messageId?: string;
-  receiptHandle?: string;
-  body?: string;
-}): Promise<void> {
-  if (!rawMessage.body || !rawMessage.receiptHandle) {
-    return;
-  }
-
-  const payload = JSON.parse(rawMessage.body) as ReminderPayload;
-
-  const incident = await prisma.incident.findFirst({
-    where: {
-      id: payload.incidentId,
-      workspaceId: payload.workspaceId,
-    },
-    select: {
-      id: true,
-      status: true,
-      title: true,
-    },
-  });
-
-  if (!incident) {
-    await deleteReminderMessage(rawMessage.receiptHandle);
-    return;
-  }
-
-  const isOpen = incident.status !== IncidentStatus.RESOLVED;
-
-  await prisma.$transaction(async (tx) => {
-    if (isOpen) {
-      await tx.incidentEvent.create({
-        data: {
-          incidentId: incident.id,
-          eventType: EventType.REMINDER,
-          body: `Automated reminder: incident is still ${incident.status}. Please update owner action and customer status.`,
-        },
-      });
-    }
-
-    if (rawMessage.messageId) {
-      await tx.reminderJobLog.updateMany({
-        where: {
-          queueMessageId: rawMessage.messageId,
-          incidentId: incident.id,
-        },
-        data: {
-          status: ReminderStatus.PROCESSED,
-          processedAt: new Date(),
-        },
-      });
-    }
-  });
-
-  await deleteReminderMessage(rawMessage.receiptHandle);
-}
 
 async function run(): Promise<void> {
   const once = process.argv.includes("--once");
@@ -89,13 +26,11 @@ async function run(): Promise<void> {
     }
 
     for (const msg of messages) {
-      await processMessage({
+      await processReminderMessage({
         messageId: msg.MessageId,
         receiptHandle: msg.ReceiptHandle,
         body: msg.Body,
       }).catch(async (error) => {
-        console.error("Worker message failed:", error);
-
         if (msg.MessageId) {
           await prisma.reminderJobLog.updateMany({
             where: { queueMessageId: msg.MessageId },

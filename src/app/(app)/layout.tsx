@@ -21,6 +21,9 @@ export default async function AppLayout({
           <Link className="btn btn-ghost" href="/dashboard">
             Dashboard
           </Link>
+          <Link className="btn btn-ghost" href="/executive">
+            Executive
+          </Link>
           <Link className="btn btn-ghost" href="/settings">
             Settings
           </Link>

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider } from "@prisma/client";
 import { z } from "zod";
-import { getAuth } from "@/lib/auth";
-import { badRequest, unauthorized } from "@/lib/http";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { badRequest } from "@/lib/http";
 import { testProviderKey } from "@/lib/ai/service";
 
 const testSchema = z.object({
@@ -11,9 +11,9 @@ const testSchema = z.object({
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
 
   const body = await request.json().catch(() => null);

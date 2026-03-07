@@ -1,38 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { setSessionCookie } from "@/lib/cookies";
+import { z } from "zod";
 import { badRequest } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
-import { createSessionForUser } from "@/lib/session";
-import { z } from "zod";
+import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 
-const loginSchema = z.object({
-  email: z.email(),
-  password: z.string().min(1),
+const loginStartSchema = z.object({
+  email: z.email().max(160),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = await request.json().catch(() => null);
-  const parsed = loginSchema.safeParse(body);
+  const parsed = loginStartSchema.safeParse(body);
   if (!parsed.success) {
     return badRequest("Invalid login payload.");
   }
 
-  const user = await prisma.user.findFirst({
-    where: { email: parsed.data.email.toLowerCase().trim() },
-  });
+  const email = parsed.data.email.toLowerCase().trim();
 
-  if (!user) {
-    return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
+  try {
+    const otp = await sendEmailOtpLoginOrCreate(email);
+
+    const account = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { stytchUserId: otp.stytchUserId },
+          { email },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (!account) {
+      return NextResponse.json(
+        { error: "No workspace account found for that email. Create a workspace first." },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      methodId: otp.methodId,
+      message: "A verification code has been sent to your email.",
+    });
+  } catch {
+    return NextResponse.json({ error: "Unable to start login challenge." }, { status: 400 });
   }
-
-  const ok = await bcrypt.compare(parsed.data.password, user.passwordHash);
-  if (!ok) {
-    return NextResponse.json({ error: "Invalid credentials." }, { status: 401 });
-  }
-
-  const session = await createSessionForUser(user.id);
-  const response = NextResponse.json({ success: true });
-  setSessionCookie(response, session.token, session.expiresAt);
-  return response;
 }

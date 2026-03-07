@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EventType, IncidentSeverity, IncidentStatus } from "@prisma/client";
 import { z } from "zod";
-import { getAuth } from "@/lib/auth";
-import { badRequest, notFound, unauthorized } from "@/lib/http";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { badRequest, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
+import { refreshWorkspaceReadModels } from "@/lib/read-models";
 
 const patchSchema = z.object({
   status: z.nativeEnum(IncidentStatus).optional(),
@@ -17,10 +18,11 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const { id } = await params;
 
@@ -52,10 +54,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const body = await request.json().catch(() => null);
   const parsed = patchSchema.safeParse(body);
@@ -74,6 +77,12 @@ export async function PATCH(
     return notFound("Incident not found.");
   }
 
+  let resolvedAtValue: Date | null | undefined = undefined;
+  if (parsed.data.status !== undefined) {
+    resolvedAtValue =
+      parsed.data.status === IncidentStatus.RESOLVED ? new Date() : null;
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     const incident = await tx.incident.update({
       where: { id: existing.id },
@@ -83,6 +92,7 @@ export async function PATCH(
         category: parsed.data.category?.trim() || null,
         summary: parsed.data.summary?.trim() || null,
         ownerUserId: parsed.data.ownerUserId ?? undefined,
+        resolvedAt: resolvedAtValue,
       },
     });
 
@@ -114,5 +124,6 @@ export async function PATCH(
     return incident;
   });
 
+  await refreshWorkspaceReadModels(auth.user.workspaceId);
   return NextResponse.json({ incident: updated });
 }

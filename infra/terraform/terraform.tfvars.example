@@ -1,0 +1,13 @@
+project_name           = "trustloop"
+aws_region             = "us-east-1"
+image_tag              = "latest"
+db_name                = "trustloop"
+db_username            = "trustloop"
+db_password            = "replace_me"
+stytch_project_id      = "project-live-xxxx"
+stytch_secret          = "secret-live-xxxx"
+stytch_env             = "live"
+key_encryption_secret  = "replace-with-long-random-secret"
+resend_api_key         = "re_xxx"
+resend_from_email      = "TrustLoop <alerts@yourdomain.com>"
+reminder_stale_minutes = 240

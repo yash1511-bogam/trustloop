@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs";
+import "dotenv/config";
 import {
   AiProvider,
   EventType,
@@ -8,10 +8,11 @@ import {
   Role,
   WorkflowType,
 } from "@prisma/client";
+import { refreshWorkspaceReadModels } from "../src/lib/read-models";
 import { prisma } from "../src/lib/prisma";
 
 const DEMO_EMAIL = "demo@trustloop.local";
-const DEMO_PASSWORD = "demo12345";
+const DEMO_STYTCH_USER_ID = process.env.SEED_STYTCH_USER_ID ?? "stytch-demo-user";
 
 async function seed(): Promise<void> {
   const existing = await prisma.user.findFirst({
@@ -24,8 +25,6 @@ async function seed(): Promise<void> {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
-
   const created = await prisma.$transaction(async (tx) => {
     const workspace = await tx.workspace.create({
       data: { name: "Acme AI Apps" },
@@ -36,8 +35,14 @@ async function seed(): Promise<void> {
         workspaceId: workspace.id,
         name: "Demo Operator",
         email: DEMO_EMAIL,
-        passwordHash,
         role: Role.OWNER,
+        stytchUserId: DEMO_STYTCH_USER_ID,
+      },
+    });
+
+    await tx.workspaceQuota.create({
+      data: {
+        workspaceId: workspace.id,
       },
     });
 
@@ -125,10 +130,12 @@ async function seed(): Promise<void> {
     return { workspace, user };
   });
 
+  await refreshWorkspaceReadModels(created.workspace.id);
+
   console.log("Seed complete.");
   console.log(`Workspace: ${created.workspace.name}`);
-  console.log(`Demo login: ${DEMO_EMAIL}`);
-  console.log(`Demo password: ${DEMO_PASSWORD}`);
+  console.log(`Demo email: ${DEMO_EMAIL}`);
+  console.log(`Demo stytch user id: ${DEMO_STYTCH_USER_ID}`);
 }
 
 seed()

@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, EventType, WorkflowType } from "@prisma/client";
-import { getAuth } from "@/lib/auth";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { decryptSecret } from "@/lib/encryption";
-import { badRequest, notFound, unauthorized } from "@/lib/http";
+import { badRequest, notFound, quotaExceeded } from "@/lib/http";
 import { generateIncidentTriage } from "@/lib/ai/service";
+import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { enqueueReminder } from "@/lib/queue";
 import { prisma } from "@/lib/prisma";
+import { refreshWorkspaceReadModels } from "@/lib/read-models";
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const { id } = await params;
 
@@ -24,6 +27,11 @@ export async function POST(
 
   if (!incident) {
     return notFound("Incident not found.");
+  }
+
+  const quota = await enforceWorkspaceQuota(auth.user.workspaceId, "triage");
+  if (!quota.allowed) {
+    return quotaExceeded(`Daily AI triage quota reached (${quota.limit}/day).`);
   }
 
   const workflow = await prisma.workflowSetting.findUnique({
@@ -72,6 +80,8 @@ export async function POST(
         severity: triage.severity,
         category: triage.category,
         summary: triage.summary,
+        triagedAt: new Date(),
+        triageRunCount: { increment: 1 },
       },
     });
 
@@ -102,6 +112,9 @@ export async function POST(
       },
     });
   }
+
+  await consumeWorkspaceQuota(auth.user.workspaceId, "triage", 1);
+  await refreshWorkspaceReadModels(auth.user.workspaceId);
 
   return NextResponse.json({
     incident: updated,

@@ -1,4 +1,3 @@
-import "server-only";
 
 import { createHash } from "crypto";
 import { cookies } from "next/headers";
@@ -22,8 +21,7 @@ export type AuthContext = {
 };
 
 type CachedSessionAuth = {
-  userId: string;
-  stytchUserId: string;
+  user: AuthContext["user"];
   expiresAtIso: string;
 };
 
@@ -42,32 +40,25 @@ export async function getAuth(): Promise<AuthContext | null> {
   const cacheKey = sessionCacheKey(sessionToken);
   const cached = await redisGetJson<CachedSessionAuth>(cacheKey);
 
-  let stytchUserId: string;
-  let expiresAt: Date;
-
   if (cached) {
     const parsedExpiry = new Date(cached.expiresAtIso);
     if (parsedExpiry.getTime() > Date.now()) {
-      stytchUserId = cached.stytchUserId;
-      expiresAt = parsedExpiry;
-    } else {
-      await redisDelete(cacheKey);
-      try {
-        const validated = await authenticateSessionToken(sessionToken);
-        stytchUserId = validated.stytchUserId;
-        expiresAt = validated.expiresAt;
-      } catch {
-        return null;
-      }
+      return {
+        user: cached.user,
+      };
     }
-  } else {
-    try {
-      const validated = await authenticateSessionToken(sessionToken);
-      stytchUserId = validated.stytchUserId;
-      expiresAt = validated.expiresAt;
-    } catch {
-      return null;
-    }
+
+    await redisDelete(cacheKey);
+  }
+
+  let stytchUserId: string;
+  let expiresAt: Date;
+  try {
+    const validated = await authenticateSessionToken(sessionToken);
+    stytchUserId = validated.stytchUserId;
+    expiresAt = validated.expiresAt;
+  } catch {
+    return null;
   }
 
   const user = await prisma.user.findUnique({
@@ -90,8 +81,15 @@ export async function getAuth(): Promise<AuthContext | null> {
   await redisSetJson<CachedSessionAuth>(
     cacheKey,
     {
-      userId: user.id,
-      stytchUserId: user.stytchUserId,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        workspaceId: user.workspaceId,
+        workspaceName: user.workspace.name,
+        stytchUserId: user.stytchUserId,
+      },
       expiresAtIso: expiresAt.toISOString(),
     },
     ttl,

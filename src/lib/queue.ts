@@ -9,24 +9,48 @@ import {
 import { REMINDER_QUEUE_NAME } from "@/lib/constants";
 
 const region = process.env.AWS_REGION ?? "us-east-1";
-const endpoint = process.env.AWS_ENDPOINT_URL ?? "http://localhost:4566";
+
+function sqsEndpoint(): string | undefined {
+  return process.env.AWS_ENDPOINT_URL;
+}
+
+function sqsCredentials(): { accessKeyId: string; secretAccessKey: string } | undefined {
+  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    return {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    };
+  }
+
+  if (sqsEndpoint()) {
+    return {
+      accessKeyId: "test",
+      secretAccessKey: "test",
+    };
+  }
+
+  return undefined;
+}
 
 function client(): SQSClient {
   return new SQSClient({
     region,
-    endpoint,
-    credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "test",
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "test",
-    },
+    endpoint: sqsEndpoint(),
+    credentials: sqsCredentials(),
   });
 }
 
 export function reminderQueueUrl(): string {
-  return (
-    process.env.REMINDER_QUEUE_URL ??
-    `${endpoint}/000000000000/${REMINDER_QUEUE_NAME}`
-  );
+  if (process.env.REMINDER_QUEUE_URL) {
+    return process.env.REMINDER_QUEUE_URL;
+  }
+
+  const endpoint = sqsEndpoint();
+  if (endpoint) {
+    return `${endpoint}/000000000000/${REMINDER_QUEUE_NAME}`;
+  }
+
+  return `https://sqs.${region}.amazonaws.com/${process.env.AWS_ACCOUNT_ID ?? "000000000000"}/${REMINDER_QUEUE_NAME}`;
 }
 
 export async function ensureReminderQueue(): Promise<string> {

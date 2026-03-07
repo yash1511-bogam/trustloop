@@ -1,22 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { AiProvider, Role, WorkflowType } from "@prisma/client";
-import { setSessionCookie } from "@/lib/cookies";
+import { z } from "zod";
 import { badRequest } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
-import { createSessionForUser } from "@/lib/session";
-import { z } from "zod";
+import { redisSetJson } from "@/lib/redis";
+import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 
-const registerSchema = z.object({
+const registerStartSchema = z.object({
   name: z.string().min(2).max(80),
   email: z.email().max(160),
-  password: z.string().min(8).max(128),
   workspaceName: z.string().min(2).max(80),
 });
 
+type PendingRegisterPayload = {
+  name: string;
+  email: string;
+  workspaceName: string;
+  stytchUserId: string;
+};
+
+function pendingRegisterKey(methodId: string): string {
+  return `auth:register:${methodId}`;
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = await request.json().catch(() => null);
-  const parsed = registerSchema.safeParse(body);
+  const parsed = registerStartSchema.safeParse(body);
 
   if (!parsed.success) {
     return badRequest("Invalid registration payload.");
@@ -36,55 +44,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  try {
+    const otp = await sendEmailOtpLoginOrCreate(email);
 
-  const user = await prisma.$transaction(async (tx) => {
-    const workspace = await tx.workspace.create({
-      data: {
-        name: parsed.data.workspaceName.trim(),
-      },
+    const pendingPayload: PendingRegisterPayload = {
+      name: parsed.data.name.trim(),
+      email,
+      workspaceName: parsed.data.workspaceName.trim(),
+      stytchUserId: otp.stytchUserId,
+    };
+
+    await redisSetJson<PendingRegisterPayload>(
+      pendingRegisterKey(otp.methodId),
+      pendingPayload,
+      15 * 60,
+    );
+
+    return NextResponse.json({
+      methodId: otp.methodId,
+      message: "A verification code has been sent to your email.",
     });
-
-    const createdUser = await tx.user.create({
-      data: {
-        workspaceId: workspace.id,
-        email,
-        name: parsed.data.name.trim(),
-        passwordHash,
-        role: Role.OWNER,
-      },
-    });
-
-    await tx.workflowSetting.createMany({
-      data: [
-        {
-          workspaceId: workspace.id,
-          workflowType: WorkflowType.INCIDENT_TRIAGE,
-          provider: AiProvider.OPENAI,
-          model: "gpt-4o-mini",
-        },
-        {
-          workspaceId: workspace.id,
-          workflowType: WorkflowType.CUSTOMER_UPDATE,
-          provider: AiProvider.OPENAI,
-          model: "gpt-4o-mini",
-        },
-      ],
-    });
-
-    return createdUser;
-  });
-
-  const session = await createSessionForUser(user.id);
-
-  const response = NextResponse.json({
-    user: {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    },
-  });
-
-  setSessionCookie(response, session.token, session.expiresAt);
-  return response;
+  } catch {
+    return NextResponse.json(
+      { error: "Unable to start registration challenge." },
+      { status: 400 },
+    );
+  }
 }

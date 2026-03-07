@@ -15,7 +15,7 @@ export default async function RegisterPage() {
         <p className="kicker mb-2">New workspace</p>
         <h1 className="mb-1 text-3xl font-semibold">Create TrustLoop account</h1>
         <p className="mb-6 text-sm text-slate-600">
-          Spin up your AI incident workspace in under two minutes.
+          Start with your work email and verify ownership with a one-time code.
         </p>
 
         <RegisterForm />

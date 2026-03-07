@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, EventType, WorkflowType } from "@prisma/client";
-import { getAuth } from "@/lib/auth";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { decryptSecret } from "@/lib/encryption";
-import { badRequest, notFound, unauthorized } from "@/lib/http";
+import { badRequest, notFound, quotaExceeded } from "@/lib/http";
 import { generateCustomerUpdateDraft } from "@/lib/ai/service";
+import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
+import { refreshWorkspaceReadModels } from "@/lib/read-models";
 
 export async function POST(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const { id } = await params;
 
@@ -29,6 +32,16 @@ export async function POST(
 
   if (!incident) {
     return notFound("Incident not found.");
+  }
+
+  const quota = await enforceWorkspaceQuota(
+    auth.user.workspaceId,
+    "customer_updates",
+  );
+  if (!quota.allowed) {
+    return quotaExceeded(
+      `Daily customer update draft quota reached (${quota.limit}/day).`,
+    );
   }
 
   const workflow =
@@ -83,7 +96,10 @@ export async function POST(
   await prisma.$transaction(async (tx) => {
     await tx.incident.update({
       where: { id: incident.id },
-      data: { lastCustomerUpdateAt: new Date() },
+      data: {
+        lastCustomerUpdateAt: new Date(),
+        customerUpdateCount: { increment: 1 },
+      },
     });
 
     await tx.incidentEvent.create({
@@ -95,6 +111,9 @@ export async function POST(
       },
     });
   });
+
+  await consumeWorkspaceQuota(auth.user.workspaceId, "customer_updates", 1);
+  await refreshWorkspaceReadModels(auth.user.workspaceId);
 
   return NextResponse.json({ draft });
 }

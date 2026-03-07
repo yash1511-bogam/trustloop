@@ -1,17 +1,19 @@
 import { NextResponse } from "next/server";
 import { IncidentStatus, ReminderStatus, Role } from "@prisma/client";
-import { getAuth, hasRole } from "@/lib/auth";
+import { hasRole } from "@/lib/auth";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { enqueueReminder } from "@/lib/queue";
-import { forbidden, unauthorized } from "@/lib/http";
+import { forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
 const STALE_MINUTES = Number(process.env.REMINDER_STALE_MINUTES ?? 240);
 
 export async function POST(): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   if (!hasRole(auth, [Role.OWNER, Role.MANAGER])) {
     return forbidden();

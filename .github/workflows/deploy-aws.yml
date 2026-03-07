@@ -1,0 +1,169 @@
+name: Deploy AWS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+  PROJECT_NAME: ${{ secrets.TF_VAR_PROJECT_NAME || 'trustloop' }}
+  TF_IN_AUTOMATION: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: trustloop/package-lock.json
+
+      - name: Install dependencies
+        working-directory: trustloop
+        run: npm ci
+
+      - name: Lint
+        working-directory: trustloop
+        run: npm run lint
+
+      - name: Build
+        working-directory: trustloop
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trustloop?schema=public
+          REDIS_URL: redis://localhost:6379
+          STYTCH_PROJECT_ID: ${{ secrets.TF_VAR_stytch_project_id || 'project-test-placeholder' }}
+          STYTCH_SECRET: ${{ secrets.TF_VAR_stytch_secret || 'secret-test-placeholder' }}
+          STYTCH_ENV: ${{ secrets.TF_VAR_stytch_env || 'test' }}
+          KEY_ENCRYPTION_SECRET: ${{ secrets.TF_VAR_key_encryption_secret || 'placeholder-key-encryption-secret-123456789' }}
+          RESEND_API_KEY: ${{ secrets.TF_VAR_resend_api_key || 're_placeholder' }}
+          RESEND_FROM_EMAIL: ${{ secrets.TF_VAR_resend_from_email || 'TrustLoop <onboarding@resend.dev>' }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_ACCOUNT_ID: 000000000000
+          REMINDER_QUEUE_NAME: trustloop-incident-reminders
+          REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/trustloop-incident-reminders
+        run: npm run build
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS credentials (OIDC)
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure AWS credentials (Access Keys)
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: trustloop/infra/terraform
+        run: terraform init
+
+      - name: Terraform Apply (ECR bootstrap)
+        working-directory: trustloop/infra/terraform
+        env:
+          TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_db_username: ${{ secrets.TF_VAR_db_username }}
+          TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+          TF_VAR_stytch_project_id: ${{ secrets.TF_VAR_stytch_project_id }}
+          TF_VAR_stytch_secret: ${{ secrets.TF_VAR_stytch_secret }}
+          TF_VAR_stytch_env: ${{ secrets.TF_VAR_stytch_env || 'live' }}
+          TF_VAR_key_encryption_secret: ${{ secrets.TF_VAR_key_encryption_secret }}
+          TF_VAR_resend_api_key: ${{ secrets.TF_VAR_resend_api_key }}
+          TF_VAR_resend_from_email: ${{ secrets.TF_VAR_resend_from_email }}
+          TF_VAR_image_tag: bootstrap
+        run: terraform apply -target=aws_ecr_repository.app -auto-approve
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker Image
+        working-directory: trustloop
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REPO="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PROJECT_NAME}"
+          docker build -t "$ECR_REPO:$IMAGE_TAG" .
+          docker push "$ECR_REPO:$IMAGE_TAG"
+
+      - name: Terraform Apply (Full deploy)
+        working-directory: trustloop/infra/terraform
+        env:
+          TF_VAR_project_name: ${{ env.PROJECT_NAME }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_db_username: ${{ secrets.TF_VAR_db_username }}
+          TF_VAR_db_password: ${{ secrets.TF_VAR_db_password }}
+          TF_VAR_stytch_project_id: ${{ secrets.TF_VAR_stytch_project_id }}
+          TF_VAR_stytch_secret: ${{ secrets.TF_VAR_stytch_secret }}
+          TF_VAR_stytch_env: ${{ secrets.TF_VAR_stytch_env || 'live' }}
+          TF_VAR_key_encryption_secret: ${{ secrets.TF_VAR_key_encryption_secret }}
+          TF_VAR_resend_api_key: ${{ secrets.TF_VAR_resend_api_key }}
+          TF_VAR_resend_from_email: ${{ secrets.TF_VAR_resend_from_email }}
+        run: terraform apply -auto-approve -var="image_tag=${GITHUB_SHA}"
+
+      - name: Run Prisma Migrations
+        working-directory: trustloop/infra/terraform
+        run: |
+          ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)
+          WEB_TASK_DEFINITION=$(terraform output -raw web_task_definition_arn)
+          ECS_SUBNETS=$(terraform output -raw ecs_subnet_ids_csv)
+          ECS_SECURITY_GROUP=$(terraform output -raw ecs_security_group_id)
+
+          cat > migration-overrides.json <<'JSON'
+          {
+            "containerOverrides": [
+              {
+                "name": "trustloop-web",
+                "command": ["npm", "run", "prisma:deploy"]
+              }
+            ]
+          }
+          JSON
+
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --launch-type FARGATE \
+            --task-definition "$WEB_TASK_DEFINITION" \
+            --network-configuration "awsvpcConfiguration={subnets=[$ECS_SUBNETS],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=ENABLED}" \
+            --overrides file://migration-overrides.json \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN"
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Migration task failed with exit code $EXIT_CODE"
+            aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN"
+            exit 1
+          fi
+
+      - name: Show deployment endpoint
+        working-directory: trustloop/infra/terraform
+        run: |
+          echo "Application URL: $(terraform output -raw app_url)"

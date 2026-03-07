@@ -15,7 +15,7 @@ export default async function LoginPage() {
         <p className="kicker mb-2">Sign in</p>
         <h1 className="mb-1 text-3xl font-semibold">Welcome back</h1>
         <p className="mb-6 text-sm text-slate-600">
-          Log in to continue triaging AI incidents.
+          Enter your work email and verify with a one-time code from Stytch.
         </p>
 
         <LoginForm />

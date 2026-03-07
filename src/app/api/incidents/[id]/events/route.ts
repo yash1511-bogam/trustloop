@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EventType } from "@prisma/client";
 import { z } from "zod";
-import { getAuth } from "@/lib/auth";
-import { badRequest, notFound, unauthorized } from "@/lib/http";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { badRequest, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
 const eventSchema = z.object({
@@ -13,10 +13,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const auth = await getAuth();
-  if (!auth) {
-    return unauthorized();
+  const access = await requireApiAuthAndRateLimit();
+  if (access.response) {
+    return access.response;
   }
+  const auth = access.auth;
 
   const { id } = await params;
 
