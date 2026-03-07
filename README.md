@@ -26,11 +26,13 @@ This command will:
 1. Install all Node packages and libraries (`pnpm install`)
 2. Ensure `.env` exists (auto-copied from `.env.example` if missing)
 3. Start local infra with Docker Compose (Postgres + Redis + LocalStack)
-4. Generate Prisma client + apply migrations
-5. Seed demo data (idempotent)
-6. Initialize LocalStack SQS queue
-7. Launch **web app + worker** together
-8. Print the local links you should use
+4. Wait for Postgres/Redis/LocalStack readiness
+5. Run Prisma automation commands (`validate`, `generate`, `migrate deploy`, `migrate status`, `db pull --print`)
+6. Seed demo data (idempotent)
+7. Initialize LocalStack SQS queue
+8. Run a worker smoke cycle (`worker:once`)
+9. Launch **web app + worker** together
+10. Print the local links you should use
 
 If `pnpm` is missing, `start.sh` auto-activates it through `corepack`.
 
@@ -105,10 +107,14 @@ pnpm install
 cp .env.example .env
 
 docker compose -f docker-compose.localstack.yml up -d
+pnpm run prisma:validate
 pnpm run prisma:generate
 pnpm run prisma:deploy
+pnpm run prisma:status
+pnpm run prisma:pull:print > /tmp/trustloop-prisma-pull.prisma
 pnpm run db:seed
 pnpm run localstack:init
+pnpm run worker:once
 pnpm run dev:full
 ```
 
@@ -146,7 +152,13 @@ AI provider keys entered in Settings are handled with server-side security contr
 
 Workflow: `.github/workflows/deploy-aws.yml`
 
-The pipeline provisions and deploys AWS services (VPC/ECS/RDS/ElastiCache/SQS/ALB/ECR) using Terraform and your AWS credentials/secrets from GitHub Actions.
+The pipeline now automatically runs required setup commands before deployment:
+- starts local Postgres + Redis + LocalStack for CI bootstrap checks
+- runs Prisma commands (`validate`, `generate`, `deploy`, `status`, `db pull --print`)
+- runs queue setup and a worker smoke cycle
+- runs lint + build
+- provisions and deploys AWS services (VPC/ECS/RDS/ElastiCache/SQS/ALB/ECR) with Terraform
+- runs production Prisma migrations as an ECS one-off task after deploy
 
 ## Troubleshooting
 

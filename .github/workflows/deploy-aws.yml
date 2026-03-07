@@ -39,6 +39,80 @@ jobs:
         working-directory: trustloop
         run: pnpm install --frozen-lockfile
 
+      - name: Start local dependencies (Postgres, Redis, LocalStack)
+        working-directory: trustloop
+        run: docker compose -f docker-compose.localstack.yml up -d
+
+      - name: Wait for local dependencies
+        working-directory: trustloop
+        run: |
+          pg_ready=false
+          for i in {1..60}; do
+            if docker compose -f docker-compose.localstack.yml exec -T postgres pg_isready -U postgres -d trustloop >/dev/null 2>&1; then
+              pg_ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$pg_ready" != "true" ]; then
+            echo "Postgres did not become ready in time."
+            exit 1
+          fi
+
+          redis_ready=false
+          for i in {1..60}; do
+            if docker compose -f docker-compose.localstack.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; then
+              redis_ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$redis_ready" != "true" ]; then
+            echo "Redis did not become ready in time."
+            exit 1
+          fi
+
+          localstack_ready=false
+          for i in {1..60}; do
+            if curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1; then
+              localstack_ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$localstack_ready" != "true" ]; then
+            echo "LocalStack did not become ready in time."
+            exit 1
+          fi
+
+      - name: Bootstrap Prisma, database, Redis and queue commands
+        working-directory: trustloop
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trustloop?schema=public
+          REDIS_URL: redis://localhost:6379
+          STYTCH_PROJECT_ID: ${{ secrets.TF_VAR_stytch_project_id || 'project-test-placeholder' }}
+          STYTCH_SECRET: ${{ secrets.TF_VAR_stytch_secret || 'secret-test-placeholder' }}
+          STYTCH_ENV: ${{ secrets.TF_VAR_stytch_env || 'test' }}
+          KEY_ENCRYPTION_SECRET: ${{ secrets.TF_VAR_key_encryption_secret || 'placeholder-key-encryption-secret-123456789' }}
+          RESEND_API_KEY: ${{ secrets.TF_VAR_resend_api_key || 're_placeholder' }}
+          RESEND_FROM_EMAIL: ${{ secrets.TF_VAR_resend_from_email || 'TrustLoop <onboarding@resend.dev>' }}
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_ENDPOINT_URL: http://localhost:4566
+          AWS_ACCOUNT_ID: 000000000000
+          REMINDER_QUEUE_NAME: trustloop-incident-reminders
+          REMINDER_QUEUE_URL: http://localhost:4566/000000000000/trustloop-incident-reminders
+        run: |
+          pnpm run prisma:validate
+          pnpm run prisma:generate
+          pnpm run prisma:deploy
+          pnpm run prisma:status
+          pnpm run prisma:pull:print > /tmp/trustloop-prisma-pull.prisma
+          pnpm run db:seed
+          pnpm run localstack:init
+          pnpm run worker:once
+
       - name: Lint
         working-directory: trustloop
         run: pnpm run lint
@@ -54,10 +128,13 @@ jobs:
           KEY_ENCRYPTION_SECRET: ${{ secrets.TF_VAR_key_encryption_secret || 'placeholder-key-encryption-secret-123456789' }}
           RESEND_API_KEY: ${{ secrets.TF_VAR_resend_api_key || 're_placeholder' }}
           RESEND_FROM_EMAIL: ${{ secrets.TF_VAR_resend_from_email || 'TrustLoop <onboarding@resend.dev>' }}
-          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_ENDPOINT_URL: http://localhost:4566
           AWS_ACCOUNT_ID: 000000000000
           REMINDER_QUEUE_NAME: trustloop-incident-reminders
-          REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/trustloop-incident-reminders
+          REMINDER_QUEUE_URL: http://localhost:4566/000000000000/trustloop-incident-reminders
         run: pnpm run build
 
       - name: Setup Terraform

@@ -195,6 +195,23 @@ async function checkPrerequisites() {
   await runStep("Checking Docker daemon", "docker", ["info"]);
 }
 
+async function waitForServices() {
+  await runStep("Waiting for Postgres readiness", "bash", [
+    "-lc",
+    "for i in {1..60}; do docker compose -f docker-compose.localstack.yml exec -T postgres pg_isready -U postgres -d trustloop >/dev/null 2>&1 && exit 0; sleep 2; done; echo 'Postgres did not become ready in time.'; exit 1",
+  ]);
+
+  await runStep("Waiting for Redis readiness", "bash", [
+    "-lc",
+    "for i in {1..60}; do docker compose -f docker-compose.localstack.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG && exit 0; sleep 2; done; echo 'Redis did not become ready in time.'; exit 1",
+  ]);
+
+  await runStep("Waiting for LocalStack readiness", "bash", [
+    "-lc",
+    "for i in {1..60}; do curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1 && exit 0; sleep 2; done; echo 'LocalStack did not become ready in time.'; exit 1",
+  ]);
+}
+
 async function main() {
   printHeader();
 
@@ -212,10 +229,18 @@ async function main() {
     "-d",
   ]);
 
+  await waitForServices();
+  await runStep("Validating Prisma schema", "pnpm", ["run", "prisma:validate"]);
   await runStep("Generating Prisma client", "pnpm", ["run", "prisma:generate"]);
   await runStep("Applying database migrations", "pnpm", ["run", "prisma:deploy"]);
+  await runStep("Checking migration status", "pnpm", ["run", "prisma:status"]);
+  await runStep("Introspecting database schema (pull/print)", "bash", [
+    "-lc",
+    "pnpm run prisma:pull:print > /tmp/trustloop-prisma-pull.prisma",
+  ]);
   await runStep("Seeding demo data (idempotent)", "pnpm", ["run", "db:seed"]);
   await runStep("Initializing LocalStack reminder queue", "pnpm", ["run", "localstack:init"]);
+  await runStep("Running one worker polling cycle", "pnpm", ["run", "worker:once"]);
 
   printLinks(envMap);
 
