@@ -1,6 +1,61 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { MarketingLanding } from "@/components/marketing-landing";
 import { getAuth } from "@/lib/auth";
+
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
+
+const softwareSchema = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "TrustLoop",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  description:
+    "TrustLoop is an incident operations SaaS for AI software companies that unifies intake, triage, ownership, and customer-safe updates.",
+  offers: {
+    "@type": "AggregateOffer",
+    lowPrice: "199",
+    highPrice: "649",
+    priceCurrency: "USD",
+    offerCount: "3",
+  },
+  provider: {
+    "@type": "Organization",
+    name: "TrustLoop",
+    url: appUrl,
+  },
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Do we need to use your AI keys?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "No. TrustLoop supports BYOK for OpenAI, Gemini, and Anthropic with per-workflow routing.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How are API keys protected?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Keys are encrypted at rest, never logged, never exposed client-side, and only used server-side.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can we enforce quotas per workspace?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. You can configure tenant-aware rate limits and daily quotas for each workspace.",
+      },
+    },
+  ],
+};
 
 export default async function LandingPage() {
   const auth = await getAuth();
@@ -9,26 +64,20 @@ export default async function LandingPage() {
   }
 
   return (
-    <main className="container-shell fade-in">
-      <div className="surface p-8 md:p-12">
-        <p className="kicker mb-3">TrustLoop</p>
-        <h1 className="mb-4 text-4xl font-bold leading-tight md:text-5xl">
-          AI incident operations for software teams that ship customer-facing AI.
-        </h1>
-        <p className="mb-8 max-w-3xl text-lg text-slate-700">
-          Stop managing hallucination escalations across scattered tickets, chats,
-          and docs. TrustLoop gives your support and product teams one workflow to
-          triage incidents, assign owners, and publish consistent customer updates.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Link className="btn btn-primary" href="/register">
-            Start workspace
-          </Link>
-          <Link className="btn btn-ghost" href="/login">
-            Sign in
-          </Link>
-        </div>
-      </div>
-    </main>
+    <>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(softwareSchema),
+        }}
+        type="application/ld+json"
+      />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqSchema),
+        }}
+        type="application/ld+json"
+      />
+      <MarketingLanding />
+    </>
   );
 }
