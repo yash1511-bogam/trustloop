@@ -32,6 +32,8 @@ This command will:
 7. Launch **web app + worker** together
 8. Print the local links you should use
 
+If `pnpm` is missing, `start.sh` auto-activates it through `corepack`.
+
 ## Expected Local Links
 
 By default (`NEXT_PUBLIC_APP_URL=http://localhost:3000`):
