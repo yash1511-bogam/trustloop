@@ -7,12 +7,12 @@ function secureCookie(): boolean {
 
 export function setSessionCookie(
   response: NextResponse,
-  token: string,
+  sessionToken: string,
   expiresAt: Date,
 ): void {
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
-    value: token,
+    value: sessionToken,
     httpOnly: true,
     sameSite: "lax",
     secure: secureCookie(),

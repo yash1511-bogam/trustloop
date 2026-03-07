@@ -1,6 +1,14 @@
 export const APP_NAME = "TrustLoop";
+
 export const SESSION_COOKIE_NAME = "trustloop_session";
-export const SESSION_DURATION_DAYS = 7;
+export const SESSION_CACHE_TTL_SECONDS = 120;
+
+export const STYTCH_OTP_EXPIRATION_MINUTES = Number(
+  process.env.STYTCH_OTP_EXPIRATION_MINUTES ?? 5,
+);
+export const STYTCH_SESSION_DURATION_MINUTES = Number(
+  process.env.STYTCH_SESSION_DURATION_MINUTES ?? 60 * 24,
+);
 
 export const REMINDER_QUEUE_NAME =
   process.env.REMINDER_QUEUE_NAME ?? "trustloop-incident-reminders";
@@ -15,3 +23,5 @@ export const WORKFLOW_NAMES = {
   INCIDENT_TRIAGE: "INCIDENT_TRIAGE",
   CUSTOMER_UPDATE: "CUSTOMER_UPDATE",
 } as const;
+
+export const DASHBOARD_CACHE_TTL_SECONDS = 45;

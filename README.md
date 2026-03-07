@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TrustLoop
 
-## Getting Started
+TrustLoop is a SaaS MVP for **AI software companies** that need to operate customer-facing AI incidents end-to-end.
 
-First, run the development server:
+It provides:
+- incident intake and status workflow
+- AI-assisted triage (severity/category/next steps)
+- AI-generated customer update drafts
+- workspace-level encrypted API key management (OpenAI, Gemini, Anthropic)
+- LocalStack-backed reminder queue + worker for stale incidents
+
+## Stack
+- Next.js 16 (App Router)
+- Prisma + SQLite (local)
+- AWS SDK v3 (SQS)
+- LocalStack (local AWS emulation)
+
+## Security model for provider keys
+- keys are entered in-app and sent to server routes only
+- keys are encrypted at rest using AES-256-GCM (`KEY_ENCRYPTION_SECRET`)
+- full keys are never returned after save (only last4 shown)
+- key usage is server-side only for AI workflows
+- keys are never logged by app code
+
+## Quick start
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Configure environment:
+
+```bash
+cp .env.example .env
+```
+
+3. Run migrations:
+
+```bash
+npx prisma migrate dev --name init
+```
+
+4. Seed demo workspace and user:
+
+```bash
+npm run db:seed
+```
+
+5. Start app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Demo login
+- email: `demo@trustloop.local`
+- password: `demo12345`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## LocalStack reminder queue (optional but recommended)
+1. Start LocalStack:
 
-## Learn More
+```bash
+docker compose -f docker-compose.localstack.yml up -d
+```
 
-To learn more about Next.js, take a look at the following resources:
+2. Initialize queue:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run localstack:init
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. Run reminder worker:
 
-## Deploy on Vercel
+```bash
+npm run worker
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4. Stop LocalStack:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+docker compose -f docker-compose.localstack.yml down
+```
+
+## Key scripts
+- `npm run dev` - run app
+- `npm run lint` - lint checks
+- `npm run build` - production build check
+- `npm run db:seed` - seed demo data
+- `npm run localstack:init` - create/check reminder queue
+- `npm run worker` - consume reminder queue
+
+## Core routes
+- UI: `/dashboard`, `/incidents/[id]`, `/settings`, `/login`, `/register`
+- APIs:
+  - `/api/auth/*`
+  - `/api/incidents/*`
+  - `/api/settings/ai-keys`
+  - `/api/settings/workflows`
+  - `/api/automation/enqueue-reminders`

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -61,73 +61,86 @@ enum ReminderStatus {
   FAILED
 }
 
+enum EmailNotificationType {
+  REMINDER
+  CUSTOMER_UPDATE
+  INCIDENT_ALERT
+}
+
+enum EmailDeliveryStatus {
+  SENT
+  FAILED
+}
+
 model Workspace {
-  id               String           @id @default(cuid())
-  name             String
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  users            User[]
-  incidents        Incident[]
-  aiProviderKeys   AiProviderKey[]
-  workflowSettings WorkflowSetting[]
-  reminderJobs     ReminderJobLog[]
+  id                String                     @id @default(cuid())
+  name              String
+  planTier          String                     @default("pro")
+  timezone          String                     @default("UTC")
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  users             User[]
+  incidents         Incident[]
+  aiProviderKeys    AiProviderKey[]
+  workflowSettings  WorkflowSetting[]
+  reminderJobs      ReminderJobLog[]
+  quotas            WorkspaceQuota?
+  dailyUsage        WorkspaceDailyUsage[]
+  analyticsDaily    IncidentAnalyticsDaily[]
+  executiveSnapshot WorkspaceExecutiveSnapshot?
+  emailNotifications EmailNotificationLog[]
 }
 
 model User {
-  id            String          @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  email         String
-  name          String
-  passwordHash  String
-  role          Role            @default(AGENT)
-  sessions      Session[]
-  ownedIncidents Incident[]     @relation("IncidentOwner")
-  events        IncidentEvent[] @relation("EventActor")
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  id             String          @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  stytchUserId   String          @unique
+  email          String
+  name           String
+  role           Role            @default(AGENT)
+  ownedIncidents Incident[]      @relation("IncidentOwner")
+  events         IncidentEvent[] @relation("EventActor")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([workspaceId, email])
   @@index([workspaceId])
 }
 
-model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
 model Incident {
-  id                  String           @id @default(cuid())
-  workspaceId         String
-  workspace           Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  title               String
-  description         String
-  customerName        String?
-  customerEmail       String?
-  channel             IncidentChannel  @default(EMAIL)
-  status              IncidentStatus   @default(NEW)
-  severity            IncidentSeverity @default(P3)
-  category            String?
-  ownerUserId         String?
-  owner               User?            @relation("IncidentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
-  modelVersion        String?
-  sourceTicketRef     String?
-  summary             String?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  id                   String                  @id @default(cuid())
+  workspaceId          String
+  workspace            Workspace               @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title                String
+  description          String
+  customerName         String?
+  customerEmail        String?
+  channel              IncidentChannel         @default(EMAIL)
+  status               IncidentStatus          @default(NEW)
+  severity             IncidentSeverity        @default(P3)
+  category             String?
+  ownerUserId          String?
+  owner                User?                   @relation("IncidentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  modelVersion         String?
+  sourceTicketRef      String?
+  summary              String?
+  triagedAt            DateTime?
+  resolvedAt           DateTime?
+  triageRunCount       Int                     @default(0)
+  customerUpdateCount  Int                     @default(0)
+  remindersSentCount   Int                     @default(0)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
   lastCustomerUpdateAt DateTime?
-  events              IncidentEvent[]
-  reminderJobs        ReminderJobLog[]
+  events               IncidentEvent[]
+  reminderJobs         ReminderJobLog[]
+  emailNotifications   EmailNotificationLog[]
 
   @@index([workspaceId, status])
   @@index([workspaceId, severity])
   @@index([ownerUserId])
+  @@index([workspaceId, updatedAt])
 }
 
 model IncidentEvent {
@@ -145,15 +158,15 @@ model IncidentEvent {
 }
 
 model AiProviderKey {
-  id          String     @id @default(cuid())
-  workspaceId String
-  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  provider    AiProvider
+  id           String     @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider     AiProvider
   encryptedKey String
-  keyLast4    String
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  keyLast4     String
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@unique([workspaceId, provider])
   @@index([workspaceId])
@@ -173,17 +186,97 @@ model WorkflowSetting {
 }
 
 model ReminderJobLog {
-  id            String         @id @default(cuid())
-  workspaceId   String
-  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  incidentId    String
-  incident      Incident       @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  id             String         @id @default(cuid())
+  workspaceId    String
+  workspace      Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  incidentId     String
+  incident       Incident       @relation(fields: [incidentId], references: [id], onDelete: Cascade)
   queueMessageId String?
-  status        ReminderStatus @default(QUEUED)
-  errorMessage  String?
-  createdAt     DateTime       @default(now())
-  processedAt   DateTime?
+  status         ReminderStatus @default(QUEUED)
+  errorMessage   String?
+  createdAt      DateTime       @default(now())
+  processedAt    DateTime?
 
   @@index([workspaceId, status])
+  @@index([incidentId])
+}
+
+model WorkspaceQuota {
+  id                    String    @id @default(cuid())
+  workspaceId           String    @unique
+  workspace             Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  apiRequestsPerMinute  Int       @default(120)
+  incidentsPerDay       Int       @default(200)
+  triageRunsPerDay      Int       @default(300)
+  customerUpdatesPerDay Int       @default(300)
+  reminderEmailsPerDay  Int       @default(500)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model WorkspaceDailyUsage {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  usageDate           DateTime  @db.Date
+  incidentsCreated    Int       @default(0)
+  triageRuns          Int       @default(0)
+  customerUpdates     Int       @default(0)
+  reminderEmailsSent  Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([workspaceId, usageDate])
+  @@index([workspaceId, usageDate])
+}
+
+model IncidentAnalyticsDaily {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  day                 DateTime  @db.Date
+  incidentsCreated    Int       @default(0)
+  incidentsResolved   Int       @default(0)
+  openAtEndOfDay      Int       @default(0)
+  p1Created           Int       @default(0)
+  triageRuns          Int       @default(0)
+  customerUpdatesSent Int       @default(0)
+  reminderEmailsSent  Int       @default(0)
+  mttrMinutesAvg      Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([workspaceId, day])
+  @@index([workspaceId, day])
+}
+
+model WorkspaceExecutiveSnapshot {
+  id                         String    @id @default(cuid())
+  workspaceId                String    @unique
+  workspace                  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  openIncidents              Int       @default(0)
+  p1OpenIncidents            Int       @default(0)
+  incidentsCreatedLast7d     Int       @default(0)
+  incidentsResolvedLast7d    Int       @default(0)
+  avgResolutionHoursLast30d  Float     @default(0)
+  triageCoveragePct          Float     @default(0)
+  customerUpdateCoveragePct  Float     @default(0)
+  updatedAt                  DateTime  @updatedAt
+}
+
+model EmailNotificationLog {
+  id                String               @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  incidentId        String?
+  incident          Incident?            @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  type              EmailNotificationType
+  toEmail           String
+  providerMessageId String?
+  status            EmailDeliveryStatus  @default(SENT)
+  errorMessage      String?
+  createdAt         DateTime             @default(now())
+
+  @@index([workspaceId, createdAt])
   @@index([incidentId])
 }
