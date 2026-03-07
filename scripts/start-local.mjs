@@ -210,10 +210,10 @@ async function main() {
     "-d",
   ]);
 
-  await runStep("Generating Prisma client", "npm", ["run", "prisma:generate"]);
-  await runStep("Applying database migrations", "npm", ["run", "prisma:deploy"]);
-  await runStep("Seeding demo data (idempotent)", "npm", ["run", "db:seed"]);
-  await runStep("Initializing LocalStack reminder queue", "npm", ["run", "localstack:init"]);
+  await runStep("Generating Prisma client", "pnpm", ["run", "prisma:generate"]);
+  await runStep("Applying database migrations", "pnpm", ["run", "prisma:deploy"]);
+  await runStep("Seeding demo data (idempotent)", "pnpm", ["run", "db:seed"]);
+  await runStep("Initializing LocalStack reminder queue", "pnpm", ["run", "localstack:init"]);
 
   printLinks(envMap);
 
@@ -225,7 +225,7 @@ async function main() {
   console.log(chalk.bold.green("Starting TrustLoop web app + worker..."));
   console.log(chalk.gray("Press Ctrl+C to stop both processes.\n"));
 
-  await execa("npm", ["run", "dev:full"], {
+  await execa("pnpm", ["run", "dev:full"], {
     cwd: rootDir,
     stdio: "inherit",
   });

@@ -44,6 +44,13 @@ export default async function LoginPage() {
           <LoginForm />
 
           <p className="mt-5 text-sm text-slate-600">
+            Lost access?{" "}
+            <Link className="font-semibold text-cyan-700 underline" href="/forgot-access">
+              Recover account
+            </Link>
+          </p>
+
+          <p className="mt-2 text-sm text-slate-600">
             Need a workspace?{" "}
             <Link className="font-semibold text-cyan-700 underline" href="/register">
               Create one

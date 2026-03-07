@@ -9,13 +9,14 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v npm >/dev/null 2>&1; then
-  echo "Error: npm is required but not installed."
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "Error: pnpm is required but not installed."
+  echo "Tip: run 'corepack enable && corepack prepare pnpm@latest --activate'"
   exit 1
 fi
 
 echo "Installing TrustLoop dependencies..."
-npm install
+pnpm install
 
 echo "Launching TrustLoop local stack..."
-npm run start:local -- "$@"
+pnpm run start:local -- "$@"

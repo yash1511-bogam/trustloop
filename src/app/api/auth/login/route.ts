@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequest } from "@/lib/http";
+import { sendAuthOtpNoticeEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 
@@ -27,7 +28,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           { email },
         ],
       },
-      select: { id: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        workspaceId: true,
+        workspace: { select: { name: true } },
+      },
     });
 
     if (!account) {
@@ -36,6 +43,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: 404 },
       );
     }
+
+    await sendAuthOtpNoticeEmail({
+      workspaceId: account.workspaceId,
+      toEmail: account.email,
+      workspaceName: account.workspace.name,
+      userName: account.name,
+    }).catch(() => null);
 
     return NextResponse.json({
       methodId: otp.methodId,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
 import { setSessionCookie } from "@/lib/cookies";
+import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const user = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
       const workspace = await tx.workspace.create({
         data: {
           name: pending.workspaceName,
@@ -131,16 +132,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         update: {},
       });
 
-      return createdUser;
+      return { user: createdUser, workspace };
     });
 
     await redisDelete(pendingRegisterKey(parsed.data.methodId));
 
+    await sendWelcomeEmail({
+      workspaceId: created.workspace.id,
+      toEmail: created.user.email,
+      workspaceName: created.workspace.name,
+      userName: created.user.name,
+    }).catch(() => null);
+
+    await sendGettingStartedGuideEmail({
+      workspaceId: created.workspace.id,
+      toEmail: created.user.email,
+      workspaceName: created.workspace.name,
+      userName: created.user.name,
+    }).catch(() => null);
+
     const response = NextResponse.json({
       user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
+        id: created.user.id,
+        email: created.user.email,
+        name: created.user.name,
       },
     });
 

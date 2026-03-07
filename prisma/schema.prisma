@@ -65,6 +65,10 @@ enum EmailNotificationType {
   REMINDER
   CUSTOMER_UPDATE
   INCIDENT_ALERT
+  AUTH_OTP
+  AUTH_RECOVERY
+  ONBOARDING_WELCOME
+  ONBOARDING_GUIDE
 }
 
 enum EmailDeliveryStatus {
