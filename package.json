@@ -31,6 +31,7 @@
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.1004.0",
     "@gsap/react": "^2.1.2",
+    "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "clsx": "^2.1.1",
     "framer-motion": "^12.35.1",

@@ -116,6 +116,7 @@ function printLinks(envMap) {
   const lines = [
     `${chalk.bold("App")}:        ${chalk.cyan(baseUrl)}`,
     `${chalk.bold("Login")}:      ${chalk.cyan(`${baseUrl}/login`)}`,
+    `${chalk.bold("Recover")}:    ${chalk.cyan(`${baseUrl}/forgot-access`)}`,
     `${chalk.bold("Register")}:   ${chalk.cyan(`${baseUrl}/register`)}`,
     `${chalk.bold("Dashboard")}:  ${chalk.cyan(`${baseUrl}/dashboard`)}`,
     `${chalk.bold("Executive")}:  ${chalk.cyan(`${baseUrl}/executive`)}`,
@@ -188,6 +189,7 @@ function ensureEnvFile() {
 }
 
 async function checkPrerequisites() {
+  await runStep("Checking pnpm", "pnpm", ["--version"]);
   await runStep("Checking Docker CLI", "docker", ["--version"]);
   await runStep("Checking Docker Compose", "docker", ["compose", "version"]);
   await runStep("Checking Docker daemon", "docker", ["info"]);

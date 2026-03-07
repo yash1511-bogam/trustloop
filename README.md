@@ -23,7 +23,7 @@ Run from inside `trustloop`:
 ```
 
 This command will:
-1. Install all Node packages and libraries (`npm install`)
+1. Install all Node packages and libraries (`pnpm install`)
 2. Ensure `.env` exists (auto-copied from `.env.example` if missing)
 3. Start local infra with Docker Compose (Postgres + Redis + LocalStack)
 4. Generate Prisma client + apply migrations
@@ -37,6 +37,7 @@ This command will:
 By default (`NEXT_PUBLIC_APP_URL=http://localhost:3000`):
 - App: `http://localhost:3000`
 - Login: `http://localhost:3000/login`
+- Recover Access: `http://localhost:3000/forgot-access`
 - Register: `http://localhost:3000/register`
 - Dashboard: `http://localhost:3000/dashboard`
 - Executive: `http://localhost:3000/executive`
@@ -45,14 +46,14 @@ By default (`NEXT_PUBLIC_APP_URL=http://localhost:3000`):
 ## Prerequisites
 
 - Node.js 20+
-- npm 10+
+- pnpm 10+
 - Docker + Docker Compose
 
 Verify quickly:
 
 ```bash
 node -v
-npm -v
+pnpm -v
 docker --version
 docker compose version
 ```
@@ -84,30 +85,41 @@ Create `.env` from `.env.example` (automatic in `./start.sh` if missing), then s
 
 - `./start.sh`
   - Main one-command launcher (recommended)
-- `npm run start:local`
+- `pnpm run start:local`
   - Runs the rich local launcher (`scripts/start-local.mjs`)
-- `npm run start:local:setup`
+- `pnpm run start:local:setup`
   - Runs provisioning only (no long-running web/worker processes)
-- `npm run dev:full`
+- `pnpm run dev:full`
   - Runs web + worker in parallel
-- `npm run dev`
+- `pnpm run dev`
   - Web app only
-- `npm run worker`
+- `pnpm run worker`
   - Worker only
 
 ## Manual Local Flow (if you do not use start.sh)
 
 ```bash
-npm install
+pnpm install
 cp .env.example .env
 
 docker compose -f docker-compose.localstack.yml up -d
-npm run prisma:generate
-npm run prisma:deploy
-npm run db:seed
-npm run localstack:init
-npm run dev:full
+pnpm run prisma:generate
+pnpm run prisma:deploy
+pnpm run db:seed
+pnpm run localstack:init
+pnpm run dev:full
 ```
+
+## Automated Auth Emails
+
+TrustLoop now sends these auth/onboarding emails through Resend:
+- Welcome email right after workspace registration is verified
+- Getting-started instructions email after welcome
+- OTP security notice email whenever login OTP is requested
+- Account recovery instructions email from forgot-access flow
+- Existing incident reminder emails remain active
+
+Note: OTP delivery itself is still handled by Stytch (source of truth for verification codes).
 
 ## Tech Stack
 
@@ -147,13 +159,13 @@ The pipeline provisions and deploys AWS services (VPC/ECS/RDS/ElastiCache/SQS/AL
   ```
 - Re-run:
   ```bash
-  npm run prisma:deploy
+  pnpm run prisma:deploy
   ```
 
 ### Worker does not consume queue
 - Ensure LocalStack queue exists:
   ```bash
-  npm run localstack:init
+  pnpm run localstack:init
   ```
 - Verify `AWS_ENDPOINT_URL=http://localhost:4566`
 
