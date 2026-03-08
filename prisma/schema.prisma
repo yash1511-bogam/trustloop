@@ -81,6 +81,10 @@ enum EmailNotificationType {
   INCIDENT_ALERT
   OWNER_ASSIGNED
   WORKSPACE_INVITE
+  PAYMENT_CONFIRMATION
+  PAYMENT_RECEIPT
+  PAYMENT_FAILURE_REMINDER
+  PLAN_CANCELED
   AUTH_OTP
   AUTH_RECOVERY
   ONBOARDING_WELCOME
@@ -107,6 +111,20 @@ enum AiKeyHealthStatus {
   FAILED
 }
 
+enum BillingSubscriptionStatus {
+  NONE
+  PENDING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum BillingEventProcessStatus {
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
 model Workspace {
   id                 String                       @id @default(cuid())
   name               String
@@ -117,7 +135,6 @@ model Workspace {
   slackBotToken      String?
   slackChannelId     String?
   slackTeamId        String?
-  stripeCustomerId   String?
   samlEnabled        Boolean                      @default(false)
   samlMetadataUrl    String?
   complianceMode     Boolean                      @default(false)
@@ -137,6 +154,8 @@ model Workspace {
   statusUpdates      StatusUpdate[]
   webhookIntegrations WorkspaceWebhookIntegration[]
   emailNotifications EmailNotificationLog[]
+  billing            WorkspaceBilling?
+  billingEvents      BillingEventLog[]
 }
 
 model User {
@@ -401,4 +420,60 @@ model WorkspaceWebhookIntegration {
 
   @@unique([workspaceId, type])
   @@index([workspaceId, isActive])
+}
+
+model WorkspaceBilling {
+  id                         String                    @id @default(cuid())
+  workspaceId                String                    @unique
+  workspace                  Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider                   String                    @default("DODO")
+  dodoCustomerId             String?
+  dodoSubscriptionId         String?
+  dodoProductId              String?
+  dodoCheckoutSessionId      String?
+  status                     BillingSubscriptionStatus @default(NONE)
+  currentPeriodStart         DateTime?
+  currentPeriodEnd           DateTime?
+  lastPaymentId              String?
+  lastPaymentAt              DateTime?
+  lastPaymentAmount          Int?
+  lastPaymentCurrency        String?
+  lastInvoiceUrl             String?
+  discountCode               String?
+  paymentFailedAt            DateTime?
+  failureReminderCount       Int                       @default(0)
+  lastFailureReminderAt      DateTime?
+  canceledAt                 DateTime?
+  cancelReason               String?
+  metadataJson               String?
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  events                     BillingEventLog[]
+
+  @@index([status, paymentFailedAt])
+  @@index([dodoCustomerId])
+  @@index([dodoSubscriptionId])
+}
+
+model BillingEventLog {
+  id                     String                    @id @default(cuid())
+  workspaceId            String
+  workspace              Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceBillingId     String?
+  workspaceBilling       WorkspaceBilling?         @relation(fields: [workspaceBillingId], references: [id], onDelete: SetNull)
+  eventId                String?                   @unique
+  eventType              String
+  providerEventCreatedAt DateTime?
+  paymentId              String?
+  subscriptionId         String?
+  amount                 Int?
+  currency               String?
+  processStatus          BillingEventProcessStatus @default(PROCESSED)
+  errorMessage           String?
+  payloadJson            String
+  createdAt              DateTime                  @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceBillingId, createdAt])
+  @@index([eventType])
 }

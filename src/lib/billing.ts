@@ -1,0 +1,534 @@
+import { BillingEventProcessStatus, BillingSubscriptionStatus, Prisma, Role } from "@prisma/client";
+import DodoPayments from "dodopayments";
+import { applyWorkspacePlan, normalizePlanTier, type PlanTier } from "@/lib/billing-plan";
+import { dodoClient, planForDodoProductId } from "@/lib/dodo";
+import {
+  sendPaymentConfirmationEmail,
+  sendPaymentFailureReminderEmail,
+  sendPaymentReceiptEmail,
+  sendPlanCanceledEmail,
+} from "@/lib/email";
+import { prisma } from "@/lib/prisma";
+
+type DodoWebhookEvent = DodoPayments.Webhooks.UnwrapWebhookEvent;
+
+type Recipient = {
+  email: string;
+  name: string;
+};
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+}
+
+function getString(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function parseIsoDate(value: unknown): Date | null {
+  const iso = getString(value);
+  if (!iso) {
+    return null;
+  }
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
+function statusFromSubscription(input: string | null | undefined): BillingSubscriptionStatus {
+  if (input === "active") return BillingSubscriptionStatus.ACTIVE;
+  if (input === "pending") return BillingSubscriptionStatus.PENDING;
+  if (input === "on_hold") return BillingSubscriptionStatus.PAST_DUE;
+  if (input === "cancelled" || input === "failed" || input === "expired") {
+    return BillingSubscriptionStatus.CANCELED;
+  }
+  return BillingSubscriptionStatus.NONE;
+}
+
+function hoursBetween(start: Date, end: Date): number {
+  return Math.floor((end.getTime() - start.getTime()) / 3_600_000);
+}
+
+async function workspaceRecipients(workspaceId: string): Promise<Recipient[]> {
+  const rows = await prisma.user.findMany({
+    where: {
+      workspaceId,
+      role: {
+        in: [Role.OWNER, Role.MANAGER],
+      },
+    },
+    select: {
+      email: true,
+      name: true,
+    },
+    orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+  });
+
+  return rows;
+}
+
+async function resolveWorkspaceId(event: DodoWebhookEvent): Promise<string | null> {
+  const data = asRecord(event.data);
+  const metadata = asRecord(data.metadata);
+
+  const metadataWorkspaceId = getString(metadata.workspaceId);
+  if (metadataWorkspaceId) {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: metadataWorkspaceId },
+      select: { id: true },
+    });
+    if (workspace) {
+      return workspace.id;
+    }
+  }
+
+  const subscriptionId = getString(data.subscription_id);
+  if (subscriptionId) {
+    const billing = await prisma.workspaceBilling.findFirst({
+      where: { dodoSubscriptionId: subscriptionId },
+      select: { workspaceId: true },
+    });
+    if (billing) {
+      return billing.workspaceId;
+    }
+  }
+
+  const customer = asRecord(data.customer);
+  const customerId = getString(customer.customer_id);
+  if (customerId) {
+    const billing = await prisma.workspaceBilling.findFirst({
+      where: { dodoCustomerId: customerId },
+      select: { workspaceId: true },
+    });
+    if (billing) {
+      return billing.workspaceId;
+    }
+  }
+
+  const checkoutSessionId = getString(data.checkout_session_id);
+  if (checkoutSessionId) {
+    const billing = await prisma.workspaceBilling.findFirst({
+      where: { dodoCheckoutSessionId: checkoutSessionId },
+      select: { workspaceId: true },
+    });
+    if (billing) {
+      return billing.workspaceId;
+    }
+  }
+
+  return null;
+}
+
+export async function processDodoWebhookEvent(input: {
+  event: DodoWebhookEvent;
+  eventId: string | null;
+}): Promise<{
+  status: "processed" | "ignored" | "duplicate";
+  workspaceId?: string;
+  reason?: string;
+}> {
+  const workspaceId = await resolveWorkspaceId(input.event);
+  if (!workspaceId) {
+    return { status: "ignored", reason: "workspace_not_resolved" };
+  }
+
+  const data = asRecord(input.event.data);
+  const metadata = asRecord(data.metadata);
+  const customer = asRecord(data.customer);
+
+  const customerId = getString(customer.customer_id);
+  const customerEmail = getString(customer.email);
+  const subscriptionId = getString(data.subscription_id) ?? getString(data.subscription?.toString());
+  const paymentId = getString(data.payment_id);
+  const amount = typeof data.total_amount === "number" ? data.total_amount : null;
+  const currency = getString(data.currency);
+  const invoiceUrl = getString(data.invoice_url);
+  const checkoutSessionId = getString(data.checkout_session_id);
+  const productId =
+    getString(data.product_id) ??
+    getString(data.product?.toString()) ??
+    getString(data.new_product_id);
+  const subscriptionStatus = getString(data.status);
+  const nextBillingDate = parseIsoDate(data.next_billing_date);
+  const previousBillingDate = parseIsoDate(data.previous_billing_date);
+  const eventCreatedAt = parseIsoDate(input.event.timestamp);
+  const planHint =
+    ((): PlanTier | null => {
+      const metadataPlan = getString(metadata.plan);
+      if (metadataPlan) {
+        return normalizePlanTier(metadataPlan);
+      }
+      return planForDodoProductId(productId);
+    })();
+
+  if (input.eventId) {
+    const existing = await prisma.billingEventLog.findUnique({
+      where: { eventId: input.eventId },
+      select: { id: true },
+    });
+    if (existing) {
+      return { status: "duplicate", workspaceId };
+    }
+  }
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: {
+      id: true,
+      name: true,
+      planTier: true,
+    },
+  });
+  if (!workspace) {
+    return { status: "ignored", reason: "workspace_missing" };
+  }
+
+  const recipients = await workspaceRecipients(workspaceId);
+  const currentPlanTier = normalizePlanTier(workspace.planTier);
+
+  const billing = await prisma.workspaceBilling.upsert({
+    where: { workspaceId },
+    create: { workspaceId },
+    update: {},
+  });
+
+  try {
+    await prisma.billingEventLog.create({
+      data: {
+        workspaceId,
+        workspaceBillingId: billing.id,
+        eventId: input.eventId,
+        eventType: input.event.type,
+        providerEventCreatedAt: eventCreatedAt,
+        paymentId,
+        subscriptionId,
+        amount,
+        currency,
+        processStatus: BillingEventProcessStatus.PROCESSED,
+        payloadJson: JSON.stringify(input.event),
+      },
+    });
+  } catch (error) {
+    if (
+      input.eventId &&
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { status: "duplicate", workspaceId };
+    }
+    throw error;
+  }
+
+  let shouldSendPaymentSuccessEmail = false;
+  let shouldSendReceiptEmail = false;
+  let shouldSendFailureReminder = false;
+  let shouldSendPlanCanceledEmail = false;
+
+  if (input.event.type === "payment.succeeded") {
+    shouldSendPaymentSuccessEmail = Boolean(customerEmail);
+    shouldSendReceiptEmail = Boolean(customerEmail && invoiceUrl);
+
+    await prisma.workspaceBilling.update({
+      where: { workspaceId },
+      data: {
+        dodoCustomerId: customerId ?? undefined,
+        dodoSubscriptionId: subscriptionId ?? undefined,
+        dodoProductId: productId ?? undefined,
+        dodoCheckoutSessionId: checkoutSessionId ?? undefined,
+        status: subscriptionId ? BillingSubscriptionStatus.ACTIVE : undefined,
+        lastPaymentId: paymentId ?? undefined,
+        lastPaymentAt: eventCreatedAt ?? new Date(),
+        lastPaymentAmount: amount ?? undefined,
+        lastPaymentCurrency: currency ?? undefined,
+        lastInvoiceUrl: invoiceUrl ?? undefined,
+        paymentFailedAt: null,
+        failureReminderCount: 0,
+        lastFailureReminderAt: null,
+        discountCode: getString(data.discount_code) ?? undefined,
+      },
+    });
+
+    if (planHint) {
+      await applyWorkspacePlan({
+        prisma,
+        workspaceId,
+        planTier: planHint,
+      });
+    }
+  }
+
+  if (input.event.type === "payment.failed") {
+    const now = new Date();
+    const failedAt = billing.paymentFailedAt ?? eventCreatedAt ?? now;
+    const shouldNotify =
+      !billing.lastFailureReminderAt ||
+      hoursBetween(billing.lastFailureReminderAt, now) >= 12;
+
+    await prisma.workspaceBilling.update({
+      where: { workspaceId },
+      data: {
+        dodoCustomerId: customerId ?? undefined,
+        dodoSubscriptionId: subscriptionId ?? undefined,
+        dodoProductId: productId ?? undefined,
+        dodoCheckoutSessionId: checkoutSessionId ?? undefined,
+        status: BillingSubscriptionStatus.PAST_DUE,
+        paymentFailedAt: failedAt,
+        failureReminderCount: shouldNotify ? Math.max(1, billing.failureReminderCount + 1) : billing.failureReminderCount,
+        lastFailureReminderAt: shouldNotify ? now : billing.lastFailureReminderAt,
+        lastPaymentId: paymentId ?? billing.lastPaymentId ?? undefined,
+      },
+    });
+
+    shouldSendFailureReminder = shouldNotify;
+  }
+
+  if (
+    input.event.type === "subscription.active" ||
+    input.event.type === "subscription.renewed" ||
+    input.event.type === "subscription.updated" ||
+    input.event.type === "subscription.plan_changed"
+  ) {
+    await prisma.workspaceBilling.update({
+      where: { workspaceId },
+      data: {
+        dodoCustomerId: customerId ?? undefined,
+        dodoSubscriptionId: subscriptionId ?? undefined,
+        dodoProductId: productId ?? undefined,
+        status:
+          statusFromSubscription(subscriptionStatus) === BillingSubscriptionStatus.NONE
+            ? BillingSubscriptionStatus.ACTIVE
+            : statusFromSubscription(subscriptionStatus),
+        currentPeriodStart: previousBillingDate ?? undefined,
+        currentPeriodEnd: nextBillingDate ?? undefined,
+        paymentFailedAt: null,
+        failureReminderCount: 0,
+        lastFailureReminderAt: null,
+        canceledAt: null,
+        cancelReason: null,
+      },
+    });
+
+    if (planHint) {
+      await applyWorkspacePlan({
+        prisma,
+        workspaceId,
+        planTier: planHint,
+      });
+    }
+  }
+
+  if (input.event.type === "subscription.on_hold") {
+    await prisma.workspaceBilling.update({
+      where: { workspaceId },
+      data: {
+        dodoCustomerId: customerId ?? undefined,
+        dodoSubscriptionId: subscriptionId ?? undefined,
+        dodoProductId: productId ?? undefined,
+        status: BillingSubscriptionStatus.PAST_DUE,
+        paymentFailedAt: billing.paymentFailedAt ?? eventCreatedAt ?? new Date(),
+      },
+    });
+  }
+
+  if (
+    input.event.type === "subscription.cancelled" ||
+    input.event.type === "subscription.expired" ||
+    input.event.type === "subscription.failed"
+  ) {
+    await prisma.workspaceBilling.update({
+      where: { workspaceId },
+      data: {
+        dodoCustomerId: customerId ?? undefined,
+        dodoSubscriptionId: subscriptionId ?? undefined,
+        dodoProductId: productId ?? undefined,
+        status: BillingSubscriptionStatus.CANCELED,
+        canceledAt: eventCreatedAt ?? new Date(),
+        cancelReason: input.event.type,
+      },
+    });
+
+    if (currentPlanTier !== "starter") {
+      await applyWorkspacePlan({
+        prisma,
+        workspaceId,
+        planTier: "starter",
+      });
+      shouldSendPlanCanceledEmail = true;
+    }
+  }
+
+  if (shouldSendPaymentSuccessEmail && customerEmail) {
+    await sendPaymentConfirmationEmail({
+      workspaceId,
+      toEmail: customerEmail,
+      workspaceName: workspace.name,
+      planTier: planHint ?? currentPlanTier,
+      amountCents: amount,
+      currency,
+    }).catch(() => null);
+  }
+
+  if (shouldSendReceiptEmail && customerEmail) {
+    await sendPaymentReceiptEmail({
+      workspaceId,
+      toEmail: customerEmail,
+      workspaceName: workspace.name,
+      invoiceUrl,
+    }).catch(() => null);
+  }
+
+  if (shouldSendFailureReminder && recipients.length > 0) {
+    for (const recipient of recipients) {
+      await sendPaymentFailureReminderEmail({
+        workspaceId,
+        toEmail: recipient.email,
+        workspaceName: workspace.name,
+        planTier: currentPlanTier,
+        hoursSinceFailure: 0,
+        cancelAfterHours: 48,
+      }).catch(() => null);
+    }
+  }
+
+  if (shouldSendPlanCanceledEmail && recipients.length > 0) {
+    for (const recipient of recipients) {
+      await sendPlanCanceledEmail({
+        workspaceId,
+        toEmail: recipient.email,
+        workspaceName: workspace.name,
+        previousPlanTier: currentPlanTier,
+        reason: "Subscription canceled by payment provider.",
+      }).catch(() => null);
+    }
+  }
+
+  return { status: "processed", workspaceId };
+}
+
+export async function processPastDueBillingAutomation(input?: {
+  now?: Date;
+}): Promise<{
+  checked: number;
+  remindersSent: number;
+  canceled: number;
+}> {
+  const now = input?.now ?? new Date();
+
+  const rows = await prisma.workspaceBilling.findMany({
+    where: {
+      status: BillingSubscriptionStatus.PAST_DUE,
+      paymentFailedAt: { not: null },
+    },
+    include: {
+      workspace: {
+        select: {
+          id: true,
+          name: true,
+          planTier: true,
+          users: {
+            where: {
+              role: { in: [Role.OWNER, Role.MANAGER] },
+            },
+            select: {
+              email: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  let remindersSent = 0;
+  let canceled = 0;
+
+  for (const row of rows) {
+    const failedAt = row.paymentFailedAt;
+    if (!failedAt) {
+      continue;
+    }
+
+    const elapsedHours = hoursBetween(failedAt, now);
+    const recipients = row.workspace.users.map((user) => user.email);
+    const currentPlanTier = normalizePlanTier(row.workspace.planTier);
+
+    if (elapsedHours >= 48) {
+      if (row.dodoSubscriptionId) {
+        await dodoClient()
+          .subscriptions.update(row.dodoSubscriptionId, {
+            cancel_at_next_billing_date: true,
+          })
+          .catch(() => null);
+      }
+
+      await applyWorkspacePlan({
+        prisma,
+        workspaceId: row.workspaceId,
+        planTier: "starter",
+      });
+
+      await prisma.workspaceBilling.update({
+        where: { workspaceId: row.workspaceId },
+        data: {
+          status: BillingSubscriptionStatus.CANCELED,
+          canceledAt: now,
+          cancelReason: "payment_failed_for_48_hours",
+        },
+      });
+
+      for (const email of recipients) {
+        await sendPlanCanceledEmail({
+          workspaceId: row.workspaceId,
+          toEmail: email,
+          workspaceName: row.workspace.name,
+          previousPlanTier: currentPlanTier,
+          reason: "Payment was not recovered within 48 hours after failure.",
+        }).catch(() => null);
+      }
+
+      canceled += 1;
+      continue;
+    }
+
+    if (
+      elapsedHours >= 24 &&
+      row.failureReminderCount < 2 &&
+      (!row.lastFailureReminderAt || hoursBetween(row.lastFailureReminderAt, now) >= 20)
+    ) {
+      for (const email of recipients) {
+        await sendPaymentFailureReminderEmail({
+          workspaceId: row.workspaceId,
+          toEmail: email,
+          workspaceName: row.workspace.name,
+          planTier: currentPlanTier,
+          hoursSinceFailure: elapsedHours,
+          cancelAfterHours: 48,
+        }).catch(() => null);
+      }
+
+      await prisma.workspaceBilling.update({
+        where: { workspaceId: row.workspaceId },
+        data: {
+          failureReminderCount: row.failureReminderCount + 1,
+          lastFailureReminderAt: now,
+        },
+      });
+
+      remindersSent += recipients.length;
+    }
+  }
+
+  return {
+    checked: rows.length,
+    remindersSent,
+    canceled,
+  };
+}

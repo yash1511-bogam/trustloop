@@ -360,3 +360,120 @@ export async function sendAiKeyHealthAlertEmail(input: {
     ].join("\n"),
   });
 }
+
+export async function sendPaymentConfirmationEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  planTier: string;
+  amountCents?: number | null;
+  currency?: string | null;
+}): Promise<LoggedEmailResult> {
+  const amountText =
+    typeof input.amountCents === "number" && input.amountCents > 0
+      ? `${(input.amountCents / 100).toFixed(2)} ${input.currency ?? "USD"}`
+      : "as invoiced";
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.PAYMENT_CONFIRMATION,
+    toEmail: input.toEmail,
+    subject: `TrustLoop payment confirmed (${input.planTier})`,
+    html: [
+      `<p>Your TrustLoop payment for <strong>${input.workspaceName}</strong> was successful.</p>`,
+      `<p><strong>Plan:</strong> ${input.planTier}</p>`,
+      `<p><strong>Amount:</strong> ${amountText}</p>`,
+      "<p>Your subscription remains active.</p>",
+    ].join(""),
+    text: [
+      `Your TrustLoop payment for ${input.workspaceName} was successful.`,
+      `Plan: ${input.planTier}`,
+      `Amount: ${amountText}`,
+      "Your subscription remains active.",
+    ].join("\n"),
+  });
+}
+
+export async function sendPaymentReceiptEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  invoiceUrl?: string | null;
+}): Promise<LoggedEmailResult> {
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.PAYMENT_RECEIPT,
+    toEmail: input.toEmail,
+    subject: `TrustLoop receipt for ${input.workspaceName}`,
+    html: [
+      `<p>Your payment receipt for <strong>${input.workspaceName}</strong> is ready.</p>`,
+      input.invoiceUrl
+        ? `<p><a href="${input.invoiceUrl}">Download invoice/receipt</a></p>`
+        : "<p>Invoice URL is not available in this event. You can access billing documents from your payment provider portal.</p>",
+    ].join(""),
+    text: [
+      `Your payment receipt for ${input.workspaceName} is ready.`,
+      input.invoiceUrl
+        ? `Download invoice/receipt: ${input.invoiceUrl}`
+        : "Invoice URL is not available in this event.",
+    ].join("\n"),
+  });
+}
+
+export async function sendPaymentFailureReminderEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  planTier: string;
+  hoursSinceFailure: number;
+  cancelAfterHours: number;
+}): Promise<LoggedEmailResult> {
+  const remaining = Math.max(0, input.cancelAfterHours - input.hoursSinceFailure);
+  const settingsUrl = `${appBaseUrl()}/settings`;
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.PAYMENT_FAILURE_REMINDER,
+    toEmail: input.toEmail,
+    subject: `Payment failed for ${input.workspaceName} (${input.planTier})`,
+    html: [
+      `<p>We couldn't process the latest payment for <strong>${input.workspaceName}</strong> on plan <strong>${input.planTier}</strong>.</p>`,
+      `<p>If billing is not fixed within ${input.cancelAfterHours} hours of failure, TrustLoop will downgrade this workspace to Starter automatically.</p>`,
+      `<p><strong>Time remaining:</strong> approximately ${remaining} hours.</p>`,
+      `<p><a href="${settingsUrl}">Open billing settings</a></p>`,
+    ].join(""),
+    text: [
+      `We couldn't process the latest payment for ${input.workspaceName} on ${input.planTier}.`,
+      `If billing is not fixed within ${input.cancelAfterHours} hours, the workspace will downgrade to Starter automatically.`,
+      `Time remaining: approximately ${remaining} hours.`,
+      `Open billing settings: ${settingsUrl}`,
+    ].join("\n"),
+  });
+}
+
+export async function sendPlanCanceledEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  previousPlanTier: string;
+  reason: string;
+}): Promise<LoggedEmailResult> {
+  const settingsUrl = `${appBaseUrl()}/settings`;
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.PLAN_CANCELED,
+    toEmail: input.toEmail,
+    subject: `TrustLoop plan downgraded to Starter`,
+    html: [
+      `<p><strong>${input.workspaceName}</strong> has been downgraded from <strong>${input.previousPlanTier}</strong> to <strong>starter</strong>.</p>`,
+      `<p><strong>Reason:</strong> ${input.reason}</p>`,
+      `<p><a href="${settingsUrl}">Open billing settings</a></p>`,
+    ].join(""),
+    text: [
+      `${input.workspaceName} has been downgraded from ${input.previousPlanTier} to starter.`,
+      `Reason: ${input.reason}`,
+      `Open billing settings: ${settingsUrl}`,
+    ].join("\n"),
+  });
+}
