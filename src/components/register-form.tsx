@@ -16,10 +16,8 @@ export function RegisterForm({
   inviteToken,
 }: Props) {
   const router = useRouter();
-  const [workspaceName, setWorkspaceName] = useState(
-    initialWorkspaceName ?? "Acme AI Apps",
-  );
-  const [name, setName] = useState("Team Lead");
+  const [workspaceName, setWorkspaceName] = useState(initialWorkspaceName ?? "");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState(initialEmail ?? "");
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
@@ -111,12 +109,13 @@ export function RegisterForm({
 
       <form className="space-y-4" onSubmit={startRegistration}>
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="workspace-name">
+          <label className="sr-only" htmlFor="workspace-name">
             Workspace
           </label>
           <input
             id="workspace-name"
             className="input"
+            placeholder="Workspace name"
             value={workspaceName}
             onChange={(event) => setWorkspaceName(event.target.value)}
             disabled={Boolean(inviteToken)}
@@ -125,12 +124,13 @@ export function RegisterForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="name">
+          <label className="sr-only" htmlFor="name">
             Your name
           </label>
           <input
             id="name"
             className="input"
+            placeholder="Your name"
             value={name}
             onChange={(event) => setName(event.target.value)}
             required
@@ -138,13 +138,14 @@ export function RegisterForm({
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="email">
+          <label className="sr-only" htmlFor="email">
             Work email
           </label>
           <input
             id="email"
             className="input"
             type="email"
+            placeholder="Work email"
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -159,14 +160,15 @@ export function RegisterForm({
       </form>
 
       {methodId ? (
-        <form className="space-y-4" onSubmit={verifyRegistration}>
+        <form className="space-y-4 mt-6" onSubmit={verifyRegistration}>
           <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor="code">
+            <label className="sr-only" htmlFor="code">
               Verification code
             </label>
             <input
               id="code"
-              className="input"
+              className="input text-center tracking-widest text-lg"
+              placeholder="Verification code"
               value={code}
               onChange={(event) => setCode(event.target.value)}
               inputMode="numeric"
@@ -183,8 +185,16 @@ export function RegisterForm({
         </form>
       ) : null}
 
-      {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {message ? (
+        <p className="rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-3 text-sm text-emerald-400">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-400">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

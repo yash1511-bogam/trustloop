@@ -3,6 +3,9 @@ import { z } from "zod";
 import { badRequest } from "@/lib/http";
 import { buildOAuthStartUrl, OAuthProvider } from "@/lib/stytch";
 
+const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
+const OAUTH_CONTEXT_MAX_AGE_SECONDS = 10 * 60;
+
 const providerSchema = z.enum(["google", "github"]);
 const querySchema = z.object({
   intent: z.enum(["login", "register"]).optional(),
@@ -12,27 +15,42 @@ const querySchema = z.object({
 
 function callbackUrl(input: {
   request: NextRequest;
-  provider: OAuthProvider;
-  intent: "login" | "register";
-  workspaceName?: string;
-  inviteToken?: string;
 }): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? input.request.nextUrl.origin;
   const base = appUrl.replace(/\/$/, "");
+  return `${base}/api/auth/oauth/callback`;
+}
 
-  const params = new URLSearchParams({
-    provider: input.provider,
-    intent: input.intent,
+function setOAuthContextCookie(
+  response: NextResponse,
+  context: {
+    provider: OAuthProvider;
+    intent: "login" | "register";
+    workspaceName?: string;
+    inviteToken?: string;
+  },
+): void {
+  response.cookies.set({
+    name: OAUTH_CONTEXT_COOKIE_NAME,
+    value: encodeURIComponent(JSON.stringify(context)),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: OAUTH_CONTEXT_MAX_AGE_SECONDS,
+    path: "/",
   });
+}
 
-  if (input.workspaceName?.trim()) {
-    params.set("workspaceName", input.workspaceName.trim());
-  }
-  if (input.inviteToken) {
-    params.set("inviteToken", input.inviteToken);
-  }
-
-  return `${base}/api/auth/oauth/callback?${params.toString()}`;
+function clearOAuthContextCookie(response: NextResponse): void {
+  response.cookies.set({
+    name: OAUTH_CONTEXT_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    path: "/",
+  });
 }
 
 export async function GET(
@@ -54,10 +72,6 @@ export async function GET(
   const intent = parsedQuery.data.intent ?? "login";
   const target = callbackUrl({
     request,
-    provider: parsedProvider.data,
-    intent,
-    workspaceName: parsedQuery.data.workspaceName,
-    inviteToken: parsedQuery.data.inviteToken,
   });
 
   try {
@@ -66,12 +80,21 @@ export async function GET(
       loginRedirectUrl: target,
       signupRedirectUrl: target,
     });
-    return NextResponse.redirect(startUrl);
+    const response = NextResponse.redirect(startUrl);
+    setOAuthContextCookie(response, {
+      provider: parsedProvider.data,
+      intent,
+      workspaceName: parsedQuery.data.workspaceName?.trim(),
+      inviteToken: parsedQuery.data.inviteToken,
+    });
+    return response;
   } catch {
     const fallback =
       intent === "register"
         ? "/register?error=oauth_not_configured"
         : "/login?error=oauth_not_configured";
-    return NextResponse.redirect(new URL(fallback, request.nextUrl.origin));
+    const response = NextResponse.redirect(new URL(fallback, request.nextUrl.origin));
+    clearOAuthContextCookie(response);
+    return response;
   }
 }

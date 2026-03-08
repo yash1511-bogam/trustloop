@@ -59,6 +59,12 @@ Copy `.env.example` to `.env` and fill values.
 - `STYTCH_ENV`
 - `STYTCH_OTP_EXPIRATION_MINUTES`
 - `STYTCH_SESSION_DURATION_MINUTES`
+- `STYTCH_OAUTH_START_MODE` (`b2c` default, or `b2b_discovery`)
+- Optional direct start URL overrides:
+  - `STYTCH_OAUTH_GOOGLE_START_URL`
+  - `STYTCH_OAUTH_GITHUB_START_URL`
+- Optional for B2B discovery:
+  - `STYTCH_B2B_DISCOVERY_ORGANIZATION_ID`
 
 ### AI + notifications
 - `RESEND_API_KEY`

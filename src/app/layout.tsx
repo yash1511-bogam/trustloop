@@ -20,7 +20,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#000000",
+  themeColor: "#020203",
 };
 
 export const metadata: Metadata = {
@@ -85,8 +85,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${display.variable} ${mono.variable}`}>
+    <html lang="en" className="bg-[#020203]">
+      <body className={`${display.variable} ${mono.variable} bg-[#020203] text-white antialiased selection:bg-cyan-500/30`}>
         {children}
         <Script id="sw-register" strategy="afterInteractive">
           {`if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => null)); }`}

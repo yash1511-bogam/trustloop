@@ -6,7 +6,7 @@ import { OAuthButtons } from "@/components/oauth-buttons";
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("demo@trustloop.local");
+  const [email, setEmail] = useState("");
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -87,12 +87,14 @@ export function LoginForm() {
 
       <form className="space-y-4" onSubmit={startChallenge}>
         <div>
-          <label className="mb-1 block text-sm font-medium" htmlFor="email">
+          <label className="sr-only" htmlFor="email">
             Work email
           </label>
           <input
             id="email"
             className="input"
+            type="email"
+            placeholder="Work email"
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -106,14 +108,15 @@ export function LoginForm() {
       </form>
 
       {methodId ? (
-        <form className="space-y-4" onSubmit={verifyChallenge}>
+        <form className="space-y-4 mt-6" onSubmit={verifyChallenge}>
           <div>
-            <label className="mb-1 block text-sm font-medium" htmlFor="code">
+            <label className="sr-only" htmlFor="code">
               Verification code
             </label>
             <input
               id="code"
-              className="input"
+              className="input text-center tracking-widest text-lg"
+              placeholder="Verification code"
               value={code}
               onChange={(event) => setCode(event.target.value)}
               inputMode="numeric"
@@ -130,8 +133,16 @@ export function LoginForm() {
         </form>
       ) : null}
 
-      {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {message ? (
+        <p className="rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-3 text-sm text-emerald-400">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-400">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

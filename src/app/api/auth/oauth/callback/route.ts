@@ -6,8 +6,17 @@ import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { authenticateOAuthToken } from "@/lib/stytch";
 
+const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
+
 const callbackSchema = z.object({
   token: z.string().min(8),
+  provider: z.enum(["google", "github"]).optional(),
+  intent: z.enum(["login", "register"]).optional(),
+  workspaceName: z.string().min(2).max(80).optional(),
+  inviteToken: z.string().uuid().optional(),
+});
+
+const oauthContextSchema = z.object({
   provider: z.enum(["google", "github"]).optional(),
   intent: z.enum(["login", "register"]).optional(),
   workspaceName: z.string().min(2).max(80).optional(),
@@ -35,6 +44,45 @@ function buildRedirect(
   return NextResponse.redirect(url);
 }
 
+function clearOAuthContextCookie(response: NextResponse): void {
+  response.cookies.set({
+    name: OAUTH_CONTEXT_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    path: "/",
+  });
+}
+
+function buildRedirectWithClear(
+  request: NextRequest,
+  path: string,
+  params?: Record<string, string | undefined>,
+): NextResponse {
+  const response = buildRedirect(request, path, params);
+  clearOAuthContextCookie(response);
+  return response;
+}
+
+function readOAuthContextCookie(request: NextRequest): z.infer<typeof oauthContextSchema> | null {
+  const raw = request.cookies.get(OAUTH_CONTEXT_COOKIE_NAME)?.value;
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = oauthContextSchema.safeParse(JSON.parse(decodeURIComponent(raw)));
+    if (!parsed.success) {
+      return null;
+    }
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
 function defaultWorkspaceName(name: string | null, email: string): string {
   if (name?.trim()) {
     return `${name.trim().slice(0, 48)} Workspace`;
@@ -47,15 +95,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const searchParams = Object.fromEntries(request.nextUrl.searchParams.entries());
   const parsed = callbackSchema.safeParse(searchParams);
   if (!parsed.success) {
-    return buildRedirect(request, "/login", { error: "oauth_invalid_callback" });
+    return buildRedirectWithClear(request, "/login", { error: "oauth_invalid_callback" });
   }
 
-  const intent = parsed.data.intent ?? "login";
+  const oauthContext = readOAuthContextCookie(request);
+  const intent = oauthContext?.intent ?? parsed.data.intent ?? "login";
+  const inviteToken = oauthContext?.inviteToken ?? parsed.data.inviteToken;
+  const workspaceName = oauthContext?.workspaceName ?? parsed.data.workspaceName;
 
   try {
     const authResult = await authenticateOAuthToken(parsed.data.token);
     if (!authResult.email) {
-      return buildRedirect(request, "/register", {
+      const fallbackPath = intent === "register" ? "/register" : "/login";
+      return buildRedirectWithClear(request, fallbackPath, {
         error: "oauth_email_missing",
       });
     }
@@ -85,21 +137,22 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       const response = buildRedirect(request, "/dashboard");
       setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+      clearOAuthContextCookie(response);
       return response;
     }
 
     if (intent !== "register") {
-      return buildRedirect(request, "/register", {
+      return buildRedirectWithClear(request, "/register", {
         email,
         error: "oauth_no_workspace_account",
       });
     }
 
     const created = await prisma.$transaction(async (tx) => {
-      if (parsed.data.inviteToken) {
+      if (inviteToken) {
         const invite = await tx.workspaceInvite.findFirst({
           where: {
-            token: parsed.data.inviteToken,
+            token: inviteToken,
             usedAt: null,
             expiresAt: { gt: new Date() },
           },
@@ -139,9 +192,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       const workspace = await tx.workspace.create({
         data: {
-          name:
-            parsed.data.workspaceName?.trim() ||
-            defaultWorkspaceName(authResult.name, email),
+          name: workspaceName?.trim() || defaultWorkspaceName(authResult.name, email),
         },
       });
 
@@ -210,14 +261,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const response = buildRedirect(request, "/dashboard");
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+    clearOAuthContextCookie(response);
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "oauth_failed";
     const errorCode =
-      message === "invite_invalid" || message === "invite_email_mismatch"
+      message === "invite_invalid" ||
+      message === "invite_email_mismatch" ||
+      message === "oauth_no_discovered_organization" ||
+      message === "oauth_mfa_required"
         ? message
         : "oauth_failed";
-    return buildRedirect(request, "/register", {
+    const fallbackPath = intent === "register" ? "/register" : "/login";
+    return buildRedirectWithClear(request, fallbackPath, {
       error: errorCode,
     });
   }

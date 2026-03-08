@@ -12,6 +12,10 @@ const oauthErrorMessages: Record<string, string> = {
     "Your OAuth account did not provide a verified email. Use OTP registration instead.",
   oauth_no_workspace_account:
     "No existing workspace account matched that OAuth identity. Continue creating a workspace below.",
+  oauth_no_discovered_organization:
+    "No organization was discovered for this account in Stytch. Continue with OTP registration.",
+  oauth_mfa_required:
+    "Your Stytch organization requires additional verification. Complete MFA in Stytch and retry.",
   invite_invalid: "Invite is invalid or expired.",
   invite_email_mismatch: "Invite email does not match the OAuth account.",
   oauth_failed: "OAuth registration failed. Try again or use email OTP.",
@@ -51,45 +55,51 @@ export default async function RegisterPage({
   const inviteEmail = invite?.email ?? params.email ?? undefined;
 
   return (
-    <main className="container-shell fade-in py-12 md:py-16">
-      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.94fr_1.06fr]">
-        <section className="surface p-8 md:p-10">
+    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center justify-center px-6 py-12 md:py-16">
+      <div className="mx-auto grid w-full max-w-[1000px] gap-8 md:grid-cols-2">
+        <section className="flex flex-col justify-center rounded-2xl border border-neutral-800 bg-neutral-900/30 p-8 backdrop-blur-sm lg:p-12">
           <p className="kicker">Create workspace</p>
-          <h1 className="mt-2 text-3xl font-bold text-white">Launch TrustLoop quickly</h1>
-          <p className="mt-2 text-sm text-neutral-400">
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl">Launch TrustLoop quickly</h1>
+          <p className="mt-4 text-base leading-relaxed text-neutral-400">
             Provision a workspace, verify team identity, and start structured AI incident response in minutes.
           </p>
 
-          <div className="mt-6 space-y-4">
-            <div className="flex items-start gap-2 text-sm text-neutral-400">
-              <Building2 className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Workspace-level controls, quotas, and team roles from day one
+          <div className="mt-10 space-y-6">
+            <div className="flex items-start gap-4 text-sm text-neutral-400">
+              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
+                <Building2 className="h-3 w-3" />
+              </span>
+              <span>Workspace-level controls, quotas, and team roles from day one</span>
             </div>
-            <div className="flex items-start gap-2 text-sm text-neutral-400">
-              <Bot className="mt-0.5 h-4 w-4 text-cyan-700" />
-              BYOK routing for OpenAI, Gemini, and Anthropic workflows
+            <div className="flex items-start gap-4 text-sm text-neutral-400">
+              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
+                <Bot className="h-3 w-3" />
+              </span>
+              <span>BYOK routing for OpenAI, Gemini, and Anthropic workflows</span>
             </div>
-            <div className="flex items-start gap-2 text-sm text-neutral-400">
-              <Sparkles className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Executive trends, exports, and automation history included
+            <div className="flex items-start gap-4 text-sm text-neutral-400">
+              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
+                <Sparkles className="h-3 w-3" />
+              </span>
+              <span>Executive trends, exports, and automation history included</span>
             </div>
           </div>
         </section>
 
-        <section className="surface p-8">
-          <p className="kicker mb-2">New workspace</p>
-          <h2 className="mb-1 text-3xl font-semibold">Create TrustLoop account</h2>
-          <p className="mb-6 text-sm text-neutral-400">
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 lg:p-12 shadow-2xl">
+          <p className="kicker mb-3">New workspace</p>
+          <h2 className="mb-2 text-3xl font-bold text-white">Create TrustLoop account</h2>
+          <p className="mb-8 text-sm text-neutral-400">
             Start with OAuth or verify ownership with one-time code.
           </p>
 
           {inviteToken && !invite ? (
-            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p className="mb-6 rounded-lg border border-red-900/50 bg-red-950/20 p-4 text-sm text-red-400">
               Invite link is invalid or expired. Request a new invite from your workspace owner.
             </p>
           ) : null}
           {errorMessage ? (
-            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p className="mb-6 rounded-lg border border-red-900/50 bg-red-950/20 p-4 text-sm text-red-400">
               {errorMessage}
             </p>
           ) : null}
@@ -100,9 +110,9 @@ export default async function RegisterPage({
             inviteToken={invite?.token}
           />
 
-          <p className="mt-6 text-sm text-neutral-400">
+          <p className="mt-8 text-sm text-neutral-400">
             Already have an account?{" "}
-            <Link className="font-semibold text-cyan-700 underline" href="/login">
+            <Link className="font-semibold text-white hover:underline" href="/login">
               Sign in
             </Link>
           </p>
