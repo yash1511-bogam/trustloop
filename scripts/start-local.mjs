@@ -13,8 +13,10 @@ const rootDir = process.cwd();
 const envPath = path.join(rootDir, ".env");
 const envExamplePath = path.join(rootDir, ".env.example");
 const setupOnly = process.argv.includes("--setup-only");
+const emptyDbFirst =
+  process.argv.includes("--empty-db-first") || process.env.TRUSTLOOP_EMPTY_DB_FIRST === "1";
 
-const hardRequiredEnv = ["DATABASE_URL", "REDIS_URL", "NEXT_PUBLIC_APP_URL"];
+const hardRequiredEnv = ["REDIS_URL", "NEXT_PUBLIC_APP_URL"];
 const warnOnlyEnv = [
   "STYTCH_PROJECT_ID",
   "STYTCH_SECRET",
@@ -28,6 +30,18 @@ const warnOnlyEnv = [
   "DODO_PRODUCT_ID_ENTERPRISE",
   "AWS_ENDPOINT_URL",
 ];
+
+const dbEnvAliases = {
+  host: ["DATABASE_HOST", "DB_HOST", "PGHOST", "POSTGRES_HOST"],
+  port: ["DATABASE_PORT", "DB_PORT", "PGPORT", "POSTGRES_PORT"],
+  user: ["DATABASE_USER", "DB_USER", "PGUSER", "POSTGRES_USER"],
+  password: ["DATABASE_PASSWORD", "DB_PASSWORD", "PGPASSWORD", "POSTGRES_PASSWORD"],
+  name: ["DATABASE_NAME", "DB_NAME", "PGDATABASE", "POSTGRES_DB"],
+  schema: ["DATABASE_SCHEMA", "DB_SCHEMA"],
+  sslmode: ["DATABASE_SSLMODE", "PGSSLMODE"],
+};
+
+const deprecatedSslModes = new Set(["prefer", "require", "verify-ca"]);
 
 function parseEnv(content) {
   const map = new Map();
@@ -53,6 +67,129 @@ function parseEnv(content) {
   }
 
   return map;
+}
+
+function firstEnvValue(envMap, keys) {
+  for (const key of keys) {
+    const value = envMap.get(key);
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function getDbPartsFromEnv(envMap) {
+  return {
+    host: firstEnvValue(envMap, dbEnvAliases.host),
+    port: firstEnvValue(envMap, dbEnvAliases.port) || "5432",
+    user: firstEnvValue(envMap, dbEnvAliases.user),
+    password: firstEnvValue(envMap, dbEnvAliases.password),
+    name: firstEnvValue(envMap, dbEnvAliases.name),
+    schema: firstEnvValue(envMap, dbEnvAliases.schema),
+    sslmode: firstEnvValue(envMap, dbEnvAliases.sslmode),
+  };
+}
+
+function getMissingDbParts(parts) {
+  const missing = [];
+
+  if (!parts.host) missing.push("DATABASE_HOST (or DB_HOST/PGHOST/POSTGRES_HOST)");
+  if (!parts.user) missing.push("DATABASE_USER (or DB_USER/PGUSER/POSTGRES_USER)");
+  if (!parts.password) missing.push("DATABASE_PASSWORD (or DB_PASSWORD/PGPASSWORD/POSTGRES_PASSWORD)");
+  if (!parts.name) missing.push("DATABASE_NAME (or DB_NAME/PGDATABASE/POSTGRES_DB)");
+
+  return missing;
+}
+
+function buildDatabaseUrlFromParts(parts) {
+  const missing = getMissingDbParts(parts);
+  if (missing.length > 0) {
+    return { ok: false, missing };
+  }
+
+  const auth = `${encodeURIComponent(parts.user)}:${encodeURIComponent(parts.password)}`;
+  const dbName = encodeURIComponent(parts.name);
+  const port = parts.port || "5432";
+  const params = new URLSearchParams();
+
+  if (parts.schema) {
+    params.set("schema", parts.schema);
+  }
+
+  if (parts.sslmode) {
+    const normalizedSslmode = parts.sslmode.toLowerCase();
+    params.set(
+      "sslmode",
+      deprecatedSslModes.has(normalizedSslmode) ? "verify-full" : normalizedSslmode,
+    );
+  }
+
+  const query = params.toString();
+  const url = `postgresql://${auth}@${parts.host}:${port}/${dbName}${query ? `?${query}` : ""}`;
+
+  return { ok: true, url };
+}
+
+function normalizeDatabaseUrlForProject(databaseUrl) {
+  if (!databaseUrl) {
+    return { url: databaseUrl, changed: false, note: "" };
+  }
+
+  try {
+    const url = new URL(databaseUrl);
+    const currentSslMode = url.searchParams.get("sslmode");
+    const normalizedCurrentSslMode = currentSslMode?.toLowerCase();
+    const localDb = isLocalDatabaseUrl(databaseUrl);
+
+    if (localDb && currentSslMode) {
+      url.searchParams.delete("sslmode");
+      return {
+        url: url.toString(),
+        changed: true,
+        note: "Removed sslmode from local DATABASE_URL.",
+      };
+    }
+
+    if (!localDb && normalizedCurrentSslMode && deprecatedSslModes.has(normalizedCurrentSslMode)) {
+      url.searchParams.set("sslmode", "verify-full");
+      return {
+        url: url.toString(),
+        changed: true,
+        note: `Updated DATABASE_URL sslmode=${normalizedCurrentSslMode} to sslmode=verify-full.`,
+      };
+    }
+
+    return { url: databaseUrl, changed: false, note: "" };
+  } catch {
+    return { url: databaseUrl, changed: false, note: "" };
+  }
+}
+
+function normalizePgSslModeForProject(databaseUrl, envMap) {
+  const currentPgSslMode = (envMap.get("PGSSLMODE") ?? process.env.PGSSLMODE ?? "").toLowerCase();
+  if (!currentPgSslMode) {
+    return { changed: false, note: "" };
+  }
+
+  const localDb = isLocalDatabaseUrl(databaseUrl);
+  if (localDb) {
+    delete process.env.PGSSLMODE;
+    envMap.delete("PGSSLMODE");
+    return { changed: true, note: "Removed PGSSLMODE for local Postgres connection." };
+  }
+
+  if (deprecatedSslModes.has(currentPgSslMode)) {
+    process.env.PGSSLMODE = "verify-full";
+    envMap.set("PGSSLMODE", "verify-full");
+    return {
+      changed: true,
+      note: `Updated PGSSLMODE=${currentPgSslMode} to PGSSLMODE=verify-full.`,
+    };
+  }
+
+  return { changed: false, note: "" };
 }
 
 function isPlaceholder(value) {
@@ -143,29 +280,40 @@ function listMigrationDirectories() {
     .sort();
 }
 
-async function waitForCondition(title, checkFn, errorMessage) {
+async function waitForCondition(title, checkFn, errorMessage, options = {}) {
+  const { attempts = 60, delayMs = 2000, exitOnFailure = true } = options;
   const spinner = ora({ text: title, color: "cyan" }).start();
 
-  for (let attempt = 1; attempt <= 60; attempt += 1) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       const ready = await checkFn();
       if (ready) {
         spinner.succeed(chalk.green(title));
-        return;
+        return true;
       }
     } catch {}
 
-    await sleep(2000);
+    await sleep(delayMs);
   }
 
   spinner.fail(chalk.red(title));
-  console.error(chalk.red(errorMessage));
-  process.exit(1);
+  if (exitOnFailure) {
+    console.error(chalk.red(errorMessage));
+    process.exit(1);
+  }
+
+  return false;
 }
 
-async function waitForPostgres(databaseUrl) {
-  await waitForCondition(
-    "Waiting for Postgres readiness",
+async function waitForPostgres(databaseUrl, options = {}) {
+  const {
+    title = "Waiting for Postgres readiness",
+    errorMessage = "Postgres did not become ready in time for DATABASE_URL.",
+    exitOnFailure = true,
+  } = options;
+
+  return waitForCondition(
+    title,
     async () => {
       const { Client } = await import("pg");
       const client = new Client({
@@ -182,7 +330,8 @@ async function waitForPostgres(databaseUrl) {
         await client.end().catch(() => {});
       }
     },
-    "Postgres did not become ready in time for DATABASE_URL.",
+    errorMessage,
+    { exitOnFailure },
   );
 }
 
@@ -222,6 +371,59 @@ async function waitForLocalstack(awsEndpointUrl) {
     },
     "LocalStack did not become ready in time.",
   );
+}
+
+async function hasRequiredAppTables(databaseUrl) {
+  const { Client } = await import("pg");
+  const client = new Client({
+    connectionString: databaseUrl,
+    connectionTimeoutMillis: 5000,
+    query_timeout: 5000,
+  });
+
+  try {
+    await client.connect();
+    const { rowCount } = await client.query(
+      `
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+          AND table_name IN ('User', 'Workspace', 'Incident')
+        LIMIT 1
+      `,
+    );
+
+    return (rowCount ?? 0) > 0;
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
+async function ensureAppSchemaExists(databaseUrl) {
+  const hasTables = await hasRequiredAppTables(databaseUrl);
+  if (hasTables) {
+    return;
+  }
+
+  console.log(
+    chalk.yellow(
+      "TrustLoop tables were not found after migrations. Creating schema with Prisma db push.",
+    ),
+  );
+  await runStep("Creating app schema (prisma db push)", "pnpm", [
+    "exec",
+    "prisma",
+    "db",
+    "push",
+    "--skip-generate",
+    "--accept-data-loss",
+  ]);
+
+  const hasTablesAfterPush = await hasRequiredAppTables(databaseUrl);
+  if (!hasTablesAfterPush) {
+    console.error(chalk.red("Schema creation did not produce required TrustLoop tables."));
+    process.exit(1);
+  }
 }
 
 async function runStep(title, command, args, options = {}) {
@@ -309,10 +511,29 @@ function validateEnv(envMap) {
     return !value;
   });
 
-  if (missing.length > 0) {
+  const databaseUrl = envMap.get("DATABASE_URL");
+  const dbPartsResult = buildDatabaseUrlFromParts(getDbPartsFromEnv(envMap));
+  const hasDatabaseConfig = Boolean(databaseUrl) || dbPartsResult.ok;
+
+  if (missing.length > 0 || !hasDatabaseConfig) {
+    const lines = [];
+
+    if (missing.length > 0) {
+      lines.push(chalk.bold("Missing required .env keys:"), ...missing);
+    }
+
+    if (!hasDatabaseConfig) {
+      if (lines.length > 0) lines.push("");
+      lines.push(
+        chalk.bold("Database config is incomplete:"),
+        "Set DATABASE_URL or all of these keys:",
+        ...dbPartsResult.missing,
+      );
+    }
+
     console.error(
       boxen(
-        `${chalk.bold("Missing required .env keys:")}\n${missing.join("\n")}`,
+        lines.join("\n"),
         {
           borderColor: "red",
           borderStyle: "round",
@@ -399,7 +620,20 @@ async function main() {
   applyEnvMapToProcess(fileEnvMap);
   const effectiveEnvMap = buildEffectiveEnvMap(fileEnvMap);
   validateEnv(effectiveEnvMap);
-  const databaseUrl = effectiveEnvMap.get("DATABASE_URL");
+  let databaseUrl = effectiveEnvMap.get("DATABASE_URL");
+  const normalizedDbUrlResult = normalizeDatabaseUrlForProject(databaseUrl);
+  if (normalizedDbUrlResult.changed) {
+    databaseUrl = normalizedDbUrlResult.url;
+    process.env.DATABASE_URL = databaseUrl;
+    effectiveEnvMap.set("DATABASE_URL", databaseUrl);
+    console.log(chalk.cyan(normalizedDbUrlResult.note));
+  }
+
+  const pgSslModeResult = normalizePgSslModeForProject(databaseUrl, effectiveEnvMap);
+  if (pgSslModeResult.changed) {
+    console.log(chalk.cyan(pgSslModeResult.note));
+  }
+
   const redisUrl = effectiveEnvMap.get("REDIS_URL");
   const awsEndpointUrl = effectiveEnvMap.get("AWS_ENDPOINT_URL");
   const bootLocalstackDocker = shouldBootLocalstackDocker(awsEndpointUrl);
@@ -419,7 +653,59 @@ async function main() {
     console.log(chalk.yellow("Skipping LocalStack Docker startup because AWS_ENDPOINT_URL is not local."));
   }
 
-  await waitForPostgres(databaseUrl);
+  let postgresReady = await waitForPostgres(databaseUrl, { exitOnFailure: false });
+  if (!postgresReady) {
+    const dbPartsResult = buildDatabaseUrlFromParts(getDbPartsFromEnv(effectiveEnvMap));
+
+    if (!dbPartsResult.ok) {
+      console.error(
+        boxen(
+          `${chalk.bold("Postgres readiness failed for DATABASE_URL.")}\n` +
+            `Fallback via DB host/user/password/name keys is missing:\n${dbPartsResult.missing.join("\n")}`,
+          {
+            borderColor: "red",
+            borderStyle: "round",
+            padding: 1,
+            margin: { top: 1, bottom: 1 },
+          },
+        ),
+      );
+      process.exit(1);
+    }
+
+    if (dbPartsResult.url === databaseUrl) {
+      console.error(chalk.red("Postgres did not become ready using DATABASE_URL."));
+      process.exit(1);
+    }
+
+    console.log(
+      chalk.yellow("DATABASE_URL was unreachable. Retrying Postgres with DB host/user/password/name from .env."),
+    );
+    const normalizedFallbackDbUrl = normalizeDatabaseUrlForProject(dbPartsResult.url);
+    databaseUrl = normalizedFallbackDbUrl.url;
+    process.env.DATABASE_URL = databaseUrl;
+    effectiveEnvMap.set("DATABASE_URL", databaseUrl);
+    if (normalizedFallbackDbUrl.changed) {
+      console.log(chalk.cyan(normalizedFallbackDbUrl.note));
+    }
+
+    const fallbackPgSslModeResult = normalizePgSslModeForProject(databaseUrl, effectiveEnvMap);
+    if (fallbackPgSslModeResult.changed) {
+      console.log(chalk.cyan(fallbackPgSslModeResult.note));
+    }
+
+    postgresReady = await waitForPostgres(databaseUrl, {
+      title: "Waiting for Postgres readiness (fallback from .env DB parts)",
+      errorMessage: "Postgres did not become ready in time for fallback DB connection values.",
+      exitOnFailure: false,
+    });
+
+    if (!postgresReady) {
+      console.error(chalk.red("Postgres did not become ready using DATABASE_URL or fallback DB parts."));
+      process.exit(1);
+    }
+  }
+
   await waitForRedis(redisUrl);
 
   if (bootLocalstackDocker) {
@@ -428,6 +714,19 @@ async function main() {
 
   await runStep("Validating Prisma schema", "pnpm", ["run", "prisma:validate"]);
   await runStep("Generating Prisma client", "pnpm", ["run", "prisma:generate"]);
+
+  if (emptyDbFirst) {
+    console.log(chalk.yellow("Empty database mode enabled. Resetting database before migration flow."));
+    await runStep("Resetting database (empty-db-first)", "pnpm", [
+      "exec",
+      "prisma",
+      "migrate",
+      "reset",
+      "--force",
+      "--skip-seed",
+    ]);
+  }
+
   const migrationStep = await runStep("Applying database migrations", "pnpm", ["run", "prisma:deploy"], {
     allowFailure: true,
   });
@@ -459,6 +758,7 @@ async function main() {
   }
 
   await runStep("Checking migration status", "pnpm", ["run", "prisma:status"]);
+  await ensureAppSchemaExists(databaseUrl);
   await runStep("Introspecting database schema (pull/print)", "bash", [
     "-lc",
     "pnpm run prisma:pull:print > /tmp/trustloop-prisma-pull.prisma",

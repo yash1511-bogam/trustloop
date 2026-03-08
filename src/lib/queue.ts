@@ -14,6 +14,28 @@ function sqsEndpoint(): string | undefined {
   return process.env.AWS_ENDPOINT_URL;
 }
 
+function normalizeEndpoint(endpoint: string): string {
+  return endpoint.endsWith("/") ? endpoint.slice(0, -1) : endpoint;
+}
+
+function isLocalEndpoint(endpoint: string): boolean {
+  try {
+    const host = new URL(endpoint).hostname.toLowerCase();
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "localstack" ||
+      host.endsWith(".localhost.localstack.cloud")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function localQueueUrl(endpoint: string): string {
+  return `${normalizeEndpoint(endpoint)}/000000000000/${REMINDER_QUEUE_NAME}`;
+}
+
 function sqsCredentials(): { accessKeyId: string; secretAccessKey: string } | undefined {
   if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
     return {
@@ -41,13 +63,17 @@ function client(): SQSClient {
 }
 
 export function reminderQueueUrl(): string {
+  const endpoint = sqsEndpoint();
+  if (endpoint && isLocalEndpoint(endpoint)) {
+    return localQueueUrl(endpoint);
+  }
+
   if (process.env.REMINDER_QUEUE_URL) {
     return process.env.REMINDER_QUEUE_URL;
   }
 
-  const endpoint = sqsEndpoint();
   if (endpoint) {
-    return `${endpoint}/000000000000/${REMINDER_QUEUE_NAME}`;
+    return localQueueUrl(endpoint);
   }
 
   return `https://sqs.${region}.amazonaws.com/${process.env.AWS_ACCOUNT_ID ?? "000000000000"}/${REMINDER_QUEUE_NAME}`;
@@ -60,8 +86,9 @@ export async function ensureReminderQueue(): Promise<string> {
       QueueName: REMINDER_QUEUE_NAME,
     }),
   );
-
-  return response.QueueUrl ?? reminderQueueUrl();
+  const queueUrl = response.QueueUrl ?? reminderQueueUrl();
+  process.env.REMINDER_QUEUE_URL = queueUrl;
+  return queueUrl;
 }
 
 export type ReminderMessagePayload = {
