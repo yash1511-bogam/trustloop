@@ -4,16 +4,29 @@ import {
   ensureReminderQueue,
   receiveReminderMessages,
 } from "../src/lib/queue";
+import { processPastDueBillingAutomation } from "../src/lib/billing";
 import { processReminderMessage } from "../src/lib/reminder-runner";
 import { prisma } from "../src/lib/prisma";
 
+const BILLING_SWEEP_INTERVAL_MS = 15 * 60 * 1000;
+
 async function run(): Promise<void> {
   const once = process.argv.includes("--once");
+  let lastBillingSweepAt = 0;
 
   await ensureReminderQueue();
   console.log("Worker started. once=", once);
 
   do {
+    const now = Date.now();
+    if (once || now - lastBillingSweepAt >= BILLING_SWEEP_INTERVAL_MS) {
+      const result = await processPastDueBillingAutomation().catch(() => null);
+      if (result) {
+        console.log("Billing grace automation", result);
+      }
+      lastBillingSweepAt = now;
+    }
+
     const messages = await receiveReminderMessages(10);
 
     if (messages.length === 0) {
