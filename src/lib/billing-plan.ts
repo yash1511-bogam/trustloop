@@ -2,6 +2,14 @@ import { PrismaClient } from "@prisma/client";
 
 export type PlanTier = "starter" | "pro" | "enterprise";
 
+export type PlanDefinition = {
+  id: PlanTier;
+  label: string;
+  headline: string;
+  description: string;
+  bullets: string[];
+};
+
 export function normalizePlanTier(value: string | null | undefined): PlanTier {
   if (value === "starter" || value === "enterprise") {
     return value;
@@ -38,6 +46,53 @@ export function quotasForPlan(planTier: PlanTier): {
     triageRunsPerDay: 300,
     customerUpdatesPerDay: 300,
     reminderEmailsPerDay: 500,
+  };
+}
+
+export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
+  const quota = quotasForPlan(planTier);
+
+  if (planTier === "starter") {
+    return {
+      id: "starter",
+      label: "Starter",
+      headline: "Lean coverage",
+      description: "For smaller teams that need dependable incident coordination without a heavy monthly footprint.",
+      bullets: [
+        `${quota.incidentsPerDay.toLocaleString()} incidents per day`,
+        `${quota.triageRunsPerDay.toLocaleString()} triage runs per day`,
+        `${quota.customerUpdatesPerDay.toLocaleString()} customer updates per day`,
+        `${quota.reminderEmailsPerDay.toLocaleString()} reminder emails per day`,
+      ],
+    };
+  }
+
+  if (planTier === "enterprise") {
+    return {
+      id: "enterprise",
+      label: "Enterprise",
+      headline: "High-scale operations",
+      description: "For large or regulated teams that need very high throughput, stronger access controls, and fewer quota constraints.",
+      bullets: [
+        `${quota.incidentsPerDay.toLocaleString()} incidents per day`,
+        `${quota.triageRunsPerDay.toLocaleString()} triage runs per day`,
+        `${quota.customerUpdatesPerDay.toLocaleString()} customer updates per day`,
+        `${quota.reminderEmailsPerDay.toLocaleString()} reminder emails per day`,
+      ],
+    };
+  }
+
+  return {
+    id: "pro",
+    label: "Pro",
+    headline: "Daily operator default",
+    description: "Balanced limits for teams running incident intake, triage, and customer comms as part of daily operations.",
+    bullets: [
+      `${quota.incidentsPerDay.toLocaleString()} incidents per day`,
+      `${quota.triageRunsPerDay.toLocaleString()} triage runs per day`,
+      `${quota.customerUpdatesPerDay.toLocaleString()} customer updates per day`,
+      `${quota.reminderEmailsPerDay.toLocaleString()} reminder emails per day`,
+    ],
   };
 }
 

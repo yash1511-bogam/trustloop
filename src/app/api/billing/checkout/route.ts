@@ -3,6 +3,7 @@ import { BillingSubscriptionStatus, Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { buildBillingCheckoutPayload } from "@/lib/billing-checkout";
 import { badRequest, forbidden } from "@/lib/http";
 import { dodoClient, dodoProductIdForPlan } from "@/lib/dodo";
 import { prisma } from "@/lib/prisma";
@@ -47,7 +48,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     where: { id: auth.workspaceId },
     select: {
       id: true,
-      name: true,
       billing: {
         select: {
           dodoCustomerId: true,
@@ -64,32 +64,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const plan = parsed.data.plan;
 
   try {
-    const session = await dodoClient().checkoutSessions.create({
-      product_cart: [
-        {
-          product_id: dodoProductIdForPlan(plan),
-          quantity: 1,
-        },
-      ],
-      customer: workspace.billing?.dodoCustomerId
-        ? {
-            customer_id: workspace.billing.dodoCustomerId,
-          }
-        : {
-            email: auth.user.email,
-            name: auth.user.name,
-          },
-      return_url: `${appUrl()}/settings?billing=success`,
-      discount_code: couponCode ?? undefined,
-      feature_flags: {
-        allow_discount_code: true,
-      },
-      metadata: {
-        workspaceId: workspace.id,
-        plan,
+    const session = await dodoClient().checkoutSessions.create(
+      buildBillingCheckoutPayload({
         actorUserId: auth.user.id,
-      },
-    });
+        couponCode,
+        customerEmail: auth.user.email,
+        customerName: auth.user.name,
+        dodoCustomerId: workspace.billing?.dodoCustomerId,
+        plan,
+        returnUrl: `${appUrl()}/settings/billing?billing=return`,
+        workspaceId: workspace.id,
+      }),
+    );
 
     await prisma.workspaceBilling.upsert({
       where: { workspaceId: workspace.id },

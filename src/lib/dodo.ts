@@ -18,6 +18,10 @@ function dodoEnvironment(): "test_mode" | "live_mode" {
   return env === "live_mode" ? "live_mode" : "test_mode";
 }
 
+export function dodoCheckoutMode(): "test" | "live" {
+  return dodoEnvironment() === "live_mode" ? "live" : "test";
+}
+
 export function dodoClient(): DodoPayments {
   if (globalForDodo.dodoClient) {
     return globalForDodo.dodoClient;
