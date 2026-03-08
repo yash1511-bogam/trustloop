@@ -127,11 +127,6 @@ type CheckoutSession = {
   sessionId: string;
 };
 
-type OtpPopupState = {
-  status: "idle" | "open" | "blocked" | "closed";
-  url: string | null;
-};
-
 type CheckoutStatusPayload = {
   customerEmail: string | null;
   customerName: string | null;
@@ -160,7 +155,7 @@ type DodoSdk = {
     isOpen: () => boolean;
     open: (options: {
       checkoutUrl: string;
-      elementId: string;
+      elementId?: string;
       options?: {
         fontSize?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
         fontWeight?: "normal" | "medium" | "bold" | "extraBold";
@@ -189,38 +184,38 @@ type Props = {
 };
 
 const CHECKOUT_ELEMENT_ID = "billing-inline-checkout";
-const OTP_POPUP_NAME = "trustloop-billing-verification";
+const CHECKOUT_STORAGE_KEY = "trustloop.billing.pendingCheckout";
 const FINAL_PAYMENT_STATUSES = new Set(["failed", "succeeded", "cancelled", "canceled"]);
 
-const inlineTheme = {
+const gatewayTheme = {
   radius: "18px",
   light: {
-    bgPrimary: "#ffffff",
-    bgSecondary: "#f8fafc",
-    borderPrimary: "#cbd5e1",
-    borderSecondary: "#e2e8f0",
-    buttonPrimary: "#0f172a",
-    buttonPrimaryHover: "#020617",
-    buttonSecondary: "#ffffff",
-    buttonSecondaryHover: "#f8fafc",
-    buttonTextPrimary: "#f8fafc",
-    buttonTextSecondary: "#0f172a",
-    inputFocusBorder: "#0284c7",
-    textError: "#b91c1c",
-    textPlaceholder: "#64748b",
-    textPrimary: "#0f172a",
-    textSecondary: "#475569",
-    textSuccess: "#166534",
+    bgPrimary: "#04050b",
+    bgSecondary: "#0b1020",
+    borderPrimary: "rgba(148, 163, 184, 0.28)",
+    borderSecondary: "rgba(148, 163, 184, 0.14)",
+    buttonPrimary: "#e2e8f0",
+    buttonPrimaryHover: "#f8fafc",
+    buttonSecondary: "#121a2c",
+    buttonSecondaryHover: "#172033",
+    buttonTextPrimary: "#020617",
+    buttonTextSecondary: "#e2e8f0",
+    inputFocusBorder: "#38bdf8",
+    textError: "#fca5a5",
+    textPlaceholder: "#94a3b8",
+    textPrimary: "#e5eefb",
+    textSecondary: "#94a3b8",
+    textSuccess: "#86efac",
   },
   dark: {
-    bgPrimary: "#060816",
-    bgSecondary: "#0f172a",
+    bgPrimary: "#04050b",
+    bgSecondary: "#0b1020",
     borderPrimary: "rgba(148, 163, 184, 0.28)",
     borderSecondary: "rgba(148, 163, 184, 0.16)",
     buttonPrimary: "#e2e8f0",
     buttonPrimaryHover: "#f8fafc",
-    buttonSecondary: "#0f172a",
-    buttonSecondaryHover: "#111827",
+    buttonSecondary: "#121a2c",
+    buttonSecondaryHover: "#172033",
     buttonTextPrimary: "#020617",
     buttonTextSecondary: "#e2e8f0",
     inputFocusBorder: "#38bdf8",
@@ -361,16 +356,14 @@ export function BillingPanel({
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutHint, setCheckoutHint] = useState<string | null>(null);
   const [checkoutFrameReady, setCheckoutFrameReady] = useState(false);
+  const [gatewayOpen, setGatewayOpen] = useState(false);
+  const [checkoutLaunchNonce, setCheckoutLaunchNonce] = useState(0);
   const [liveBreakdown, setLiveBreakdown] = useState<LiveBreakdown | null>(null);
   const [sessionStatus, setSessionStatus] = useState<CheckoutStatusPayload | null>(null);
   const [sessionStatusLoading, setSessionStatusLoading] = useState(false);
-  const [otpPopupState, setOtpPopupState] = useState<OtpPopupState>({ status: "idle", url: null });
   const previewRequestId = useRef(0);
   const previewCouponCodeRef = useRef<string | null>(previewCouponCode);
   const dodoRef = useRef<DodoSdk | null>(null);
-  const checkoutSectionRef = useRef<HTMLElement | null>(null);
-  const otpPopupRef = useRef<Window | null>(null);
-  const otpPopupPollRef = useRef<number | null>(null);
 
   const normalizedCouponInput = normalizeCoupon(couponCode);
   const previewDirty = normalizedCouponInput !== previewCouponCode;
@@ -380,62 +373,21 @@ export function BillingPanel({
     [],
   );
 
-  const clearOtpPopupMonitor = useCallback(() => {
-    if (otpPopupPollRef.current) {
-      window.clearInterval(otpPopupPollRef.current);
-      otpPopupPollRef.current = null;
+  const persistCheckoutSession = useCallback((session: CheckoutSession) => {
+    try {
+      window.sessionStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(session));
+    } catch {
+      // Ignore browser storage failures; the checkout can still continue in the current tab.
     }
   }, []);
 
-  const openOtpPopup = useCallback(
-    (redirectUrl: string) => {
-      clearOtpPopupMonitor();
-
-      const width = 520;
-      const height = 760;
-      const left = Math.max(40, Math.round((window.screen.width - width) / 2));
-      const top = Math.max(40, Math.round((window.screen.height - height) / 2));
-      const features = [
-        "popup=yes",
-        "toolbar=no",
-        "location=yes",
-        "status=no",
-        "menubar=no",
-        "scrollbars=yes",
-        "resizable=yes",
-        `width=${width}`,
-        `height=${height}`,
-        `left=${left}`,
-        `top=${top}`,
-      ].join(",");
-
-      const popup = window.open(redirectUrl, OTP_POPUP_NAME, features);
-      if (!popup) {
-        setOtpPopupState({ status: "blocked", url: redirectUrl });
-        setCheckoutHint("Your browser blocked the verification popup. Open it manually to finish the OTP step.");
-        return false;
-      }
-
-      popup.focus();
-      otpPopupRef.current = popup;
-      setOtpPopupState({ status: "open", url: redirectUrl });
-      setCheckoutHint("Additional verification opened in a secure popup. Complete the OTP challenge there, then return here.");
-
-      otpPopupPollRef.current = window.setInterval(() => {
-        if (!otpPopupRef.current || otpPopupRef.current.closed) {
-          clearOtpPopupMonitor();
-          otpPopupRef.current = null;
-          setOtpPopupState((current) =>
-            current.status === "idle" ? current : { status: "closed", url: current.url },
-          );
-          setCheckoutHint("Verification window closed. Billing status will keep refreshing here.");
-        }
-      }, 1000);
-
-      return true;
-    },
-    [clearOtpPopupMonitor],
-  );
+  const clearStoredCheckoutSession = useCallback(() => {
+    try {
+      window.sessionStorage.removeItem(CHECKOUT_STORAGE_KEY);
+    } catch {
+      // Ignore browser storage failures.
+    }
+  }, []);
 
   const effectiveCurrentBreakdown = useMemo(() => {
     if (!preview) {
@@ -505,6 +457,45 @@ export function BillingPanel({
   }, [previewCouponCode]);
 
   useEffect(() => {
+    try {
+      const storedValue = window.sessionStorage.getItem(CHECKOUT_STORAGE_KEY);
+      if (!storedValue) {
+        return;
+      }
+
+      const parsed = JSON.parse(storedValue) as Partial<CheckoutSession>;
+      if (
+        typeof parsed.checkoutUrl !== "string" ||
+        typeof parsed.sessionId !== "string" ||
+        (parsed.plan !== "starter" && parsed.plan !== "pro" && parsed.plan !== "enterprise")
+      ) {
+        clearStoredCheckoutSession();
+        return;
+      }
+
+      const restoredCouponCode = normalizeCoupon(parsed.couponCode);
+      const restoredSession: CheckoutSession = {
+        checkoutUrl: parsed.checkoutUrl,
+        couponCode: restoredCouponCode,
+        plan: parsed.plan,
+        sessionId: parsed.sessionId,
+      };
+
+      setSelectedPlan(restoredSession.plan);
+      setCouponCode(restoredSession.couponCode ?? "");
+      setPreviewCouponCode(restoredSession.couponCode);
+      previewCouponCodeRef.current = restoredSession.couponCode;
+      setCheckoutSession(restoredSession);
+      setCheckoutFrameReady(false);
+      setCheckoutHint("Resuming your payment session. Reload the payment form if further confirmation is still required.");
+      void loadPreview(restoredSession.plan, restoredSession.couponCode);
+      setCheckoutLaunchNonce((current) => current + 1);
+    } catch {
+      clearStoredCheckoutSession();
+    }
+  }, [clearStoredCheckoutSession, loadPreview]);
+
+  useEffect(() => {
     void loadPreview(selectedPlan, previewCouponCodeRef.current);
   }, [loadPreview, selectedPlan]);
 
@@ -525,22 +516,16 @@ export function BillingPanel({
 
       setCheckoutSession(null);
       setCheckoutFrameReady(false);
-      setCheckoutHint("Plan or coupon changed. Start a new secure checkout to apply the updated summary.");
+      setGatewayOpen(false);
+      setCheckoutHint("Plan or coupon changed. Start a new payment session to apply the updated summary.");
       setSessionStatus(null);
       setLiveBreakdown(null);
-      clearOtpPopupMonitor();
-      try {
-        otpPopupRef.current?.close();
-      } catch {
-        // Best effort cleanup if a verification popup is still open.
-      }
-      otpPopupRef.current = null;
-      setOtpPopupState({ status: "idle", url: null });
+      clearStoredCheckoutSession();
     }
-  }, [checkoutSession, clearOtpPopupMonitor, previewCouponCode, selectedPlan]);
+  }, [checkoutSession, clearStoredCheckoutSession, previewCouponCode, selectedPlan]);
 
   useEffect(() => {
-    if (!checkoutSession?.checkoutUrl) {
+    if (!checkoutSession?.checkoutUrl || checkoutLaunchNonce === 0) {
       return;
     }
 
@@ -550,7 +535,8 @@ export function BillingPanel({
     async function mountCheckout() {
       setCheckoutError(null);
       setCheckoutFrameReady(false);
-      setCheckoutHint("Loading secure checkout…");
+      setGatewayOpen(false);
+      setCheckoutHint("Loading payment form…");
 
       try {
         const sdkModule = await import("dodopayments-checkout");
@@ -573,12 +559,20 @@ export function BillingPanel({
             const data = asRecord(event.data);
 
             if (event.event_type === "checkout.opened") {
-              setCheckoutHint("Secure checkout loaded.");
+              setGatewayOpen(true);
+              setCheckoutHint("Payment form loaded.");
+              return;
+            }
+
+            if (event.event_type === "checkout.payment_page_opened") {
+              setGatewayOpen(true);
+              setCheckoutHint("Payment page is ready.");
               return;
             }
 
             if (event.event_type === "checkout.form_ready") {
               setCheckoutFrameReady(true);
+              setGatewayOpen(true);
               setCheckoutHint("Payment form is ready.");
               return;
             }
@@ -607,18 +601,26 @@ export function BillingPanel({
             if (event.event_type === "checkout.redirect_requested") {
               const redirectUrl = extractRedirectUrl(data);
               if (redirectUrl) {
-                openOtpPopup(redirectUrl);
+                setCheckoutFrameReady(false);
+                setGatewayOpen(false);
+                setCheckoutHint("Continuing to payment verification in the same tab…");
+                window.location.assign(redirectUrl);
               }
               return;
             }
 
             if (event.event_type === "checkout.redirect") {
-              setCheckoutHint("Continue the payment confirmation in the verification popup if your bank requests it.");
+              setCheckoutFrameReady(false);
+              setGatewayOpen(false);
+              setCheckoutHint("Continuing to payment verification in the same tab…");
               return;
             }
 
             if (event.event_type === "checkout.link_expired") {
-              setCheckoutError("This checkout session expired. Start a new secure checkout.");
+              setCheckoutFrameReady(false);
+              setGatewayOpen(false);
+              setCheckoutError("This payment session expired. Start a new payment session.");
+              clearStoredCheckoutSession();
               return;
             }
 
@@ -633,6 +635,8 @@ export function BillingPanel({
 
             if (event.event_type === "checkout.closed") {
               setCheckoutFrameReady(false);
+              setGatewayOpen(false);
+              setCheckoutHint("Payment form closed. Reload it any time to continue this billing session.");
             }
           },
         });
@@ -645,7 +649,7 @@ export function BillingPanel({
 
         const target = document.getElementById(CHECKOUT_ELEMENT_ID);
         if (!target) {
-          setCheckoutError("Checkout container could not be mounted.");
+          setCheckoutError("Payment form container could not be mounted.");
           return;
         }
 
@@ -656,16 +660,15 @@ export function BillingPanel({
           options: {
             fontSize: "sm",
             fontWeight: "medium",
-            manualRedirect: true,
             payButtonText: "Proceed to payment",
             showSecurityBadge: true,
             showTimer: true,
-            themeConfig: inlineTheme,
+            themeConfig: gatewayTheme,
           },
         });
       } catch (error) {
         setCheckoutError(
-          error instanceof Error ? error.message : "Secure checkout could not be loaded.",
+          error instanceof Error ? error.message : "Payment form could not be loaded.",
         );
       }
     }
@@ -680,7 +683,7 @@ export function BillingPanel({
         // No-op cleanup for checkout teardown.
       }
     };
-  }, [checkoutMode, checkoutSession?.checkoutUrl, openOtpPopup]);
+  }, [checkoutLaunchNonce, checkoutMode, checkoutSession?.checkoutUrl, clearStoredCheckoutSession]);
 
   useEffect(() => {
     if (!checkoutSession?.sessionId) {
@@ -746,42 +749,15 @@ export function BillingPanel({
   }, [checkoutSession?.sessionId]);
 
   useEffect(() => {
-    if (!checkoutSession?.sessionId) {
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      checkoutSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [checkoutSession?.sessionId]);
-
-  useEffect(() => {
     const paymentStatus = sessionStatus?.paymentStatus?.toLowerCase();
     if (!paymentStatus || !FINAL_PAYMENT_STATUSES.has(paymentStatus)) {
       return;
     }
 
-    clearOtpPopupMonitor();
-    try {
-      otpPopupRef.current?.close();
-    } catch {
-      // Ignore popup close errors once the session reaches a final state.
-    }
-    otpPopupRef.current = null;
-    setOtpPopupState({ status: "idle", url: null });
-  }, [clearOtpPopupMonitor, sessionStatus?.paymentStatus]);
-
-  useEffect(
-    () => () => {
-      clearOtpPopupMonitor();
-    },
-    [clearOtpPopupMonitor],
-  );
+    clearStoredCheckoutSession();
+    setCheckoutFrameReady(false);
+    setGatewayOpen(false);
+  }, [clearStoredCheckoutSession, sessionStatus?.paymentStatus]);
 
   async function refreshPricing() {
     await loadPreview(selectedPlan, normalizedCouponInput);
@@ -792,24 +768,34 @@ export function BillingPanel({
     await loadPreview(selectedPlan, null);
   }
 
+  function resumeCheckout() {
+    if (!checkoutSession) {
+      return;
+    }
+
+    setCheckoutError(null);
+    setCheckoutHint("Loading payment form…");
+    setCheckoutLaunchNonce((current) => current + 1);
+  }
+
   async function startCheckout() {
     if (!canManageBilling) {
       return;
     }
 
     if (previewDirty) {
-      setCheckoutError("Refresh the billing summary after editing the coupon code before starting checkout.");
+      setCheckoutError("Refresh the billing summary after editing the coupon code before starting payment.");
       return;
     }
 
     if (!preview && !previewLoading) {
-      setCheckoutError("Load the billing summary before starting secure checkout.");
+      setCheckoutError("Load the billing summary before starting payment.");
       return;
     }
 
     setCheckoutLoading(true);
     setCheckoutError(null);
-    setCheckoutHint("Creating secure checkout session…");
+    setCheckoutHint("Creating payment session…");
     setSessionStatus(null);
     setLiveBreakdown(null);
 
@@ -834,13 +820,18 @@ export function BillingPanel({
         return;
       }
 
-      setCheckoutSession({
+      const nextSession: CheckoutSession = {
         checkoutUrl: payload.checkoutUrl,
         couponCode: previewCouponCode,
         plan: selectedPlan,
         sessionId: payload.sessionId,
-      });
-      setCheckoutHint("Secure checkout is loading below.");
+      };
+
+      setCheckoutSession(nextSession);
+      setCheckoutFrameReady(false);
+      persistCheckoutSession(nextSession);
+      setCheckoutHint("Loading payment form…");
+      setCheckoutLaunchNonce((current) => current + 1);
     } catch (error) {
       setCheckoutLoading(false);
       setCheckoutError(
@@ -849,12 +840,14 @@ export function BillingPanel({
     }
   }
 
-  const paymentStatusLabel = sessionStatus?.paymentStatus
-    ? formatStatusLabel(sessionStatus.paymentStatus)
-    : formatStatusLabel(billing?.status ?? "pending");
+  const paymentStatusValue = sessionStatus?.paymentStatus ?? billing?.status ?? "pending";
+  const paymentStatusLabel = formatStatusLabel(paymentStatusValue);
+  const sessionFinalized =
+    !!sessionStatus?.paymentStatus &&
+    FINAL_PAYMENT_STATUSES.has(sessionStatus.paymentStatus.toLowerCase());
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {billingNotice ? (
         <div className="rounded-2xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
           {billingNotice}
@@ -867,382 +860,355 @@ export function BillingPanel({
         </div>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-        <div className="space-y-6">
-          <section className="space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="kicker">Current workspace plan</p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-100">{planDefinitionFor(planTier).label}</h2>
-                <p className="mt-2 max-w-2xl text-sm text-neutral-400">
-                  Select the next plan, review the exact pricing summary from Dodo, then load the secure checkout frame.
-                </p>
-              </div>
-              <span className={`badge ${statusToneClass(billing?.status)}`}>
-                {formatStatusLabel(billing?.status ?? "none")}
-              </span>
-            </div>
-
-            <div className="grid gap-4 lg:grid-cols-3">
-              {availablePlans.map((plan) => {
-                const isSelected = plan.id === selectedPlan;
-                const isCurrent = plan.id === planTier;
-                return (
-                  <article
-                    className={`panel-card p-5 transition-colors ${
-                      isSelected ? "border-sky-400/60 bg-sky-500/10" : "border-[var(--line)] bg-[var(--bg-soft)]"
-                    }`}
-                    key={plan.id}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-lg font-semibold text-slate-100">{plan.label}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-sky-200/80">{plan.headline}</p>
-                      </div>
-                      {isCurrent ? <span className="badge">Current</span> : null}
-                    </div>
-                    <p className="mt-3 text-sm text-neutral-400">{plan.description}</p>
-                    <ul className="mt-4 space-y-2 text-sm text-neutral-300">
-                      {plan.bullets.map((bullet) => (
-                        <li className="flex items-start gap-2" key={bullet}>
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                          <span>{bullet}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <button
-                      className={isSelected ? "btn btn-primary mt-5 w-full" : "btn btn-ghost mt-5 w-full"}
-                      onClick={() => setSelectedPlan(plan.id)}
-                      type="button"
-                    >
-                      {isSelected ? "Selected" : `Choose ${plan.label}`}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <article className="panel-card space-y-5 p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="kicker">Pricing summary</p>
-                  <h3 className="mt-2 text-xl font-semibold text-slate-100">{selectedPlanDefinition.label}</h3>
-                </div>
-                {previewLoading ? (
-                  <span className="inline-flex items-center gap-2 text-sm text-neutral-400">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Updating
-                  </span>
-                ) : (
-                  <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">
-                    Live Dodo preview
-                  </span>
-                )}
-              </div>
-
-              <p className="text-sm text-neutral-400">{selectedPlanDefinition.description}</p>
-
-              <div className="space-y-3 rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-slate-200">Coupon code</span>
-                  <input
-                    className="input"
-                    disabled={!canManageBilling}
-                    onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
-                    placeholder="SAVE20"
-                    value={couponCode}
-                  />
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className="btn btn-ghost"
-                    disabled={!canManageBilling || previewLoading}
-                    onClick={refreshPricing}
-                    type="button"
-                  >
-                    <RefreshCcw className="h-4 w-4" />
-                    Update pricing
-                  </button>
-                  <button
-                    className="btn btn-ghost"
-                    disabled={!canManageBilling || (!couponCode && !previewCouponCode)}
-                    onClick={clearCoupon}
-                    type="button"
-                  >
-                    Clear code
-                  </button>
-                </div>
-                {previewDirty ? (
-                  <p className="text-xs text-amber-200">
-                    Coupon edits are not applied yet. Refresh pricing before loading secure checkout.
-                  </p>
-                ) : null}
-              </div>
-
-              {previewError ? (
-                <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                  {previewError}
-                </div>
-              ) : null}
-
-              {preview?.taxIdError ? (
-                <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                  {preview.taxIdError}
-                </div>
-              ) : null}
-
-              <div className="space-y-4">
-                {(preview?.productCart.length ? preview.productCart : [null]).map((item, index) => {
-                  const title = item?.name ?? selectedPlanDefinition.label;
-                  const description = item?.description ?? selectedPlanDefinition.description;
-                  return (
-                    <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4" key={item?.productId ?? index}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="font-medium text-slate-100">{title}</p>
-                          <p className="mt-1 text-sm text-neutral-400">{description}</p>
-                        </div>
-                        <span className="text-sm text-neutral-300">Qty {item?.quantity ?? 1}</span>
-                      </div>
-
-                      {item?.creditEntitlements.length ? (
-                        <ul className="mt-4 space-y-2 text-sm text-neutral-300">
-                          {item.creditEntitlements.map((credit) => (
-                            <li className="flex items-start gap-2" key={credit.creditEntitlementId}>
-                              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                              <span>
-                                {credit.amount} {credit.unit} {credit.name}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-
-                      {item?.meters.length ? (
-                        <div className="mt-4 space-y-2 rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-sm text-neutral-300">
-                          {item.meters.map((meter) => (
-                            <p key={`${item.productId}-${meter.name}`}>
-                              <span className="font-medium text-slate-200">{meter.name}</span>
-                              {meter.description ? `: ${meter.description}. ` : ": "}
-                              {meter.freeThreshold ? `Free up to ${meter.freeThreshold.toLocaleString()} ${meter.measurementUnit}, ` : ""}
-                              then {meter.pricePerUnit} per {meter.measurementUnit}.
-                            </p>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {item?.addons.length ? (
-                        <div className="mt-4 space-y-2 text-sm text-neutral-300">
-                          {item.addons.map((addon) => (
-                            <div className="rounded-xl border border-[var(--line)] px-3 py-3" key={addon.addonId}>
-                              <p className="font-medium text-slate-200">{addon.name}</p>
-                              {addon.description ? <p className="mt-1 text-neutral-400">{addon.description}</p> : null}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-300">
-                <div className="flex items-center justify-between gap-3">
-                  <span>Subtotal</span>
-                  <span>{formatMoney(effectiveCurrentBreakdown?.subtotal, effectiveCurrentBreakdown?.currency)}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <span>Discount</span>
-                  <span>
-                    {typeof effectiveCurrentBreakdown?.discount === "number"
-                      ? `-${formatMoney(effectiveCurrentBreakdown.discount, effectiveCurrentBreakdown.currency)}`
-                      : "N/A"}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <span>Tax</span>
-                  <span>{formatMoney(effectiveCurrentBreakdown?.tax, effectiveCurrentBreakdown?.currency)}</span>
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3 text-base font-semibold text-slate-100">
-                  <span>Due today</span>
-                  <span>{formatMoney(effectiveCurrentBreakdown?.totalAmount, effectiveCurrentBreakdown?.currency)}</span>
-                </div>
-                {preview?.recurringBreakdown ? (
-                  <div className="mt-4 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-3 text-sm text-sky-100">
-                    <p className="font-medium">Recurring terms</p>
-                    <p className="mt-2 text-sky-100/90">
-                      This subscription renews automatically until canceled. The renewal amount is
-                      {" "}
-                      <strong>{formatMoney(preview.recurringBreakdown.totalAmount, preview.currency)}</strong>
-                      {" "}
-                      per billing cycle, plus any applicable taxes displayed in secure checkout.
-                    </p>
-                  </div>
-                ) : null}
-                <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                  <span>Currency: {effectiveCurrentBreakdown?.currency ?? preview?.currency ?? "USD"}</span>
-                  <span>Billing country: {preview?.billingCountry ?? "Collected in checkout"}</span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  className="btn btn-primary"
-                  disabled={!canManageBilling || checkoutLoading || previewLoading}
-                  onClick={startCheckout}
-                  type="button"
-                >
-                  {checkoutLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading checkout
-                    </>
-                  ) : checkoutSession ? (
-                    <>
-                      <RefreshCcw className="h-4 w-4" />
-                      Reload secure checkout
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4" />
-                      Open secure checkout
-                    </>
-                  )}
-                </button>
-                <a
-                  className="btn btn-ghost"
-                  href="/billing-policy"
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  <Receipt className="h-4 w-4" />
-                  Refund policy
-                </a>
-              </div>
-            </article>
-
-            <article className="panel-card p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="kicker">Billing status</p>
-                  <h3 className="mt-2 text-xl font-semibold text-slate-100">Payment lifecycle</h3>
-                </div>
-                <span className={`badge ${statusToneClass(paymentStatusLabel)}`}>{paymentStatusLabel}</span>
-              </div>
-
-              <div className="mt-5 grid gap-3 text-sm text-neutral-300 md:grid-cols-2">
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-                  <p className="text-neutral-500">Last successful payment</p>
-                  <p className="mt-2 font-medium text-slate-100">{formatDateTime(billing?.lastPaymentAt)}</p>
-                  <p className="mt-1 text-neutral-400">
-                    {formatMoney(billing?.lastPaymentAmount, billing?.lastPaymentCurrency)}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-                  <p className="text-neutral-500">Current billing period</p>
-                  <p className="mt-2 font-medium text-slate-100">{formatDateTime(billing?.currentPeriodStart)}</p>
-                  <p className="mt-1 text-neutral-400">through {formatDateTime(billing?.currentPeriodEnd)}</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-                  <p className="text-neutral-500">Recovery automation</p>
-                  <p className="mt-2 font-medium text-slate-100">{billing?.failureReminderCount ?? 0} reminders sent</p>
-                  <p className="mt-1 text-neutral-400">Past-due workspaces downgrade to Starter after the recovery window ends.</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-                  <p className="text-neutral-500">Invoice and references</p>
-                  {billing?.lastInvoiceUrl ? (
-                    <a
-                      className="mt-2 inline-flex items-center gap-2 font-medium text-sky-200 hover:text-sky-100"
-                      href={billing.lastInvoiceUrl}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      Open latest invoice <ExternalLink className="h-4 w-4" />
-                    </a>
-                  ) : (
-                    <p className="mt-2 text-neutral-400">Invoice link will appear after the next completed payment.</p>
-                  )}
-                </div>
-              </div>
-
-              {billing?.paymentFailedAt ? (
-                <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                  Payment failure detected at {formatDateTime(billing.paymentFailedAt)}. Fix billing before the recovery window ends to avoid an automatic downgrade.
-                </div>
-              ) : null}
-
-              {billing?.canceledAt ? (
-                <div className="mt-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-                  Subscription canceled at {formatDateTime(billing.canceledAt)}{billing.cancelReason ? ` (${billing.cancelReason}).` : "."}
-                </div>
-              ) : null}
-            </article>
+      <section className="panel-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="kicker">Billing overview</p>
+            <h2 className="mt-2 text-2xl font-semibold text-slate-100">
+              {planDefinitionFor(planTier).label}
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-neutral-400">
+              Choose a plan, review live pricing, then proceed to payment. The payment form only opens lower on the page after you confirm the selection.
+            </p>
           </div>
-
-          <section className="grid gap-4 md:grid-cols-2">
-            {[
-              {
-                label: "Incidents / day",
-                used: usage.incidentsCreated,
-                limit: quota.incidentsPerDay,
-              },
-              {
-                label: "Triage runs / day",
-                used: usage.triageRuns,
-                limit: quota.triageRunsPerDay,
-              },
-              {
-                label: "Customer updates / day",
-                used: usage.customerUpdates,
-                limit: quota.customerUpdatesPerDay,
-              },
-              {
-                label: "Reminder emails / day",
-                used: usage.reminderEmailsSent,
-                limit: quota.reminderEmailsPerDay,
-              },
-            ].map((row) => (
-              <article className="panel-card p-4" key={row.label}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-slate-100">{row.label}</p>
-                  <span className="text-sm text-neutral-400">
-                    {row.used} / {row.limit}
-                  </span>
-                </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-900">
-                  <div
-                    className="h-full rounded-full bg-sky-500 transition-[width]"
-                    style={{ width: `${percent(row.used, row.limit)}%` }}
-                  />
-                </div>
-              </article>
-            ))}
-          </section>
+          <span className={`badge ${statusToneClass(paymentStatusValue)}`}>{paymentStatusLabel}</span>
         </div>
 
-        <aside className="panel-card h-fit p-5 xl:sticky xl:top-24">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="kicker">Secure checkout</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-100">Embedded payment frame</h3>
-              <p className="mt-2 text-sm text-neutral-400">
-                TrustLoop keeps plan and pricing context on this page. Payment details stay inside Dodo’s secure checkout frame and footer.
-              </p>
-            </div>
-            <ShieldCheck className="h-5 w-5 text-emerald-300" />
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Current plan</p>
+            <p className="mt-2 text-lg font-semibold text-slate-100">{planDefinitionFor(planTier).label}</p>
+            <p className="mt-1 text-sm text-neutral-400">{planDefinitionFor(planTier).headline}</p>
           </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Last payment</p>
+            <p className="mt-2 text-lg font-semibold text-slate-100">
+              {formatMoney(billing?.lastPaymentAmount, billing?.lastPaymentCurrency)}
+            </p>
+            <p className="mt-1 text-sm text-neutral-400">{formatDateTime(billing?.lastPaymentAt)}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Renewal window</p>
+            <p className="mt-2 text-lg font-semibold text-slate-100">{formatDateTime(billing?.currentPeriodEnd)}</p>
+            <p className="mt-1 text-sm text-neutral-400">Current period started {formatDateTime(billing?.currentPeriodStart)}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Recovery reminders</p>
+            <p className="mt-2 text-lg font-semibold text-slate-100">{billing?.failureReminderCount ?? 0}</p>
+            <p className="mt-1 text-sm text-neutral-400">Past-due workspaces downgrade to Starter after the recovery window ends.</p>
+          </div>
+        </div>
+      </section>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2 text-sm">
-            <span className={`badge ${statusToneClass(paymentStatusLabel)}`}>{paymentStatusLabel}</span>
-            {sessionStatusLoading ? (
-              <span className="inline-flex items-center gap-2 text-neutral-400">
-                <Loader2 className="h-4 w-4 animate-spin" /> Checking session
-              </span>
+      <section className="panel-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="kicker">Step 1</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-100">Select a payment plan</h3>
+            <p className="mt-2 max-w-3xl text-sm text-neutral-400">
+              Pick the workspace plan first. Pricing and checkout stay separate so the page is easier to scan.
+            </p>
+          </div>
+          <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">
+            {availablePlans.length} plans available
+          </span>
+        </div>
+
+        <div className="mt-6 grid gap-4 xl:grid-cols-3">
+          {availablePlans.map((plan) => {
+            const isSelected = plan.id === selectedPlan;
+            const isCurrent = plan.id === planTier;
+            return (
+              <article
+                className={`rounded-[28px] border p-5 transition-colors ${
+                  isSelected
+                    ? "border-sky-400/60 bg-sky-500/10"
+                    : "border-[var(--line)] bg-[var(--bg-soft)]"
+                }`}
+                key={plan.id}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-lg font-semibold text-slate-100">{plan.label}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.16em] text-sky-200/80">
+                      {plan.headline}
+                    </p>
+                  </div>
+                  {isCurrent ? <span className="badge">Current</span> : null}
+                </div>
+                <p className="mt-3 text-sm text-neutral-400">{plan.description}</p>
+                <div className="mt-4 max-h-40 overflow-y-auto pr-1">
+                  <ul className="space-y-2 text-sm text-neutral-300">
+                    {plan.bullets.map((bullet) => (
+                      <li className="flex items-start gap-2" key={bullet}>
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <button
+                  className={isSelected ? "btn btn-primary mt-5 w-full" : "btn btn-ghost mt-5 w-full"}
+                  onClick={() => setSelectedPlan(plan.id)}
+                  type="button"
+                >
+                  {isSelected ? "Selected" : `Choose ${plan.label}`}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="panel-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="kicker">Step 2</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-100">Review pricing</h3>
+            <p className="mt-2 max-w-3xl text-sm text-neutral-400">
+              Review the live billing preview for {selectedPlanDefinition.label}, apply a coupon if needed, then proceed to payment.
+            </p>
+          </div>
+          {previewLoading ? (
+            <span className="inline-flex items-center gap-2 text-sm text-neutral-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Updating preview
+            </span>
+          ) : (
+            <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">Live Dodo preview</span>
+          )}
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+              <label className="space-y-2 text-sm">
+                <span className="font-medium text-slate-200">Coupon code</span>
+                <input
+                  className="input"
+                  disabled={!canManageBilling}
+                  onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+                  placeholder="SAVE20"
+                  value={couponCode}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="btn btn-ghost"
+                  disabled={!canManageBilling || previewLoading}
+                  onClick={refreshPricing}
+                  type="button"
+                >
+                  <RefreshCcw className="h-4 w-4" />
+                  Update pricing
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  disabled={!canManageBilling || (!couponCode && !previewCouponCode)}
+                  onClick={clearCoupon}
+                  type="button"
+                >
+                  Clear code
+                </button>
+              </div>
+            </div>
+            {previewDirty ? (
+              <p className="mt-3 text-xs text-amber-200">
+                Coupon edits are not applied yet. Refresh pricing before proceeding to payment.
+              </p>
             ) : null}
           </div>
 
-          {checkoutHint ? <p className="mt-3 text-sm text-neutral-400">{checkoutHint}</p> : null}
+          {previewError ? (
+            <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {previewError}
+            </div>
+          ) : null}
+
+          {preview?.taxIdError ? (
+            <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {preview.taxIdError}
+            </div>
+          ) : null}
+
+          <div className="rounded-[28px] border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-slate-100">{selectedPlanDefinition.label}</p>
+                <p className="mt-1 text-sm text-neutral-400">{selectedPlanDefinition.description}</p>
+              </div>
+              <span className="text-sm text-neutral-400">
+                Currency: {effectiveCurrentBreakdown?.currency ?? preview?.currency ?? "USD"}
+              </span>
+            </div>
+
+            <div className="mt-4 max-h-[360px] space-y-4 overflow-y-auto pr-1">
+              {(preview?.productCart.length ? preview.productCart : [null]).map((item, index) => {
+                const title = item?.name ?? selectedPlanDefinition.label;
+                const description = item?.description ?? selectedPlanDefinition.description;
+
+                return (
+                  <div
+                    className="rounded-2xl border border-[var(--line)] bg-[var(--bg-soft)] p-4"
+                    key={item?.productId ?? index}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-100">{title}</p>
+                        <p className="mt-1 text-sm text-neutral-400">{description}</p>
+                      </div>
+                      <span className="text-sm text-neutral-300">Qty {item?.quantity ?? 1}</span>
+                    </div>
+
+                    {item?.creditEntitlements.length ? (
+                      <ul className="mt-4 space-y-2 text-sm text-neutral-300">
+                        {item.creditEntitlements.map((credit) => (
+                          <li className="flex items-start gap-2" key={credit.creditEntitlementId}>
+                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                            <span>
+                              {credit.amount} {credit.unit} {credit.name}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+
+                    {item?.meters.length ? (
+                      <div className="mt-4 space-y-2 rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-sm text-neutral-300">
+                        {item.meters.map((meter) => (
+                          <p key={`${item.productId}-${meter.name}`}>
+                            <span className="font-medium text-slate-200">{meter.name}</span>
+                            {meter.description ? `: ${meter.description}. ` : ": "}
+                            {meter.freeThreshold
+                              ? `Free up to ${meter.freeThreshold.toLocaleString()} ${meter.measurementUnit}, `
+                              : ""}
+                            then {meter.pricePerUnit} per {meter.measurementUnit}.
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {item?.addons.length ? (
+                      <div className="mt-4 space-y-2 text-sm text-neutral-300">
+                        {item.addons.map((addon) => (
+                          <div className="rounded-xl border border-[var(--line)] px-3 py-3" key={addon.addonId}>
+                            <p className="font-medium text-slate-200">{addon.name}</p>
+                            {addon.description ? (
+                              <p className="mt-1 text-neutral-400">{addon.description}</p>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[rgba(2,6,23,0.5)] p-4 text-sm text-neutral-300">
+              <div className="flex items-center justify-between gap-3">
+                <span>Subtotal</span>
+                <span>
+                  {formatMoney(effectiveCurrentBreakdown?.subtotal, effectiveCurrentBreakdown?.currency)}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span>Discount</span>
+                <span>
+                  {typeof effectiveCurrentBreakdown?.discount === "number"
+                    ? `-${formatMoney(effectiveCurrentBreakdown.discount, effectiveCurrentBreakdown.currency)}`
+                    : "N/A"}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span>Tax</span>
+                <span>{formatMoney(effectiveCurrentBreakdown?.tax, effectiveCurrentBreakdown?.currency)}</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3 text-base font-semibold text-slate-100">
+                <span>Due today</span>
+                <span>
+                  {formatMoney(
+                    effectiveCurrentBreakdown?.totalAmount,
+                    effectiveCurrentBreakdown?.currency,
+                  )}
+                </span>
+              </div>
+
+              {preview?.recurringBreakdown ? (
+                <div className="mt-4 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-3 text-sm text-sky-100">
+                  <p className="font-medium">Recurring terms</p>
+                  <p className="mt-2 text-sky-100/90">
+                    This subscription renews automatically until canceled. The renewal amount is{" "}
+                    <strong>
+                      {formatMoney(preview.recurringBreakdown.totalAmount, preview.currency)}
+                    </strong>{" "}
+                    per billing cycle, plus any applicable taxes displayed in payment.
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
+                <span>Billing country: {preview?.billingCountry ?? "Collected in payment"}</span>
+                <span>The payment form opens inline on this page after you proceed.</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              className="btn btn-primary"
+              disabled={!canManageBilling || checkoutLoading || previewLoading}
+              onClick={checkoutSession && !sessionFinalized ? resumeCheckout : startCheckout}
+              type="button"
+            >
+              {checkoutLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Preparing payment
+                </>
+              ) : checkoutSession && !sessionFinalized ? (
+                <>
+                  <RefreshCcw className="h-4 w-4" />
+                  Reload payment form
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-4 w-4" />
+                  Proceed to payment
+                </>
+              )}
+            </button>
+            <a className="btn btn-ghost" href="/billing-policy" rel="noreferrer" target="_blank">
+              <Receipt className="h-4 w-4" />
+              Refund policy
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {checkoutSession ? (
+        <section className="panel-card p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="kicker">Step 3</p>
+              <h3 className="mt-2 text-xl font-semibold text-slate-100">Payment form</h3>
+              <p className="mt-2 max-w-3xl text-sm text-neutral-400">
+                Payment opens inline in a black secure surface. If card or bank verification is required, the flow continues in the same tab and returns here when finished.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className={`badge ${statusToneClass(paymentStatusValue)}`}>{paymentStatusLabel}</span>
+              {sessionStatusLoading ? (
+                <span className="inline-flex items-center gap-2 text-neutral-400">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking session
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          {checkoutHint ? <p className="mt-4 text-sm text-neutral-400">{checkoutHint}</p> : null}
+
           {checkoutError ? (
             <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               <div className="flex items-start gap-2">
@@ -1253,55 +1219,224 @@ export function BillingPanel({
           ) : null}
 
           {sessionStatus ? (
-            <div className="mt-4 grid gap-3 text-sm text-neutral-300 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-300">
                 <p className="text-neutral-500">Session created</p>
-                <p className="mt-2 font-medium text-slate-100">{formatDateTime(sessionStatus.sessionCreatedAt)}</p>
+                <p className="mt-2 font-medium text-slate-100">
+                  {formatDateTime(sessionStatus.sessionCreatedAt)}
+                </p>
               </div>
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-300">
                 <p className="text-neutral-500">Payment status</p>
-                <p className="mt-2 font-medium text-slate-100">{formatStatusLabel(sessionStatus.paymentStatus ?? sessionStatus.providerStatus)}</p>
+                <p className="mt-2 font-medium text-slate-100">
+                  {formatStatusLabel(sessionStatus.paymentStatus ?? sessionStatus.providerStatus)}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-300">
+                <p className="text-neutral-500">Customer</p>
+                <p className="mt-2 font-medium text-slate-100">
+                  {sessionStatus.customerName ?? sessionStatus.customerEmail ?? "Collected in payment"}
+                </p>
               </div>
             </div>
           ) : null}
 
-          <div className="mt-5 overflow-hidden rounded-[24px] border border-[var(--line)] bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.98))]">
-            {!checkoutSession ? (
-              <div className="flex min-h-[640px] flex-col items-center justify-center gap-4 px-6 py-12 text-center text-neutral-400">
-                <CreditCard className="h-10 w-10 text-sky-200" />
-                <div>
-                  <p className="text-base font-medium text-slate-100">Secure checkout appears here</p>
-                  <p className="mt-2 max-w-sm text-sm text-neutral-400">
-                    Review the pricing summary, apply any coupon, then open the embedded Dodo checkout to finish payment without leaving settings.
+          <div className="mt-5 overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#06070d,#02030a)] p-6">
+            <div className="rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.16),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.98))] p-6">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-2xl">
+                  <p className="text-xs uppercase tracking-[0.18em] text-sky-200/75">Secure payment</p>
+                  <h4 className="mt-2 text-xl font-semibold text-slate-100">
+                    Black inline payment surface with same-tab verification
+                  </h4>
+                  <p className="mt-2 text-sm text-slate-300/85">
+                    TrustLoop keeps plan details on this page while Dodo renders the payment form inline below. OTP or bank verification continues in the same browser tab and returns to this billing session when complete.
                   </p>
                 </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="btn btn-primary"
+                    onClick={sessionFinalized ? startCheckout : resumeCheckout}
+                    type="button"
+                  >
+                    <CreditCard className="h-4 w-4" />
+                    {sessionFinalized
+                      ? "Start new payment session"
+                      : gatewayOpen
+                        ? "Reload payment form"
+                        : "Open payment form"}
+                  </button>
+                  <a className="btn btn-ghost" href="/billing-policy" rel="noreferrer" target="_blank">
+                    <Receipt className="h-4 w-4" />
+                    Refund policy
+                  </a>
+                </div>
               </div>
-            ) : (
-              <div className="min-h-[640px] bg-[#020617] p-3">
+
+              <div className="mt-6 grid gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                  <p className="text-slate-400">Form status</p>
+                  <p className="mt-2 font-medium text-slate-100">
+                    {sessionFinalized
+                      ? "Completed"
+                      : checkoutFrameReady
+                        ? "Visible on this page"
+                        : gatewayOpen
+                          ? "Loading on this page"
+                          : "Ready to load"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                  <p className="text-slate-400">Verification handling</p>
+                  <p className="mt-2 font-medium text-slate-100">Same tab, no popup windows</p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                  <p className="text-slate-400">Session ID</p>
+                  <p className="mt-2 truncate font-medium text-slate-100">{checkoutSession.sessionId}</p>
+                </div>
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-[24px] border border-white/10 bg-[#04050b] p-3">
                 {!checkoutFrameReady ? (
-                  <div className="flex min-h-[120px] items-center gap-3 rounded-2xl border border-dashed border-[var(--line)] bg-white/5 px-4 py-4 text-sm text-neutral-300">
+                  <div className="flex min-h-[120px] items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-4 text-sm text-slate-300">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Preparing the payment form…
+                    Preparing the inline payment form…
                   </div>
                 ) : null}
                 <div className={checkoutFrameReady ? "mt-3" : "mt-4"} id={CHECKOUT_ELEMENT_ID} />
               </div>
-            )}
+            </div>
           </div>
 
           <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-400">
             <p className="flex items-center gap-2 font-medium text-slate-100">
-              <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-              Inline checkout requirements are covered here
+              <ShieldCheck className="h-4 w-4 text-emerald-300" />
+              Payment notes
             </p>
             <ul className="mt-3 space-y-2">
-              <li>Recurring pricing is shown above whenever the selected plan renews.</li>
-              <li>Item descriptions, totals, tax, and currency remain visible next to the checkout frame.</li>
-              <li>The embedded Dodo frame keeps its footer and legal information intact.</li>
+              <li>Recurring pricing and totals stay visible above while the payment form is active.</li>
+              <li>OTP or bank verification continues in the same browser tab and returns to this billing screen.</li>
+              <li>The Dodo inline payment form keeps its legal footer and secure payment controls intact.</li>
             </ul>
           </div>
-        </aside>
-      </div>
+        </section>
+      ) : (
+        <section className="rounded-[28px] border border-dashed border-[var(--line)] bg-[var(--bg-soft)]/55 px-6 py-8 text-sm text-neutral-400">
+          <div className="flex flex-wrap items-center gap-3">
+            <CreditCard className="h-5 w-5 text-sky-200" />
+            <p>The payment form opens inline on this page after you select a plan and click <span className="font-medium text-slate-100">Proceed to payment</span>.</p>
+          </div>
+        </section>
+      )}
+
+      <section className="panel-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="kicker">Billing status</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-100">Payment lifecycle</h3>
+          </div>
+          <span className={`badge ${statusToneClass(paymentStatusValue)}`}>{paymentStatusLabel}</span>
+        </div>
+
+        <div className="mt-5 grid gap-3 text-sm text-neutral-300 md:grid-cols-2">
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-neutral-500">Current billing period</p>
+            <p className="mt-2 font-medium text-slate-100">{formatDateTime(billing?.currentPeriodStart)}</p>
+            <p className="mt-1 text-neutral-400">through {formatDateTime(billing?.currentPeriodEnd)}</p>
+          </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-neutral-500">Invoice and references</p>
+            {billing?.lastInvoiceUrl ? (
+              <a
+                className="mt-2 inline-flex items-center gap-2 font-medium text-sky-200 hover:text-sky-100"
+                href={billing.lastInvoiceUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Open latest invoice <ExternalLink className="h-4 w-4" />
+              </a>
+            ) : (
+              <p className="mt-2 text-neutral-400">Invoice link will appear after the next completed payment.</p>
+            )}
+          </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-neutral-500">Recovery automation</p>
+            <p className="mt-2 font-medium text-slate-100">
+              {billing?.failureReminderCount ?? 0} reminders sent
+            </p>
+            <p className="mt-1 text-neutral-400">
+              Past-due workspaces downgrade to Starter after the recovery window ends.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
+            <p className="text-neutral-500">Cancellation</p>
+            <p className="mt-2 font-medium text-slate-100">
+              {billing?.canceledAt ? formatDateTime(billing.canceledAt) : "Active"}
+            </p>
+            <p className="mt-1 text-neutral-400">
+              {billing?.cancelReason ?? "No cancellation scheduled."}
+            </p>
+          </div>
+        </div>
+
+        {billing?.paymentFailedAt ? (
+          <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            Payment failure detected at {formatDateTime(billing.paymentFailedAt)}. Fix billing before the recovery window ends to avoid an automatic downgrade.
+          </div>
+        ) : null}
+      </section>
+
+      <section className="panel-card p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="kicker">Usage today</p>
+            <h3 className="mt-2 text-xl font-semibold text-slate-100">Workspace limits</h3>
+          </div>
+          <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">
+            Resets daily
+          </span>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          {[
+            {
+              label: "Incidents / day",
+              used: usage.incidentsCreated,
+              limit: quota.incidentsPerDay,
+            },
+            {
+              label: "Triage runs / day",
+              used: usage.triageRuns,
+              limit: quota.triageRunsPerDay,
+            },
+            {
+              label: "Customer updates / day",
+              used: usage.customerUpdates,
+              limit: quota.customerUpdatesPerDay,
+            },
+            {
+              label: "Reminder emails / day",
+              used: usage.reminderEmailsSent,
+              limit: quota.reminderEmailsPerDay,
+            },
+          ].map((row) => (
+            <article className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4" key={row.label}>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-slate-100">{row.label}</p>
+                <span className="text-sm text-neutral-400">
+                  {row.used} / {row.limit}
+                </span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-900">
+                <div
+                  className="h-full rounded-full bg-sky-500 transition-[width]"
+                  style={{ width: `${percent(row.used, row.limit)}%` }}
+                />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

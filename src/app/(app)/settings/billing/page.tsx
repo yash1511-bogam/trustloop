@@ -78,53 +78,51 @@ export default async function SettingsBillingPage({
   ]);
 
   return (
-    <>
+    <div className="space-y-8">
       <section className="surface p-6">
         <p className="kicker">Billing and plans</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-100">Manage plan changes and secure checkout</h1>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-100">Manage plan changes and payment</h1>
         <p className="mt-2 max-w-3xl text-sm text-neutral-500">
-          Review workspace usage, compare available plans, and complete payment without leaving the TrustLoop settings area.
+          Review workspace usage, compare available plans, and move into payment only when you are ready.
         </p>
       </section>
 
-      <section className="surface p-6">
-        <BillingPanel
-          billingNotice={billingNoticeFromQuery(params.billing)}
-          canManageBilling={hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])}
-          checkoutMode={dodoCheckoutMode()}
-          planTier={normalizePlanTier(workspace.planTier)}
-          usage={{
-            incidentsCreated: usage.incidentsCreated,
-            triageRuns: usage.triageRuns,
-            customerUpdates: usage.customerUpdates,
-            reminderEmailsSent: usage.reminderEmailsSent,
-          }}
-          quota={{
-            incidentsPerDay: quota.incidentsPerDay,
-            triageRunsPerDay: quota.triageRunsPerDay,
-            customerUpdatesPerDay: quota.customerUpdatesPerDay,
-            reminderEmailsPerDay: quota.reminderEmailsPerDay,
-          }}
-          billing={
-            workspace.billing
-              ? {
-                  status: workspace.billing.status,
-                  discountCode: workspace.billing.discountCode,
-                  currentPeriodStart: workspace.billing.currentPeriodStart?.toISOString() ?? null,
-                  currentPeriodEnd: workspace.billing.currentPeriodEnd?.toISOString() ?? null,
-                  canceledAt: workspace.billing.canceledAt?.toISOString() ?? null,
-                  cancelReason: workspace.billing.cancelReason,
-                  failureReminderCount: workspace.billing.failureReminderCount,
-                  lastPaymentAt: workspace.billing.lastPaymentAt?.toISOString() ?? null,
-                  lastPaymentAmount: workspace.billing.lastPaymentAmount,
-                  lastPaymentCurrency: workspace.billing.lastPaymentCurrency,
-                  lastInvoiceUrl: workspace.billing.lastInvoiceUrl,
-                  paymentFailedAt: workspace.billing.paymentFailedAt?.toISOString() ?? null,
-                }
-              : null
-          }
-        />
-      </section>
-    </>
+      <BillingPanel
+        billingNotice={billingNoticeFromQuery(params.billing)}
+        canManageBilling={hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])}
+        checkoutMode={dodoCheckoutMode()}
+        planTier={normalizePlanTier(workspace.planTier)}
+        usage={{
+          incidentsCreated: usage.incidentsCreated,
+          triageRuns: usage.triageRuns,
+          customerUpdates: usage.customerUpdates,
+          reminderEmailsSent: usage.reminderEmailsSent,
+        }}
+        quota={{
+          incidentsPerDay: quota.incidentsPerDay,
+          triageRunsPerDay: quota.triageRunsPerDay,
+          customerUpdatesPerDay: quota.customerUpdatesPerDay,
+          reminderEmailsPerDay: quota.reminderEmailsPerDay,
+        }}
+        billing={
+          workspace.billing
+            ? {
+                status: workspace.billing.status,
+                discountCode: workspace.billing.discountCode,
+                currentPeriodStart: workspace.billing.currentPeriodStart?.toISOString() ?? null,
+                currentPeriodEnd: workspace.billing.currentPeriodEnd?.toISOString() ?? null,
+                canceledAt: workspace.billing.canceledAt?.toISOString() ?? null,
+                cancelReason: workspace.billing.cancelReason,
+                failureReminderCount: workspace.billing.failureReminderCount,
+                lastPaymentAt: workspace.billing.lastPaymentAt?.toISOString() ?? null,
+                lastPaymentAmount: workspace.billing.lastPaymentAmount,
+                lastPaymentCurrency: workspace.billing.lastPaymentCurrency,
+                lastInvoiceUrl: workspace.billing.lastInvoiceUrl,
+                paymentFailedAt: workspace.billing.paymentFailedAt?.toISOString() ?? null,
+              }
+            : null
+        }
+      />
+    </div>
   );
 }
