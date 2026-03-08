@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OAuthButtons } from "@/components/oauth-buttons";
+import { SamlSsoForm } from "@/components/saml-sso-form";
 
 type Props = {
   initialWorkspaceName?: string;
@@ -100,6 +101,7 @@ export function RegisterForm({
         inviteToken={inviteToken}
         disabled={submitting}
       />
+      <SamlSsoForm disabled={submitting} mode="register" />
 
       <div className="flex items-center gap-2 text-xs text-neutral-500">
         <div className="h-px flex-1 bg-neutral-900" />

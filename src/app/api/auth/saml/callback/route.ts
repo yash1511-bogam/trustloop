@@ -4,15 +4,58 @@ import { setSessionCookie } from "@/lib/cookies";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateSamlToken, isSamlSsoSupported } from "@/lib/stytch";
+import { ensureWorkspaceSlug } from "@/lib/workspace-slug";
+
+const SAML_CONTEXT_COOKIE_NAME = "trustloop_saml_context";
+
+const samlContextSchema = z.object({
+  intent: z.enum(["login", "register"]).optional(),
+});
 
 const callbackSchema = z.object({
   token: z.string().min(8),
 });
 
-function redirectWithError(request: NextRequest, code: string): NextResponse {
-  const url = new URL("/login", request.nextUrl.origin);
+function buildRedirectPath(intent: "login" | "register"): string {
+  return intent === "register" ? "/register" : "/login";
+}
+
+function clearSamlContextCookie(response: NextResponse): void {
+  response.cookies.set({
+    name: SAML_CONTEXT_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    path: "/",
+  });
+}
+
+function readSamlContextCookie(request: NextRequest): z.infer<typeof samlContextSchema> | null {
+  const raw = request.cookies.get(SAML_CONTEXT_COOKIE_NAME)?.value;
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = samlContextSchema.safeParse(JSON.parse(decodeURIComponent(raw)));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
+
+function redirectWithError(
+  request: NextRequest,
+  code: string,
+  intent: "login" | "register" = "login",
+): NextResponse {
+  const url = new URL(buildRedirectPath(intent), request.nextUrl.origin);
   url.searchParams.set("error", code);
-  return NextResponse.redirect(url);
+  const response = NextResponse.redirect(url);
+  clearSamlContextCookie(response);
+  return response;
 }
 
 function fallbackName(email: string): string {
@@ -21,13 +64,16 @@ function fallbackName(email: string): string {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const samlContext = readSamlContextCookie(request);
+  const intent = samlContext?.intent ?? "login";
+
   if (!isSamlSsoSupported()) {
-    return redirectWithError(request, "saml_not_configured");
+    return redirectWithError(request, "saml_not_configured", intent);
   }
 
   const parsed = callbackSchema.safeParse(Object.fromEntries(request.nextUrl.searchParams.entries()));
   if (!parsed.success) {
-    return redirectWithError(request, "saml_callback_invalid");
+    return redirectWithError(request, "saml_callback_invalid", intent);
   }
 
   try {
@@ -35,7 +81,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const normalizedEmail = authResult.email?.toLowerCase().trim() ?? null;
 
     if (!normalizedEmail) {
-      return redirectWithError(request, "saml_email_missing");
+      return redirectWithError(request, "saml_email_missing", intent);
     }
 
     const workspaceLookupConditions: Array<{
@@ -58,7 +104,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     });
 
     if (!workspace) {
-      return redirectWithError(request, "saml_workspace_not_ready");
+      return redirectWithError(request, "saml_workspace_not_ready", intent);
     }
 
     const existing = await prisma.user.findFirst({
@@ -108,7 +154,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
 
       if (!invite) {
-        return redirectWithError(request, "saml_invite_required");
+        return redirectWithError(request, "saml_invite_required", intent);
       }
 
       const created = await prisma.$transaction(async (tx) => {
@@ -138,8 +184,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       userId = created.id;
     }
 
+    await ensureWorkspaceSlug(prisma, workspace.id, workspace.name);
+
     const response = NextResponse.redirect(new URL("/dashboard", request.nextUrl.origin));
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+    clearSamlContextCookie(response);
 
     log.auth.info("SAML sign-in completed", {
       workspaceId: workspace.id,
@@ -153,6 +202,6 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     log.auth.error("SAML callback failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    return redirectWithError(request, "saml_auth_failed");
+    return redirectWithError(request, "saml_auth_failed", intent);
   }
 }

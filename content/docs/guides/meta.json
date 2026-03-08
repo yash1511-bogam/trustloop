@@ -6,8 +6,6 @@
     "webhook-integrations",
     "api-key-authentication",
     "incident-workflow",
-    "billing-and-plan-limits",
-    "documentation-style-and-citations",
-    "navigation-and-backlinks"
+    "billing-and-plan-limits"
   ]
 }

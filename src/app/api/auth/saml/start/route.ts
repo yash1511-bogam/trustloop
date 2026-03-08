@@ -3,6 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { buildSamlStartUrl, isSamlSsoSupported } from "@/lib/stytch";
 
+const SAML_CONTEXT_COOKIE_NAME = "trustloop_saml_context";
+const SAML_CONTEXT_MAX_AGE_SECONDS = 10 * 60;
+
 const slugSchema = z
   .string()
   .trim()
@@ -11,10 +14,51 @@ const slugSchema = z
   .max(60)
   .regex(/^[a-z0-9-]+$/);
 
-function redirectWithError(request: NextRequest, code: string): NextResponse {
-  const url = new URL("/login", request.nextUrl.origin);
+const intentSchema = z.enum(["login", "register"]);
+
+function redirectPath(intent: "login" | "register"): string {
+  return intent === "register" ? "/register" : "/login";
+}
+
+function redirectWithError(
+  request: NextRequest,
+  code: string,
+  intent: "login" | "register" = "login",
+): NextResponse {
+  const url = new URL(redirectPath(intent), request.nextUrl.origin);
   url.searchParams.set("error", code);
-  return NextResponse.redirect(url);
+  const response = NextResponse.redirect(url);
+  clearSamlContextCookie(response);
+  return response;
+}
+
+function setSamlContextCookie(
+  response: NextResponse,
+  context: {
+    intent: "login" | "register";
+  },
+): void {
+  response.cookies.set({
+    name: SAML_CONTEXT_COOKIE_NAME,
+    value: encodeURIComponent(JSON.stringify(context)),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: SAML_CONTEXT_MAX_AGE_SECONDS,
+    path: "/",
+  });
+}
+
+function clearSamlContextCookie(response: NextResponse): void {
+  response.cookies.set({
+    name: SAML_CONTEXT_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    path: "/",
+  });
 }
 
 function callbackUrl(request: NextRequest): string {
@@ -23,13 +67,16 @@ function callbackUrl(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  const parsedIntent = intentSchema.safeParse(request.nextUrl.searchParams.get("intent"));
+  const intent = parsedIntent.success ? parsedIntent.data : "login";
+
   if (!isSamlSsoSupported()) {
-    return redirectWithError(request, "saml_not_configured");
+    return redirectWithError(request, "saml_not_configured", intent);
   }
 
   const parsedSlug = slugSchema.safeParse(request.nextUrl.searchParams.get("slug"));
   if (!parsedSlug.success) {
-    return redirectWithError(request, "saml_workspace_not_found");
+    return redirectWithError(request, "saml_workspace_not_found", intent);
   }
 
   const workspace = await prisma.workspace.findUnique({
@@ -44,7 +91,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   });
 
   if (!workspace) {
-    return redirectWithError(request, "saml_workspace_not_found");
+    return redirectWithError(request, "saml_workspace_not_found", intent);
   }
 
   if (
@@ -53,7 +100,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     !workspace.samlOrganizationId ||
     !workspace.samlConnectionId
   ) {
-    return redirectWithError(request, "saml_workspace_not_ready");
+    return redirectWithError(request, "saml_workspace_not_ready", intent);
   }
 
   try {
@@ -62,8 +109,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       loginRedirectUrl: callbackUrl(request),
       signupRedirectUrl: callbackUrl(request),
     });
-    return NextResponse.redirect(startUrl);
+    const response = NextResponse.redirect(startUrl);
+    setSamlContextCookie(response, { intent });
+    return response;
   } catch {
-    return redirectWithError(request, "saml_not_configured");
+    return redirectWithError(request, "saml_not_configured", intent);
   }
 }

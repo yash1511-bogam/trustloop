@@ -6,6 +6,7 @@ import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateOAuthToken } from "@/lib/stytch";
+import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
 
@@ -146,6 +147,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         }
       }
 
+      await ensureWorkspaceSlug(prisma, existing.workspace.id, existing.workspace.name);
+
       const response = buildRedirect(request, "/dashboard");
       setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
       clearOAuthContextCookie(response);
@@ -198,14 +201,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           },
         });
 
+        await ensureWorkspaceSlug(tx, invite.workspace.id, invite.workspace.name);
+
         return { user, workspace: invite.workspace };
       }
 
-      const workspace = await tx.workspace.create({
-        data: {
-          name: workspaceName?.trim() || defaultWorkspaceName(authResult.name, email),
-        },
-      });
+      const workspace = await createWorkspaceWithGeneratedSlug(
+        tx,
+        workspaceName?.trim() || defaultWorkspaceName(authResult.name, email),
+      );
 
       const user = await tx.user.create({
         data: {

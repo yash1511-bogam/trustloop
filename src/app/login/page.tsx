@@ -3,6 +3,7 @@ import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
 import { getAuth } from "@/lib/auth";
+import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
 
 const oauthErrorMessages: Record<string, string> = {
   oauth_not_configured:
@@ -32,14 +33,14 @@ const oauthErrorMessages: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; token?: string; provider?: string; stytch_token_type?: string }>;
 }) {
+  const params = await redirectToOAuthCallbackIfPresent(searchParams);
   const auth = await getAuth();
   if (auth) {
     redirect("/dashboard");
   }
 
-  const params = await searchParams;
   const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
 
   return (

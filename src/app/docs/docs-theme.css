@@ -1,0 +1,163 @@
+.docs-theme {
+  color-scheme: dark;
+  --color-fd-background: #050507;
+  --color-fd-foreground: #ffffff;
+  --color-fd-muted: #101014;
+  --color-fd-muted-foreground: #8a8a93;
+  --color-fd-popover: #0d0d11;
+  --color-fd-popover-foreground: #f5f5f7;
+  --color-fd-card: #0d0d11;
+  --color-fd-card-foreground: #ffffff;
+  --color-fd-border: rgba(255, 255, 255, 0.08);
+  --color-fd-primary: #f5f5f7;
+  --color-fd-primary-foreground: #050507;
+  --color-fd-secondary: #17171c;
+  --color-fd-secondary-foreground: #f5f5f7;
+  --color-fd-accent: rgba(6, 182, 212, 0.14);
+  --color-fd-accent-foreground: #dffbff;
+  --color-fd-ring: rgba(255, 255, 255, 0.24);
+  --color-fd-overlay: rgba(0, 0, 0, 0.58);
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at top, rgba(28, 41, 74, 0.16), transparent 45%),
+    radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.08), transparent 45%),
+    var(--bg-base);
+  color: var(--color-fd-foreground);
+}
+
+.docs-theme a {
+  color: inherit;
+}
+
+.docs-theme .text-fd-foreground,
+.docs-theme .text-fd-card-foreground,
+.docs-theme .text-fd-popover-foreground,
+.docs-theme .text-fd-secondary-foreground,
+.docs-theme .text-fd-accent-foreground {
+  color: var(--color-fd-foreground) !important;
+}
+
+.docs-theme .text-fd-muted-foreground,
+.docs-theme .text-fd-popover-foreground\/80,
+.docs-theme .text-fd-foreground\/80 {
+  color: var(--color-fd-muted-foreground) !important;
+}
+
+.docs-theme .bg-fd-background,
+.docs-theme .bg-fd-background\/60,
+.docs-theme .bg-fd-background\/80,
+.docs-theme .bg-fd-card,
+.docs-theme .bg-fd-popover,
+.docs-theme .bg-fd-popover\/60,
+.docs-theme .bg-fd-popover\/80,
+.docs-theme .bg-fd-muted,
+.docs-theme .bg-fd-secondary {
+  background-color: var(--color-fd-card) !important;
+}
+
+.docs-theme .bg-fd-primary {
+  background-color: var(--color-fd-primary) !important;
+}
+
+.docs-theme .border-fd-border,
+.docs-theme .before\:bg-fd-border::before {
+  border-color: var(--color-fd-border) !important;
+  background-color: var(--color-fd-border) !important;
+}
+
+.docs-theme .prose,
+.docs-theme article,
+.docs-theme main {
+  color: var(--color-fd-foreground);
+}
+
+.docs-theme :where(h1, h2, h3, h4, h5, h6, strong, th) {
+  color: #ffffff;
+}
+
+.docs-theme :where(p, li, td, blockquote, summary) {
+  color: #d6d6dc;
+}
+
+.docs-theme :where(code):not(pre code) {
+  border: 1px solid var(--color-fd-border);
+  border-radius: 8px;
+  background: #121218;
+  color: #f5f5f7;
+  padding: 0.15rem 0.4rem;
+}
+
+.docs-theme pre {
+  border: 1px solid var(--color-fd-border);
+  background: #09090c !important;
+}
+
+.docs-theme input,
+.docs-theme button[role="combobox"],
+.docs-theme [cmdk-root] {
+  color: var(--color-fd-foreground);
+}
+
+.docs-theme #nd-subnav,
+.docs-theme #nd-sidebar,
+.docs-theme #nd-sidebar-mobile,
+.docs-theme [data-sidebar-panel] {
+  border: 1px solid var(--shell-float-border) !important;
+  background: var(--shell-float-bg) !important;
+  box-shadow: var(--shell-float-shadow);
+  backdrop-filter: blur(var(--shell-float-blur));
+  -webkit-backdrop-filter: blur(var(--shell-float-blur));
+}
+
+.docs-theme #nd-subnav {
+  margin: 12px 12px 0;
+  width: calc(100% - 24px);
+  border-radius: var(--shell-float-radius);
+  overflow: hidden;
+}
+
+.docs-theme #nd-sidebar {
+  border-radius: var(--shell-float-radius);
+  overflow: hidden;
+  border-inline-end-color: var(--shell-float-border) !important;
+}
+
+.docs-theme #nd-sidebar[data-collapsed="false"] {
+  inset-block: 16px !important;
+  inset-inline-start: 0 !important;
+}
+
+.docs-theme #nd-sidebar[data-collapsed="true"] {
+  inset-block: 16px !important;
+}
+
+.docs-theme [data-sidebar-panel] {
+  top: calc(var(--fd-docs-row-3) + 16px) !important;
+  inset-inline-start: 16px !important;
+  gap: 4px;
+  padding: 6px !important;
+  border-radius: var(--shell-float-radius);
+  overflow: hidden;
+}
+
+.docs-theme #nd-sidebar-mobile {
+  background: var(--shell-float-bg-strong) !important;
+  border-inline-start-color: var(--shell-float-border) !important;
+}
+
+.docs-theme #nd-subnav a,
+.docs-theme #nd-subnav button,
+.docs-theme #nd-sidebar a,
+.docs-theme #nd-sidebar button,
+.docs-theme #nd-sidebar-mobile a,
+.docs-theme #nd-sidebar-mobile button,
+.docs-theme [data-sidebar-panel] a,
+.docs-theme [data-sidebar-panel] button,
+.docs-theme [data-toc-popover] button,
+.docs-theme [data-toc-popover] a {
+  border-radius: 14px;
+}
+
+.docs-theme [data-sidebar-panel] > * {
+  flex: 0 0 auto;
+}

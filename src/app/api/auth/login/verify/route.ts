@@ -5,6 +5,7 @@ import { badRequest, notFound } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateEmailOtp } from "@/lib/stytch";
+import { ensureWorkspaceSlug } from "@/lib/workspace-slug";
 
 const loginVerifySchema = z.object({
   methodId: z.string().min(6).max(200),
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         id: true,
         name: true,
         email: true,
+        workspaceId: true,
       },
     });
 
@@ -42,6 +44,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           id: true,
           name: true,
           email: true,
+          workspaceId: true,
         },
       });
 
@@ -67,6 +70,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!user) {
       return notFound("No TrustLoop user found for this Stytch identity.");
     }
+
+    await ensureWorkspaceSlug(prisma, user.workspaceId);
 
     const response = NextResponse.json({
       success: true,

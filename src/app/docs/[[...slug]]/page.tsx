@@ -33,11 +33,6 @@ export default async function DocsSlugPage({
       footer={{ enabled: true }}
       tableOfContent={{
         enabled: true,
-        header: (
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-fd-muted-foreground">
-            On this page
-          </p>
-        ),
         footer: (
           <Link
             className="text-xs font-medium text-fd-muted-foreground underline underline-offset-4"

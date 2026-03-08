@@ -8,6 +8,7 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { authenticateEmailOtp } from "@/lib/stytch";
+import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 
 const registerVerifySchema = z.object({
   methodId: z.string().min(6).max(200),
@@ -116,14 +117,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           },
         });
 
+        await ensureWorkspaceSlug(tx, invite.workspace.id, invite.workspace.name);
+
         return { user: createdUser, workspace: invite.workspace };
       }
 
-      const workspace = await tx.workspace.create({
-        data: {
-          name: pending.workspaceName,
-        },
-      });
+      const workspace = await createWorkspaceWithGeneratedSlug(tx, pending.workspaceName);
 
       const createdUser = await tx.user.create({
         data: {

@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { OAuthButtons } from "@/components/oauth-buttons";
+import { SamlSsoForm } from "@/components/saml-sso-form";
 
 export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
-  const [samlSlug, setSamlSlug] = useState("");
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -79,28 +79,7 @@ export function LoginForm() {
   return (
     <div className="space-y-4">
       <OAuthButtons mode="login" disabled={submitting} />
-
-      <form action="/api/auth/saml/start" className="space-y-3" method="GET">
-        <div>
-          <label className="sr-only" htmlFor="saml-slug">
-            Workspace slug
-          </label>
-          <input
-            id="saml-slug"
-            className="input"
-            name="slug"
-            placeholder="Workspace slug for SAML SSO (e.g. acme-ai)"
-            value={samlSlug}
-            onChange={(event) => setSamlSlug(event.target.value.toLowerCase())}
-            minLength={3}
-            maxLength={60}
-            pattern="^[a-z0-9-]+$"
-          />
-        </div>
-        <button className="btn btn-ghost w-full" disabled={submitting || samlSlug.length < 3} type="submit">
-          Continue with SAML SSO
-        </button>
-      </form>
+      <SamlSsoForm disabled={submitting} mode="login" />
 
       <div className="flex items-center gap-2 text-xs text-neutral-500">
         <div className="h-px flex-1 bg-neutral-900" />

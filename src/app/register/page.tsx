@@ -3,11 +3,13 @@ import { Bot, Building2, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/register-form";
 import { getAuth } from "@/lib/auth";
+import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
 import { prisma } from "@/lib/prisma";
 
 const oauthErrorMessages: Record<string, string> = {
   oauth_not_configured:
     "OAuth is not configured yet. Ask your admin to set STYTCH_PUBLIC_TOKEN and redirect URLs.",
+  oauth_invalid_callback: "OAuth callback was invalid. Start sign-up again.",
   oauth_email_missing:
     "Your OAuth account did not provide a verified email. Use OTP registration instead.",
   oauth_no_workspace_account:
@@ -19,19 +21,38 @@ const oauthErrorMessages: Record<string, string> = {
   invite_invalid: "Invite is invalid or expired.",
   invite_email_mismatch: "Invite email does not match the OAuth account.",
   oauth_failed: "OAuth registration failed. Try again or use email OTP.",
+  saml_not_configured:
+    "SAML SSO is not configured for this environment. Ask your admin to enable Stytch B2B SSO.",
+  saml_workspace_not_found:
+    "Workspace not found. Enter the workspace slug configured by your TrustLoop admin.",
+  saml_workspace_not_ready:
+    "SAML is not fully configured for that workspace yet. Contact your workspace owner.",
+  saml_callback_invalid: "SAML callback was invalid. Start sign-up again.",
+  saml_email_missing:
+    "SAML response did not include an email address. Contact your identity provider admin.",
+  saml_invite_required:
+    "Your SAML identity is valid, but no active invite was found for this workspace.",
+  saml_auth_failed: "SAML sign-up failed. Try again or use email OTP.",
 };
 
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ invite?: string; email?: string; error?: string }>;
+  searchParams: Promise<{
+    invite?: string;
+    email?: string;
+    error?: string;
+    token?: string;
+    provider?: string;
+    stytch_token_type?: string;
+  }>;
 }) {
+  const params = await redirectToOAuthCallbackIfPresent(searchParams);
   const auth = await getAuth();
   if (auth) {
     redirect("/dashboard");
   }
 
-  const params = await searchParams;
   const inviteToken = params.invite;
   const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
   const invite =
@@ -90,7 +111,7 @@ export default async function RegisterPage({
           <p className="kicker mb-3">New workspace</p>
           <h2 className="mb-2 text-3xl font-bold text-white">Create TrustLoop account</h2>
           <p className="mb-8 text-sm text-neutral-400">
-            Start with OAuth or verify ownership with one-time code.
+            Start with Google, GitHub, SAML SSO, or verify ownership with one-time code.
           </p>
 
           {inviteToken && !invite ? (
