@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { badRequest, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
+import { refreshWorkspaceReadModels } from "@/lib/read-models";
 
 const publishSchema = z.object({
   body: z.string().min(8).max(2000),
@@ -62,6 +63,8 @@ export async function POST(
 
     return statusUpdate;
   });
+
+  await refreshWorkspaceReadModels(auth.workspaceId);
 
   return NextResponse.json({ statusUpdate: published }, { status: 201 });
 }

@@ -285,3 +285,78 @@ export async function sendGettingStartedGuideEmail(input: {
     ].join("\n"),
   });
 }
+
+export async function sendOwnerAssignedEmail(input: {
+  workspaceId: string;
+  incidentId: string;
+  toEmail: string;
+  ownerName: string;
+  incidentTitle: string;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    incidentId: input.incidentId,
+    type: EmailNotificationType.OWNER_ASSIGNED,
+    toEmail: input.toEmail,
+    subject: `You were assigned: ${input.incidentTitle}`,
+    html: [
+      `<p>Hi ${input.ownerName},</p>`,
+      `<p>You were assigned as incident owner for <strong>${input.incidentTitle}</strong>.</p>`,
+      `<p><a href=\"${baseUrl}/dashboard\">Open TrustLoop dashboard</a></p>`,
+    ].join(""),
+    text: [
+      `Hi ${input.ownerName},`,
+      `You were assigned as incident owner for ${input.incidentTitle}.`,
+      `Open dashboard: ${baseUrl}/dashboard`,
+    ].join("\n"),
+  });
+}
+
+export async function sendWorkspaceInviteEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  inviterName: string;
+  workspaceName: string;
+  role: string;
+  joinUrl: string;
+}): Promise<LoggedEmailResult> {
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.WORKSPACE_INVITE,
+    toEmail: input.toEmail,
+    subject: `You are invited to ${input.workspaceName} on TrustLoop`,
+    html: [
+      `<p>${input.inviterName} invited you to join <strong>${input.workspaceName}</strong> on TrustLoop as <strong>${input.role}</strong>.</p>`,
+      `<p><a href=\"${input.joinUrl}\">Accept invite</a></p>`,
+    ].join(""),
+    text: [
+      `${input.inviterName} invited you to join ${input.workspaceName} on TrustLoop as ${input.role}.`,
+      `Accept invite: ${input.joinUrl}`,
+    ].join("\n"),
+  });
+}
+
+export async function sendAiKeyHealthAlertEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  provider: string;
+  detail: string;
+}): Promise<LoggedEmailResult> {
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.INCIDENT_ALERT,
+    toEmail: input.toEmail,
+    subject: `${input.provider} API key verification failed`,
+    html: [
+      `<p>TrustLoop could not verify your <strong>${input.provider}</strong> API key.</p>`,
+      `<p>${input.detail}</p>`,
+      "<p>Update the key in Settings to restore AI triage and customer update workflows.</p>",
+    ].join(""),
+    text: [
+      `TrustLoop could not verify your ${input.provider} API key.`,
+      input.detail,
+      "Update the key in Settings to restore AI workflows.",
+    ].join("\n"),
+  });
+}

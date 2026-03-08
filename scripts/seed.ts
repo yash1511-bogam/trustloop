@@ -1,5 +1,6 @@
 import "dotenv/config";
 import {
+  AIIncidentCategory,
   AiProvider,
   EventType,
   IncidentChannel,
@@ -74,7 +75,7 @@ async function seed(): Promise<void> {
         channel: IncidentChannel.CHAT,
         status: IncidentStatus.INVESTIGATING,
         severity: IncidentSeverity.P2,
-        category: "Policy hallucination",
+        category: AIIncidentCategory.HALLUCINATION,
         ownerUserId: user.id,
         sourceTicketRef: "INT-44931",
         modelVersion: "assistant-prod-v42",
@@ -111,7 +112,7 @@ async function seed(): Promise<void> {
         channel: IncidentChannel.EMAIL,
         status: IncidentStatus.NEW,
         severity: IncidentSeverity.P3,
-        category: "Knowledge freshness",
+        category: AIIncidentCategory.DATA_DRIFT,
         ownerUserId: user.id,
         sourceTicketRef: "INT-44938",
         modelVersion: "assistant-prod-v42",

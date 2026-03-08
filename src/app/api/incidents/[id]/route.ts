@@ -119,7 +119,8 @@ export async function PATCH(
       data: {
         status: parsed.data.status,
         severity: parsed.data.severity,
-        category: parsed.data.category ?? undefined,
+        category:
+          parsed.data.category !== undefined ? parsed.data.category : undefined,
         summary: parsed.data.summary?.trim() || null,
         ownerUserId: parsed.data.ownerUserId ?? undefined,
         resolvedAt: resolvedAtValue,
@@ -132,6 +133,11 @@ export async function PATCH(
     }
     if (parsed.data.severity && parsed.data.severity !== existing.severity) {
       changed.push(`severity ${existing.severity} -> ${parsed.data.severity}`);
+    }
+    if (parsed.data.category !== undefined && parsed.data.category !== existing.category) {
+      changed.push(
+        `category ${existing.category ?? "Uncategorized"} -> ${parsed.data.category ?? "Uncategorized"}`,
+      );
     }
     if (
       parsed.data.ownerUserId !== undefined &&

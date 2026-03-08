@@ -7,6 +7,9 @@ type KeyRecord = {
   provider: AiProvider;
   keyLast4: string;
   isActive: boolean;
+  healthStatus: "UNKNOWN" | "OK" | "FAILED";
+  lastVerifiedAt: string | null;
+  lastVerificationError: string | null;
   updatedAt: string;
 };
 
@@ -158,6 +161,17 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                       ).toLocaleString()}`
                     : "No key saved yet."}
                 </p>
+                {record ? (
+                  <p className="mt-1 text-xs text-slate-600">
+                    Health: {record.healthStatus}
+                    {record.lastVerifiedAt
+                      ? ` • last checked ${new Date(record.lastVerifiedAt).toLocaleString()}`
+                      : ""}
+                  </p>
+                ) : null}
+                {record?.lastVerificationError ? (
+                  <p className="mt-1 text-xs text-red-700">{record.lastVerificationError}</p>
+                ) : null}
 
                 <input
                   className="input mt-3"

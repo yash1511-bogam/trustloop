@@ -1,6 +1,6 @@
 "use client";
 
-import { IncidentChannel, IncidentSeverity } from "@prisma/client";
+import { AIIncidentCategory, IncidentChannel, IncidentSeverity } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -15,6 +15,7 @@ export function CreateIncidentForm() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [channel, setChannel] = useState<IncidentChannel>(IncidentChannel.EMAIL);
   const [severity, setSeverity] = useState<IncidentSeverity>(IncidentSeverity.P3);
+  const [category, setCategory] = useState<AIIncidentCategory | "">("");
   const [modelVersion, setModelVersion] = useState("");
   const [sourceTicketRef, setSourceTicketRef] = useState("");
 
@@ -33,6 +34,7 @@ export function CreateIncidentForm() {
         customerEmail: customerEmail || null,
         channel,
         severity,
+        category: category || null,
         modelVersion: modelVersion || null,
         sourceTicketRef: sourceTicketRef || null,
       }),
@@ -54,6 +56,7 @@ export function CreateIncidentForm() {
     setDescription("");
     setCustomerName("");
     setCustomerEmail("");
+    setCategory("");
     setModelVersion("");
     setSourceTicketRef("");
 
@@ -108,7 +111,7 @@ export function CreateIncidentForm() {
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <select
           className="select"
           value={severity}
@@ -117,6 +120,24 @@ export function CreateIncidentForm() {
           }
         >
           {Object.values(IncidentSeverity).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <select
+          className="select"
+          value={category}
+          onChange={(event) =>
+            setCategory(
+              event.target.value
+                ? (event.target.value as AIIncidentCategory)
+                : "",
+            )
+          }
+        >
+          <option value="">Uncategorized</option>
+          {Object.values(AIIncidentCategory).map((option) => (
             <option key={option} value={option}>
               {option}
             </option>

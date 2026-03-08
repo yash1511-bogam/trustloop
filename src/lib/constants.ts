@@ -1,7 +1,7 @@
 export const APP_NAME = "TrustLoop";
 
 export const SESSION_COOKIE_NAME = "trustloop_session";
-export const SESSION_CACHE_TTL_SECONDS = 120;
+export const SESSION_CACHE_TTL_SECONDS = 30;
 
 export const STYTCH_OTP_EXPIRATION_MINUTES = Number(
   process.env.STYTCH_OTP_EXPIRATION_MINUTES ?? 5,

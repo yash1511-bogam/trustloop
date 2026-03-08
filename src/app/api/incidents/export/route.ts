@@ -1,0 +1,148 @@
+import { NextRequest, NextResponse } from "next/server";
+import { Role } from "@prisma/client";
+import { hasRole } from "@/lib/auth";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { forbidden } from "@/lib/http";
+import { prisma } from "@/lib/prisma";
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  const text = String(value);
+  const escaped = text.replace(/"/g, '""');
+  return /[",\n]/.test(escaped) ? `"${escaped}"` : escaped;
+}
+
+function toDate(value: string | null): Date | null {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date;
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const access = await requireApiAuthAndRateLimit(request);
+  if (access.response) {
+    return access.response;
+  }
+  const auth = access.auth;
+  if (auth.kind !== "session") {
+    return forbidden();
+  }
+  if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
+    return forbidden();
+  }
+
+  const format = request.nextUrl.searchParams.get("format") ?? "csv";
+  if (format !== "csv") {
+    return NextResponse.json({ error: "Only format=csv is currently supported." }, { status: 400 });
+  }
+
+  const fromDate = toDate(request.nextUrl.searchParams.get("from"));
+  const toDateValue = toDate(request.nextUrl.searchParams.get("to"));
+  const toExclusive = toDateValue ? new Date(toDateValue.getTime() + 24 * 60 * 60 * 1000) : null;
+
+  const incidents = await prisma.incident.findMany({
+    where: {
+      workspaceId: auth.workspaceId,
+      createdAt: {
+        gte: fromDate ?? undefined,
+        lt: toExclusive ?? undefined,
+      },
+    },
+    include: {
+      events: {
+        orderBy: { createdAt: "asc" },
+      },
+      statusUpdates: {
+        orderBy: { publishedAt: "asc" },
+      },
+      emailNotifications: {
+        orderBy: { createdAt: "asc" },
+      },
+      owner: {
+        select: { name: true, email: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const rows: string[] = [];
+  rows.push(
+    [
+      "incident_id",
+      "title",
+      "severity",
+      "status",
+      "category",
+      "owner_name",
+      "owner_email",
+      "created_at",
+      "resolved_at",
+      "event_type",
+      "event_body",
+      "event_created_at",
+      "status_update_body",
+      "status_update_published_at",
+      "email_type",
+      "email_to",
+      "email_status",
+      "email_created_at",
+    ]
+      .map(csvEscape)
+      .join(","),
+  );
+
+  for (const incident of incidents) {
+    const maxRows = Math.max(
+      incident.events.length,
+      incident.statusUpdates.length,
+      incident.emailNotifications.length,
+      1,
+    );
+
+    for (let i = 0; i < maxRows; i += 1) {
+      const event = incident.events[i];
+      const statusUpdate = incident.statusUpdates[i];
+      const email = incident.emailNotifications[i];
+
+      rows.push(
+        [
+          incident.id,
+          incident.title,
+          incident.severity,
+          incident.status,
+          incident.category ?? "",
+          incident.owner?.name ?? "",
+          incident.owner?.email ?? "",
+          incident.createdAt.toISOString(),
+          incident.resolvedAt?.toISOString() ?? "",
+          event?.eventType ?? "",
+          event?.body ?? "",
+          event?.createdAt.toISOString() ?? "",
+          statusUpdate?.body ?? "",
+          statusUpdate?.publishedAt.toISOString() ?? "",
+          email?.type ?? "",
+          email?.toEmail ?? "",
+          email?.status ?? "",
+          email?.createdAt.toISOString() ?? "",
+        ]
+          .map(csvEscape)
+          .join(","),
+      );
+    }
+  }
+
+  return new NextResponse(rows.join("\n"), {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename=\"trustloop-incidents-${new Date().toISOString().slice(0, 10)}.csv\"`,
+    },
+  });
+}

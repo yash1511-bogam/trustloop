@@ -1,6 +1,6 @@
 "use client";
 
-import { IncidentSeverity, IncidentStatus } from "@prisma/client";
+import { AIIncidentCategory, IncidentSeverity, IncidentStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -8,7 +8,13 @@ type Props = {
   incidentId: string;
   status: IncidentStatus;
   severity: IncidentSeverity;
-  category: string | null;
+  category: AIIncidentCategory | null;
+  ownerUserId: string | null;
+  owners: Array<{
+    id: string;
+    name: string;
+    role: string;
+  }>;
 };
 
 export function IncidentActions({
@@ -16,6 +22,8 @@ export function IncidentActions({
   status,
   severity,
   category,
+  ownerUserId,
+  owners,
 }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -23,8 +31,12 @@ export function IncidentActions({
   const [currentStatus, setCurrentStatus] = useState<IncidentStatus>(status);
   const [currentSeverity, setCurrentSeverity] =
     useState<IncidentSeverity>(severity);
-  const [currentCategory, setCurrentCategory] = useState(category ?? "");
+  const [currentCategory, setCurrentCategory] = useState<AIIncidentCategory | "">(
+    category ?? "",
+  );
+  const [currentOwnerUserId, setCurrentOwnerUserId] = useState(ownerUserId ?? "");
   const [draft, setDraft] = useState("");
+  const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,6 +50,7 @@ export function IncidentActions({
         status: currentStatus,
         severity: currentSeverity,
         category: currentCategory || null,
+        ownerUserId: currentOwnerUserId || null,
       }),
     });
 
@@ -130,9 +143,41 @@ export function IncidentActions({
     router.refresh();
   }
 
+  async function publishDraft() {
+    if (!draft.trim()) {
+      setError("Generate or edit a draft before publishing.");
+      return;
+    }
+
+    setPublishing(true);
+    setError(null);
+
+    const response = await fetch(`/api/incidents/${incidentId}/status-updates`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        body: draft,
+        isVisible: true,
+      }),
+    });
+
+    setPublishing(false);
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      setError(payload?.error ?? "Could not publish update.");
+      return;
+    }
+
+    setMessage("Update published to status page.");
+    router.refresh();
+  }
+
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <select
           className="select"
           value={currentStatus}
@@ -161,12 +206,37 @@ export function IncidentActions({
           ))}
         </select>
 
-        <input
-          className="input"
-          placeholder="Category"
+        <select
+          className="select"
           value={currentCategory}
-          onChange={(event) => setCurrentCategory(event.target.value)}
-        />
+          onChange={(event) =>
+            setCurrentCategory(
+              event.target.value
+                ? (event.target.value as AIIncidentCategory)
+                : "",
+            )
+          }
+        >
+          <option value="">Uncategorized</option>
+          {Object.values(AIIncidentCategory).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="select"
+          value={currentOwnerUserId}
+          onChange={(event) => setCurrentOwnerUserId(event.target.value)}
+        >
+          <option value="">Unassigned</option>
+          {owners.map((owner) => (
+            <option key={owner.id} value={owner.id}>
+              {owner.name} ({owner.role})
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -201,7 +271,28 @@ export function IncidentActions({
       {draft ? (
         <div className="space-y-1">
           <p className="kicker">Draft customer update</p>
-          <textarea className="textarea min-h-[120px]" value={draft} readOnly />
+          <textarea
+            className="textarea min-h-[120px]"
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn btn-primary"
+              disabled={publishing}
+              onClick={publishDraft}
+              type="button"
+            >
+              {publishing ? "Publishing..." : "Publish to status page"}
+            </button>
+            <a
+              className="btn btn-ghost"
+              href={`/api/incidents/${incidentId}/export?format=pdf`}
+              target="_blank"
+            >
+              Download incident PDF
+            </a>
+          </div>
         </div>
       ) : null}
 

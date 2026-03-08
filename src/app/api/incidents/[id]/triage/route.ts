@@ -3,7 +3,7 @@ import { AiProvider, EventType, WorkflowType } from "@prisma/client";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { decryptSecret } from "@/lib/encryption";
 import { badRequest, notFound, quotaExceeded } from "@/lib/http";
-import { generateIncidentTriage } from "@/lib/ai/service";
+import { AiProviderError, generateIncidentTriage } from "@/lib/ai/service";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { enqueueReminder } from "@/lib/queue";
 import { prisma } from "@/lib/prisma";
@@ -63,16 +63,33 @@ export async function POST(
 
   const apiKey = decryptSecret(key.encryptedKey);
 
-  const triage = await generateIncidentTriage({
-    provider,
-    apiKey,
-    model: workflow?.model,
-    incidentTitle: incident.title,
-    incidentDescription: incident.description,
-    customerContext: [incident.customerName, incident.customerEmail]
-      .filter(Boolean)
-      .join(" | "),
-  });
+  let triage: Awaited<ReturnType<typeof generateIncidentTriage>>;
+  try {
+    triage = await generateIncidentTriage({
+      provider,
+      apiKey,
+      model: workflow?.model,
+      incidentTitle: incident.title,
+      incidentDescription: incident.description,
+      customerContext: [incident.customerName, incident.customerEmail]
+        .filter(Boolean)
+        .join(" | "),
+    });
+  } catch (error) {
+    if (error instanceof AiProviderError) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          retryAfterSeconds: error.retryAfterSeconds,
+        },
+        {
+          status: error.code === "PROVIDER_RATE_LIMITED" ? 429 : 502,
+        },
+      );
+    }
+    throw error;
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     const saved = await tx.incident.update({

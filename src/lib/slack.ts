@@ -32,7 +32,10 @@ export function slackOAuthRedirectUri(): string {
 }
 
 export function slackInstallUrl(state?: string): string {
-  const clientId = requiredEnv("SLACK_CLIENT_ID");
+  const clientId = process.env.SLACK_CLIENT_ID;
+  if (!clientId) {
+    return "#";
+  }
   const redirectUri = slackOAuthRedirectUri();
   const scope = [
     "commands",

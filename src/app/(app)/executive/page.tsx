@@ -1,14 +1,12 @@
+import Link from "next/link";
+import { ExecutiveCharts } from "@/components/executive-charts";
 import { requireAuth } from "@/lib/auth";
-import { getExecutiveDashboard, refreshWorkspaceReadModels } from "@/lib/read-models";
+import { getExecutiveDashboard } from "@/lib/read-models";
 
 export default async function ExecutivePage() {
   const auth = await requireAuth();
 
-  let dashboard = await getExecutiveDashboard(auth.user.workspaceId);
-  if (!dashboard.snapshot) {
-    await refreshWorkspaceReadModels(auth.user.workspaceId);
-    dashboard = await getExecutiveDashboard(auth.user.workspaceId);
-  }
+  const dashboard = await getExecutiveDashboard(auth.user.workspaceId);
 
   const snapshot = dashboard.snapshot;
 
@@ -68,45 +66,22 @@ export default async function ExecutivePage() {
 
       <section className="surface overflow-hidden">
         <div className="border-b border-slate-200 p-4">
-          <h3 className="text-lg font-semibold">14-day analytics trend</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold">14-day analytics trend</h3>
+            <div className="flex gap-2">
+              <Link className="btn btn-ghost" href="/api/incidents/export?format=csv">
+                Export CSV
+              </Link>
+              <form action="/api/workspace/refresh-read-models" method="post">
+                <button className="btn btn-primary" type="submit">
+                  Refresh now
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3">Day</th>
-                <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3">Resolved</th>
-                <th className="px-4 py-3">Open EOD</th>
-                <th className="px-4 py-3">P1 Created</th>
-                <th className="px-4 py-3">Triage Runs</th>
-                <th className="px-4 py-3">Customer Updates</th>
-                <th className="px-4 py-3">Reminder Emails</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dashboard.series.map((row) => (
-                <tr className="border-t border-slate-100" key={row.day}>
-                  <td className="px-4 py-3">{row.day}</td>
-                  <td className="px-4 py-3">{row.incidentsCreated}</td>
-                  <td className="px-4 py-3">{row.incidentsResolved}</td>
-                  <td className="px-4 py-3">{row.openAtEndOfDay}</td>
-                  <td className="px-4 py-3">{row.p1Created}</td>
-                  <td className="px-4 py-3">{row.triageRuns}</td>
-                  <td className="px-4 py-3">{row.customerUpdatesSent}</td>
-                  <td className="px-4 py-3">{row.reminderEmailsSent}</td>
-                </tr>
-              ))}
-
-              {dashboard.series.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-8 text-slate-500" colSpan={8}>
-                    No analytics rows generated yet.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        <div className="p-4">
+          <ExecutiveCharts data={dashboard.series} />
         </div>
       </section>
     </div>

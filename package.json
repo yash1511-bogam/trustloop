@@ -29,7 +29,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "worker": "tsx scripts/worker.ts",
     "worker:once": "tsx scripts/worker.ts --once",
-    "localstack:init": "tsx scripts/init-localstack.ts"
+    "localstack:init": "tsx scripts/init-localstack.ts",
+    "ai-keys:verify": "tsx scripts/verify-ai-keys.ts"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.1004.0",

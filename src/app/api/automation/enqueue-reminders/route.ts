@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { IncidentStatus, ReminderStatus, Role } from "@prisma/client";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
@@ -8,14 +8,17 @@ import { prisma } from "@/lib/prisma";
 
 const STALE_MINUTES = Number(process.env.REMINDER_STALE_MINUTES ?? 240);
 
-export async function POST(): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const access = await requireApiAuthAndRateLimit(request);
   if (access.response) {
     return access.response;
   }
   const auth = access.auth;
+  if (auth.kind !== "session") {
+    return forbidden();
+  }
 
-  if (!hasRole(auth, [Role.OWNER, Role.MANAGER])) {
+  if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
     return forbidden();
   }
 
@@ -23,7 +26,7 @@ export async function POST(): Promise<NextResponse> {
 
   const incidents = await prisma.incident.findMany({
     where: {
-      workspaceId: auth.user.workspaceId,
+      workspaceId: auth.workspaceId,
       status: {
         in: [
           IncidentStatus.NEW,
@@ -43,14 +46,14 @@ export async function POST(): Promise<NextResponse> {
 
   for (const incident of incidents) {
     const messageId = await enqueueReminder({
-      workspaceId: auth.user.workspaceId,
+      workspaceId: auth.workspaceId,
       incidentId: incident.id,
       queuedAt: new Date().toISOString(),
     });
 
     await prisma.reminderJobLog.create({
       data: {
-        workspaceId: auth.user.workspaceId,
+        workspaceId: auth.workspaceId,
         incidentId: incident.id,
         queueMessageId: messageId,
         status: ReminderStatus.QUEUED,

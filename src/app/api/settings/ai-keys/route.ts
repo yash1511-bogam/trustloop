@@ -12,20 +12,26 @@ const saveKeySchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function GET(): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const access = await requireApiAuthAndRateLimit(request);
   if (access.response) {
     return access.response;
   }
   const auth = access.auth;
+  if (auth.kind !== "session") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const keys = await prisma.aiProviderKey.findMany({
-    where: { workspaceId: auth.user.workspaceId },
+    where: { workspaceId: auth.workspaceId },
     orderBy: { provider: "asc" },
     select: {
       provider: true,
       keyLast4: true,
       isActive: true,
+      healthStatus: true,
+      lastVerifiedAt: true,
+      lastVerificationError: true,
       updatedAt: true,
     },
   });
@@ -34,11 +40,14 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(request);
   if (access.response) {
     return access.response;
   }
   const auth = access.auth;
+  if (auth.kind !== "session") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const parsed = saveKeySchema.safeParse(body);
@@ -52,26 +61,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const key = await prisma.aiProviderKey.upsert({
     where: {
       workspaceId_provider: {
-        workspaceId: auth.user.workspaceId,
+        workspaceId: auth.workspaceId,
         provider: parsed.data.provider,
       },
     },
     create: {
-      workspaceId: auth.user.workspaceId,
+      workspaceId: auth.workspaceId,
       provider: parsed.data.provider,
       encryptedKey: encrypted,
       keyLast4: last4(parsed.data.apiKey),
       isActive: parsed.data.isActive ?? true,
+      healthStatus: "UNKNOWN",
+      lastVerifiedAt: null,
+      lastVerificationError: null,
     },
     update: {
       encryptedKey: encrypted,
       keyLast4: last4(parsed.data.apiKey),
       isActive: parsed.data.isActive ?? true,
+      healthStatus: "UNKNOWN",
+      lastVerifiedAt: null,
+      lastVerificationError: null,
     },
     select: {
       provider: true,
       keyLast4: true,
       isActive: true,
+      healthStatus: true,
+      lastVerifiedAt: true,
+      lastVerificationError: true,
       updatedAt: true,
     },
   });

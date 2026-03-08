@@ -68,16 +68,23 @@ export type ReminderMessagePayload = {
   workspaceId: string;
   incidentId: string;
   queuedAt: string;
+  delaySeconds?: number;
 };
 
 export async function enqueueReminder(
   payload: ReminderMessagePayload,
 ): Promise<string | undefined> {
+  const delaySeconds =
+    payload.delaySeconds !== undefined
+      ? Math.max(0, Math.min(900, Math.floor(payload.delaySeconds)))
+      : 0;
+
   const sqs = client();
   const response = await sqs.send(
     new SendMessageCommand({
       QueueUrl: reminderQueueUrl(),
       MessageBody: JSON.stringify(payload),
+      DelaySeconds: delaySeconds,
     }),
   );
 

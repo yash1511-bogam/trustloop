@@ -43,6 +43,16 @@ export default async function IncidentDetailPage({
     notFound();
   }
 
+  const owners = await prisma.user.findMany({
+    where: { workspaceId: auth.user.workspaceId },
+    select: {
+      id: true,
+      name: true,
+      role: true,
+    },
+    orderBy: [{ role: "asc" }, { name: "asc" }],
+  });
+
   return (
     <div className="space-y-5">
       <section className="surface p-5">
@@ -79,6 +89,8 @@ export default async function IncidentDetailPage({
           status={incident.status}
           severity={incident.severity}
           category={incident.category}
+          ownerUserId={incident.ownerUserId}
+          owners={owners}
         />
       </section>
 

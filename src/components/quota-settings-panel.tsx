@@ -8,6 +8,8 @@ type Quota = {
   triageRunsPerDay: number;
   customerUpdatesPerDay: number;
   reminderEmailsPerDay: number;
+  reminderIntervalHoursP1: number;
+  reminderIntervalHoursP2: number;
 };
 
 type Props = {
@@ -116,6 +118,30 @@ export function QuotaSettingsPanel({ initialQuota }: Props) {
             max={100000}
             value={quota.reminderEmailsPerDay}
             onChange={(event) => updateField("reminderEmailsPerDay", event.target.value)}
+          />
+        </label>
+
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">P1 reminder interval (hours)</span>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={168}
+            value={quota.reminderIntervalHoursP1}
+            onChange={(event) => updateField("reminderIntervalHoursP1", event.target.value)}
+          />
+        </label>
+
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">P2 reminder interval (hours)</span>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={336}
+            value={quota.reminderIntervalHoursP2}
+            onChange={(event) => updateField("reminderIntervalHoursP2", event.target.value)}
           />
         </label>
       </div>

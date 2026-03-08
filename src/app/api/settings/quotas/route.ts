@@ -13,23 +13,28 @@ const quotaSchema = z.object({
   triageRunsPerDay: z.int().min(10).max(100000),
   customerUpdatesPerDay: z.int().min(10).max(100000),
   reminderEmailsPerDay: z.int().min(10).max(100000),
+  reminderIntervalHoursP1: z.int().min(1).max(168).optional(),
+  reminderIntervalHoursP2: z.int().min(1).max(336).optional(),
 });
 
 function quotaCacheKey(workspaceId: string): string {
   return `quota:policy:${workspaceId}`;
 }
 
-export async function GET(): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const access = await requireApiAuthAndRateLimit(request);
   if (access.response) {
     return access.response;
   }
 
   const auth = access.auth;
+  if (auth.kind !== "session") {
+    return forbidden();
+  }
 
   const quota = await prisma.workspaceQuota.upsert({
-    where: { workspaceId: auth.user.workspaceId },
-    create: { workspaceId: auth.user.workspaceId },
+    where: { workspaceId: auth.workspaceId },
+    create: { workspaceId: auth.workspaceId },
     update: {},
   });
 
@@ -37,13 +42,16 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(request);
   if (access.response) {
     return access.response;
   }
 
   const auth = access.auth;
-  if (!hasRole(auth, [Role.OWNER, Role.MANAGER])) {
+  if (auth.kind !== "session") {
+    return forbidden();
+  }
+  if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
     return forbidden();
   }
 
@@ -54,9 +62,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const quota = await prisma.workspaceQuota.upsert({
-    where: { workspaceId: auth.user.workspaceId },
+    where: { workspaceId: auth.workspaceId },
     create: {
-      workspaceId: auth.user.workspaceId,
+      workspaceId: auth.workspaceId,
       ...parsed.data,
     },
     update: {
@@ -64,7 +72,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     },
   });
 
-  await redisDelete(quotaCacheKey(auth.user.workspaceId));
+  await redisDelete(quotaCacheKey(auth.workspaceId));
 
   return NextResponse.json({ quota });
 }

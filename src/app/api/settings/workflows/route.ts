@@ -17,9 +17,12 @@ export async function GET(): Promise<NextResponse> {
     return access.response;
   }
   const auth = access.auth;
+  if (auth.kind !== "session") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const workflows = await prisma.workflowSetting.findMany({
-    where: { workspaceId: auth.user.workspaceId },
+    where: { workspaceId: auth.workspaceId },
     orderBy: { workflowType: "asc" },
   });
 
@@ -27,11 +30,14 @@ export async function GET(): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(request);
   if (access.response) {
     return access.response;
   }
   const auth = access.auth;
+  if (auth.kind !== "session") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const parsed = upsertWorkflowSchema.safeParse(body);
@@ -42,12 +48,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const saved = await prisma.workflowSetting.upsert({
     where: {
       workspaceId_workflowType: {
-        workspaceId: auth.user.workspaceId,
+        workspaceId: auth.workspaceId,
         workflowType: parsed.data.workflowType,
       },
     },
     create: {
-      workspaceId: auth.user.workspaceId,
+      workspaceId: auth.workspaceId,
       workflowType: parsed.data.workflowType,
       provider: parsed.data.provider,
       model: parsed.data.model.trim(),

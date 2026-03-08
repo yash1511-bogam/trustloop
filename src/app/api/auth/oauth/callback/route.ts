@@ -1,0 +1,224 @@
+import { NextRequest, NextResponse } from "next/server";
+import { AiProvider, Role, WorkflowType } from "@prisma/client";
+import { z } from "zod";
+import { setSessionCookie } from "@/lib/cookies";
+import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
+import { prisma } from "@/lib/prisma";
+import { authenticateOAuthToken } from "@/lib/stytch";
+
+const callbackSchema = z.object({
+  token: z.string().min(8),
+  provider: z.enum(["google", "github"]).optional(),
+  intent: z.enum(["login", "register"]).optional(),
+  workspaceName: z.string().min(2).max(80).optional(),
+  inviteToken: z.string().uuid().optional(),
+});
+
+function startOfUtcDay(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function buildRedirect(
+  request: NextRequest,
+  path: string,
+  params?: Record<string, string | undefined>,
+): NextResponse {
+  const url = new URL(path, request.nextUrl.origin);
+  if (params) {
+    for (const [key, value] of Object.entries(params)) {
+      if (value) {
+        url.searchParams.set(key, value);
+      }
+    }
+  }
+  return NextResponse.redirect(url);
+}
+
+function defaultWorkspaceName(name: string | null, email: string): string {
+  if (name?.trim()) {
+    return `${name.trim().slice(0, 48)} Workspace`;
+  }
+  const local = email.split("@")[0] ?? "Team";
+  return `${local.slice(0, 40)} Workspace`;
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const searchParams = Object.fromEntries(request.nextUrl.searchParams.entries());
+  const parsed = callbackSchema.safeParse(searchParams);
+  if (!parsed.success) {
+    return buildRedirect(request, "/login", { error: "oauth_invalid_callback" });
+  }
+
+  const intent = parsed.data.intent ?? "login";
+
+  try {
+    const authResult = await authenticateOAuthToken(parsed.data.token);
+    if (!authResult.email) {
+      return buildRedirect(request, "/register", {
+        error: "oauth_email_missing",
+      });
+    }
+
+    const email = authResult.email.toLowerCase().trim();
+
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [{ stytchUserId: authResult.stytchUserId }, { email }],
+      },
+      include: {
+        workspace: true,
+      },
+    });
+
+    if (existing) {
+      if (existing.stytchUserId !== authResult.stytchUserId) {
+        await prisma.user
+          .update({
+            where: { id: existing.id },
+            data: {
+              stytchUserId: authResult.stytchUserId,
+            },
+          })
+          .catch(() => null);
+      }
+
+      const response = buildRedirect(request, "/dashboard");
+      setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+      return response;
+    }
+
+    if (intent !== "register") {
+      return buildRedirect(request, "/register", {
+        email,
+        error: "oauth_no_workspace_account",
+      });
+    }
+
+    const created = await prisma.$transaction(async (tx) => {
+      if (parsed.data.inviteToken) {
+        const invite = await tx.workspaceInvite.findFirst({
+          where: {
+            token: parsed.data.inviteToken,
+            usedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          include: {
+            workspace: true,
+          },
+        });
+
+        if (!invite) {
+          throw new Error("invite_invalid");
+        }
+        if (invite.email.toLowerCase() !== email) {
+          throw new Error("invite_email_mismatch");
+        }
+
+        const user = await tx.user.create({
+          data: {
+            workspaceId: invite.workspaceId,
+            email,
+            name: authResult.name?.trim() || "Team Member",
+            role: invite.role,
+            stytchUserId: authResult.stytchUserId,
+          },
+        });
+
+        await tx.workspaceInvite.update({
+          where: {
+            id: invite.id,
+          },
+          data: {
+            usedAt: new Date(),
+          },
+        });
+
+        return { user, workspace: invite.workspace };
+      }
+
+      const workspace = await tx.workspace.create({
+        data: {
+          name:
+            parsed.data.workspaceName?.trim() ||
+            defaultWorkspaceName(authResult.name, email),
+        },
+      });
+
+      const user = await tx.user.create({
+        data: {
+          workspaceId: workspace.id,
+          email,
+          name: authResult.name?.trim() || "Workspace Owner",
+          role: Role.OWNER,
+          stytchUserId: authResult.stytchUserId,
+        },
+      });
+
+      await tx.workflowSetting.createMany({
+        data: [
+          {
+            workspaceId: workspace.id,
+            workflowType: WorkflowType.INCIDENT_TRIAGE,
+            provider: AiProvider.OPENAI,
+            model: "gpt-4o-mini",
+          },
+          {
+            workspaceId: workspace.id,
+            workflowType: WorkflowType.CUSTOMER_UPDATE,
+            provider: AiProvider.OPENAI,
+            model: "gpt-4o-mini",
+          },
+        ],
+      });
+
+      await tx.workspaceQuota.create({
+        data: {
+          workspaceId: workspace.id,
+        },
+      });
+
+      await tx.workspaceDailyUsage.upsert({
+        where: {
+          workspaceId_usageDate: {
+            workspaceId: workspace.id,
+            usageDate: startOfUtcDay(),
+          },
+        },
+        create: {
+          workspaceId: workspace.id,
+          usageDate: startOfUtcDay(),
+        },
+        update: {},
+      });
+
+      return { user, workspace };
+    });
+
+    await sendWelcomeEmail({
+      workspaceId: created.workspace.id,
+      toEmail: created.user.email,
+      workspaceName: created.workspace.name,
+      userName: created.user.name,
+    }).catch(() => null);
+    await sendGettingStartedGuideEmail({
+      workspaceId: created.workspace.id,
+      toEmail: created.user.email,
+      workspaceName: created.workspace.name,
+      userName: created.user.name,
+    }).catch(() => null);
+
+    const response = buildRedirect(request, "/dashboard");
+    setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+    return response;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "oauth_failed";
+    const errorCode =
+      message === "invite_invalid" || message === "invite_email_mismatch"
+        ? message
+        : "oauth_failed";
+    return buildRedirect(request, "/register", {
+      error: errorCode,
+    });
+  }
+}
