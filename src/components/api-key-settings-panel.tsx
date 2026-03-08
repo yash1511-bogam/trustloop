@@ -87,11 +87,11 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-neutral-400">
         Create API keys for external incident intake (monitoring alerts, bot automations, and webhook pipelines).
       </p>
 
-      <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+      <div className="grid gap-4 md:grid-cols-[1fr_auto]">
         <input
           className="input"
           value={name}
@@ -104,7 +104,7 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
       </div>
 
       {revealedKey ? (
-        <div className="panel-card p-3">
+        <div className="panel-card p-4">
           <p className="kicker mb-1">One-time key reveal</p>
           <code className="block overflow-x-auto rounded bg-white p-2 text-xs">{revealedKey}</code>
         </div>
@@ -112,27 +112,27 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[740px] text-left text-sm">
-          <thead className="bg-slate-50 text-slate-600">
+          <thead className="bg-neutral-900 text-neutral-400">
             <tr>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Prefix</th>
-              <th className="px-3 py-2">Created</th>
-              <th className="px-3 py-2">Last used</th>
-              <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Action</th>
+              <th className="px-4 py-2">Name</th>
+              <th className="px-4 py-2">Prefix</th>
+              <th className="px-4 py-2">Created</th>
+              <th className="px-4 py-2">Last used</th>
+              <th className="px-4 py-2">Status</th>
+              <th className="px-4 py-2">Action</th>
             </tr>
           </thead>
           <tbody>
             {keys.map((key) => (
-              <tr className="border-t border-slate-100" key={key.id}>
-                <td className="px-3 py-2">{key.name}</td>
-                <td className="px-3 py-2 font-mono text-xs">{key.keyPrefix}</td>
-                <td className="px-3 py-2">{new Date(key.createdAt).toLocaleString()}</td>
-                <td className="px-3 py-2">
+              <tr className="border-t border-neutral-800" key={key.id}>
+                <td className="px-4 py-2">{key.name}</td>
+                <td className="px-4 py-2 font-mono text-xs">{key.keyPrefix}</td>
+                <td className="px-4 py-2">{new Date(key.createdAt).toLocaleString()}</td>
+                <td className="px-4 py-2">
                   {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "Never"}
                 </td>
-                <td className="px-3 py-2">{key.isActive ? "Active" : "Revoked"}</td>
-                <td className="px-3 py-2">
+                <td className="px-4 py-2">{key.isActive ? "Active" : "Revoked"}</td>
+                <td className="px-4 py-2">
                   {key.isActive ? (
                     <button
                       className="btn btn-ghost"
@@ -148,7 +148,7 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
             ))}
             {keys.length === 0 ? (
               <tr>
-                <td className="px-3 py-4 text-slate-500" colSpan={6}>
+                <td className="px-4 py-4 text-neutral-500" colSpan={6}>
                   No API keys created yet.
                 </td>
               </tr>

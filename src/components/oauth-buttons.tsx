@@ -53,7 +53,7 @@ export function OAuthButtons({ mode, workspaceName, inviteToken, disabled }: Pro
 
   return (
     <div className="space-y-2">
-      <p className="text-xs uppercase tracking-wide text-slate-500">
+      <p className="text-xs uppercase tracking-wide text-neutral-500">
         Or continue with OAuth
       </p>
       <div className="grid gap-2 md:grid-cols-2">

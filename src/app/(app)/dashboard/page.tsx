@@ -33,7 +33,7 @@ export default async function DashboardPage() {
           <div>
             <p className="kicker">Incident operations</p>
             <h2 className="mt-2 text-3xl font-semibold text-slate-100">Command dashboard</h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-500">
+            <p className="mt-2 max-w-3xl text-sm text-neutral-500">
               Track incident pressure, ownership, and response quality in one workspace view.
             </p>
           </div>
@@ -77,19 +77,19 @@ export default async function DashboardPage() {
       </section>
 
       <section className="surface p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-semibold text-slate-100">Executive read-model snapshot</h3>
-            <p className="text-sm text-slate-500">Cached analytics summary for leadership.
+            <p className="text-sm text-neutral-500">Cached analytics summary for leadership.
             </p>
           </div>
-          <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1 text-xs text-neutral-500">
             <Clock3 className="h-3.5 w-3.5" />
             {snapshot?.updatedAt ? new Date(snapshot.updatedAt).toLocaleString() : "No snapshot yet"}
           </span>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           <article className="panel-card p-4">
             <p className="kicker">Triage coverage (30d)</p>
             <p className="mt-1 text-2xl font-semibold">{snapshot?.triageCoveragePct ?? 0}%</p>
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
 
       <section className="surface p-6">
         <h3 className="mb-1 text-xl font-semibold text-slate-100">Create incident</h3>
-        <p className="mb-4 text-sm text-slate-500">
+        <p className="mb-4 text-sm text-neutral-500">
           Log customer-facing AI failures and trigger ownership immediately.
         </p>
         <CreateIncidentForm />

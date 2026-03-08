@@ -52,14 +52,14 @@ export default async function SettingsTeamPage() {
       <section className="surface p-6">
         <p className="kicker">Team operations</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Membership and on-call profile</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
           Invite teammates, assign roles safely, and keep contact data current for high-severity response workflows.
         </p>
       </section>
 
       <section className="surface p-6">
         <h2 className="text-2xl font-semibold text-slate-100">Team management</h2>
-        <p className="mt-1 text-sm text-slate-500">Invite teammates, assign roles, and remove members.</p>
+        <p className="mt-1 text-sm text-neutral-500">Invite teammates, assign roles, and remove members.</p>
         <div className="mt-4">
           <TeamManagementPanel
             canManageRoles={auth.user.role === "OWNER"}
@@ -79,7 +79,7 @@ export default async function SettingsTeamPage() {
 
       <section className="surface p-6">
         <h2 className="text-2xl font-semibold text-slate-100">Profile & on-call</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-neutral-500">
           Keep personal contact details up to date for urgent P1 notifications.
         </p>
         <div className="mt-4">

@@ -30,7 +30,7 @@ export default async function ExecutivePage() {
       <section className="surface p-6">
         <p className="kicker">Executive visibility</p>
         <h2 className="mt-2 text-3xl font-semibold text-slate-100">Reliability and response analytics</h2>
-        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
           Tenant-scoped read models for incident operations, response coverage, and leadership reviews.
         </p>
       </section>
@@ -59,8 +59,8 @@ export default async function ExecutivePage() {
       </section>
 
       <section className="surface p-6">
-        <h3 className="mb-3 text-lg font-semibold text-slate-100">Coverage and timing</h3>
-        <div className="grid gap-3 md:grid-cols-3">
+        <h3 className="mb-4 text-lg font-semibold text-slate-100">Coverage and timing</h3>
+        <div className="grid gap-4 md:grid-cols-3">
           <article className="panel-card p-4">
             <p className="kicker">Avg resolution (hrs, 30d)</p>
             <p className="mt-1 text-2xl font-semibold">{snapshot?.avgResolutionHoursLast30d ?? 0}</p>
@@ -77,7 +77,7 @@ export default async function ExecutivePage() {
       </section>
 
       <section className="surface overflow-hidden">
-        <div className="border-b border-slate-200 p-5">
+        <div className="border-b border-neutral-800 p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-semibold text-slate-100">14-day analytics trend</h3>
             <div className="flex gap-2">
@@ -92,7 +92,7 @@ export default async function ExecutivePage() {
             </div>
           </div>
         </div>
-        <div className="p-5">
+        <div className="p-6">
           <ExecutiveCharts data={dashboard.series} />
         </div>
       </section>

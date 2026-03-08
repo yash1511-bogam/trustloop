@@ -16,19 +16,19 @@ export default async function AppLayout({
   });
 
   return (
-    <main className="container-shell fade-in py-7 md:py-8">
+    <main className="container-shell fade-in py-8 md:py-8">
       <div className="app-shell">
         <aside className="surface app-nav-panel">
-          <div className="space-y-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#0891b2_0%,#1d4ed8_100%)] text-sky-50 shadow-[0_12px_24px_rgba(2,132,199,0.32)]">
+          <div className="space-y-4">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-neutral-900 text-sky-50 shadow-sm">
               <Siren className="h-5 w-5" />
             </span>
             <div>
               <p className="kicker">{auth.user.workspaceName}</p>
               <h1 className="mt-1 text-xl font-semibold text-slate-100">TrustLoop Operations</h1>
-              <p className="text-sm text-slate-500">{auth.user.name}</p>
+              <p className="text-sm text-neutral-500">{auth.user.name}</p>
               {workspace?.complianceMode ? (
-                <span className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+                <span className="mt-2 inline-flex rounded-full border border-neutral-800 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">
                   Compliance mode
                 </span>
               ) : null}
@@ -37,7 +37,7 @@ export default async function AppLayout({
 
           <AppShellNav />
 
-          <div className="panel-card p-3 text-xs text-slate-500">
+          <div className="panel-card p-4 text-xs text-neutral-500">
             <div className="mb-1 inline-flex items-center gap-1 font-semibold text-slate-400">
               <CalendarClock className="h-3.5 w-3.5" />
               Daily Workflow

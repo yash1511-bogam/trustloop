@@ -81,7 +81,7 @@ export default async function SettingsOverviewPage() {
       <section className="surface p-6">
         <p className="kicker">Settings workspace</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Configuration overview</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
           Settings are now split into focused pages to reduce page clutter and make operations faster.
         </p>
       </section>
@@ -116,26 +116,26 @@ export default async function SettingsOverviewPage() {
       <section className="surface p-6">
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-slate-100">Open a settings area</h2>
-          <p className="mt-1 text-sm text-slate-500">Each section has its own page and save cycle.</p>
+          <p className="mt-1 text-sm text-neutral-500">Each section has its own page and save cycle.</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           {cards.map((card) => (
             <Link
-              className="panel-card group p-5 transition-transform duration-200 hover:-translate-y-1"
+              className="panel-card group p-6 transition-transform duration-200 hover:-translate-y-1"
               href={card.href}
               key={card.href}
             >
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(8,145,178,0.2)] text-cyan-300">
                 <card.icon className="h-5 w-5" />
               </span>
-              <h3 className="mt-3 text-lg font-semibold text-slate-100">{card.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-slate-500">{card.description}</p>
+              <h3 className="mt-4 text-lg font-semibold text-slate-100">{card.title}</h3>
+              <p className="mt-1 text-sm leading-relaxed text-neutral-500">{card.description}</p>
             </Link>
           ))}
         </div>
 
-        <p className="mt-5 text-sm text-slate-500">
+        <p className="mt-6 text-sm text-neutral-500">
           Current plan tier: <span className="font-semibold text-slate-200">{workspace.planTier}</span>
         </p>
       </section>

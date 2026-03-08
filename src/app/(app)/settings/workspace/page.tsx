@@ -55,14 +55,14 @@ export default async function SettingsWorkspacePage() {
       <section className="surface p-6">
         <p className="kicker">Workspace controls</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Quotas, integrations, and workspace policy</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
           Manage workspace-level rate limits, status page behavior, Slack + SSO configuration, and signed webhook inputs.
         </p>
       </section>
 
       <section className="surface p-6">
         <h2 className="text-2xl font-semibold text-slate-100">Workspace quotas</h2>
-        <p className="mt-1 text-sm text-slate-500">Tenant-aware rate-limit and daily quota controls for this workspace.</p>
+        <p className="mt-1 text-sm text-neutral-500">Tenant-aware rate-limit and daily quota controls for this workspace.</p>
         <div className="mt-4">
           <QuotaSettingsPanel
             initialQuota={{
@@ -80,7 +80,7 @@ export default async function SettingsWorkspacePage() {
 
       <section className="surface p-6">
         <h2 className="text-2xl font-semibold text-slate-100">Workspace settings</h2>
-        <p className="mt-1 text-sm text-slate-500">Control public status page, Slack connect/channel, and enterprise SSO metadata.</p>
+        <p className="mt-1 text-sm text-neutral-500">Control public status page, Slack connect/channel, and enterprise SSO metadata.</p>
         <div className="mt-4">
           <WorkspaceSettingsPanel
             workspace={workspace}
@@ -91,7 +91,7 @@ export default async function SettingsWorkspacePage() {
 
       <section className="surface p-6">
         <h2 className="text-2xl font-semibold text-slate-100">Webhook integrations</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-neutral-500">
           Configure signed inbound webhook secrets for Datadog, PagerDuty, Sentry, and AI observability tools.
         </p>
         <div className="mt-4">

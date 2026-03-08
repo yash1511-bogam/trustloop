@@ -160,8 +160,8 @@ export function TeamManagementPanel({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="grid gap-3 md:grid-cols-[1fr_220px_auto]">
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-[1fr_220px_auto]">
         <input
           className="input"
           placeholder="teammate@company.com"
@@ -189,23 +189,23 @@ export function TeamManagementPanel({
         <p className="kicker mb-2">Members</p>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-neutral-900 text-neutral-400">
               <tr>
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Email</th>
-                <th className="px-3 py-2">Phone</th>
-                <th className="px-3 py-2">Role</th>
-                <th className="px-3 py-2">Created</th>
-                <th className="px-3 py-2">Actions</th>
+                <th className="px-4 py-2">Name</th>
+                <th className="px-4 py-2">Email</th>
+                <th className="px-4 py-2">Phone</th>
+                <th className="px-4 py-2">Role</th>
+                <th className="px-4 py-2">Created</th>
+                <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
               {members.map((member) => (
-                <tr className="border-t border-slate-100" key={member.id}>
-                  <td className="px-3 py-2">{member.name}</td>
-                  <td className="px-3 py-2">{member.email}</td>
-                  <td className="px-3 py-2">{member.phone ?? "-"}</td>
-                  <td className="px-3 py-2">
+                <tr className="border-t border-neutral-800" key={member.id}>
+                  <td className="px-4 py-2">{member.name}</td>
+                  <td className="px-4 py-2">{member.email}</td>
+                  <td className="px-4 py-2">{member.phone ?? "-"}</td>
+                  <td className="px-4 py-2">
                     {canManageRoles ? (
                       <select
                         className="select"
@@ -225,8 +225,8 @@ export function TeamManagementPanel({
                       member.role
                     )}
                   </td>
-                  <td className="px-3 py-2">{new Date(member.createdAt).toLocaleDateString()}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-2">{new Date(member.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">
                     {canManageRoles && member.id !== currentUserId ? (
                       <button
                         className="btn btn-ghost"
@@ -249,13 +249,13 @@ export function TeamManagementPanel({
         <p className="kicker mb-2">Pending invites</p>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-neutral-900 text-neutral-400">
               <tr>
-                <th className="px-3 py-2">Email</th>
-                <th className="px-3 py-2">Role</th>
-                <th className="px-3 py-2">Expires</th>
-                <th className="px-3 py-2">Join link</th>
-                <th className="px-3 py-2">Action</th>
+                <th className="px-4 py-2">Email</th>
+                <th className="px-4 py-2">Role</th>
+                <th className="px-4 py-2">Expires</th>
+                <th className="px-4 py-2">Join link</th>
+                <th className="px-4 py-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -263,14 +263,14 @@ export function TeamManagementPanel({
                 const appUrl = typeof window !== "undefined" ? window.location.origin : "";
                 const link = `${appUrl}/join?token=${encodeURIComponent(invite.token)}`;
                 return (
-                  <tr className="border-t border-slate-100" key={invite.id}>
-                    <td className="px-3 py-2">{invite.email}</td>
-                    <td className="px-3 py-2">{invite.role}</td>
-                    <td className="px-3 py-2">{new Date(invite.expiresAt).toLocaleString()}</td>
-                    <td className="px-3 py-2">
+                  <tr className="border-t border-neutral-800" key={invite.id}>
+                    <td className="px-4 py-2">{invite.email}</td>
+                    <td className="px-4 py-2">{invite.role}</td>
+                    <td className="px-4 py-2">{new Date(invite.expiresAt).toLocaleString()}</td>
+                    <td className="px-4 py-2">
                       <code className="text-xs">{link}</code>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-2">
                       <button
                         className="btn btn-ghost"
                         disabled={loading}
@@ -285,7 +285,7 @@ export function TeamManagementPanel({
               })}
               {invites.length === 0 ? (
                 <tr>
-                  <td className="px-3 py-3 text-slate-500" colSpan={5}>
+                  <td className="px-4 py-4 text-neutral-500" colSpan={5}>
                     No pending invites.
                   </td>
                 </tr>

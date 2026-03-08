@@ -12,10 +12,15 @@ export default function Template({
 
   return (
     <motion.div
-      animate={{ opacity: 1, y: 0 }}
-      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      initial={{ opacity: 0, y: 16, scale: 0.98 }}
       key={pathname}
-      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 30,
+        mass: 0.8 
+      }}
     >
       {children}
     </motion.div>

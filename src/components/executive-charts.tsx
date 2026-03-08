@@ -35,9 +35,9 @@ export function ExecutiveCharts({ data }: Props) {
   } as const;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <section className="surface p-4">
-        <h4 className="mb-3 text-sm font-semibold text-slate-700">Incidents created vs resolved</h4>
+        <h4 className="mb-4 text-sm font-semibold text-neutral-400">Incidents created vs resolved</h4>
         <div className="h-72 w-full">
           <ResponsiveContainer>
             <LineChart data={data}>
@@ -71,7 +71,7 @@ export function ExecutiveCharts({ data }: Props) {
       </section>
 
       <section className="surface p-4">
-        <h4 className="mb-3 text-sm font-semibold text-slate-700">P1 incidents by day</h4>
+        <h4 className="mb-4 text-sm font-semibold text-neutral-400">P1 incidents by day</h4>
         <div className="h-72 w-full">
           <ResponsiveContainer>
             <BarChart data={data}>

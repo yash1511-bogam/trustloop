@@ -133,11 +133,11 @@ export function DashboardIncidentQueue() {
 
   return (
     <section className="surface overflow-hidden">
-      <div className="border-b border-slate-200 p-5">
+      <div className="border-b border-neutral-800 p-6">
         <h2 className="text-xl font-semibold text-slate-100">Incident queue</h2>
       </div>
 
-      <div className="grid gap-3 border-b border-slate-200 bg-slate-50/80 p-5 md:grid-cols-6">
+      <div className="grid gap-4 border-b border-neutral-800 bg-neutral-900/80 p-6 md:grid-cols-6">
         <select className="select" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="">All status</option>
           {Object.values(IncidentStatus).map((option) => (
@@ -202,38 +202,38 @@ export function DashboardIncidentQueue() {
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="bg-slate-50 text-slate-600">
+          <thead className="bg-neutral-900 text-neutral-400">
             <tr>
-              <th className="px-4 py-3">Severity</th>
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Owner</th>
-              <th className="px-4 py-3">Events</th>
-              <th className="px-4 py-3">Updated</th>
+              <th className="px-4 py-4">Severity</th>
+              <th className="px-4 py-4">Title</th>
+              <th className="px-4 py-4">Status</th>
+              <th className="px-4 py-4">Owner</th>
+              <th className="px-4 py-4">Events</th>
+              <th className="px-4 py-4">Updated</th>
             </tr>
           </thead>
           <tbody>
             {items.map((incident) => (
-              <tr className="border-t border-slate-100" key={incident.id}>
-                <td className="px-4 py-3">
+              <tr className="border-t border-neutral-800" key={incident.id}>
+                <td className="px-4 py-4">
                   <span className={severityBadgeClass(incident.severity)}>{incident.severity}</span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-4">
                   <Link className="font-medium text-teal-800 hover:underline" href={`/incidents/${incident.id}`}>
                     {incident.title}
                   </Link>
-                  <p className="mt-1 text-xs text-slate-500">{incident.category ?? "Uncategorized"}</p>
+                  <p className="mt-1 text-xs text-neutral-500">{incident.category ?? "Uncategorized"}</p>
                 </td>
-                <td className="px-4 py-3">{incident.status}</td>
-                <td className="px-4 py-3">{incident.owner?.name ?? "Unassigned"}</td>
-                <td className="px-4 py-3">{incident._count.events}</td>
-                <td className="px-4 py-3">{new Date(incident.updatedAt).toLocaleString()}</td>
+                <td className="px-4 py-4">{incident.status}</td>
+                <td className="px-4 py-4">{incident.owner?.name ?? "Unassigned"}</td>
+                <td className="px-4 py-4">{incident._count.events}</td>
+                <td className="px-4 py-4">{new Date(incident.updatedAt).toLocaleString()}</td>
               </tr>
             ))}
 
             {items.length === 0 && !loading ? (
               <tr>
-                <td className="px-4 py-8 text-slate-500" colSpan={6}>
+                <td className="px-4 py-8 text-neutral-500" colSpan={6}>
                   No incidents found.
                 </td>
               </tr>
@@ -242,7 +242,7 @@ export function DashboardIncidentQueue() {
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-200 p-5">
+      <div className="flex items-center justify-between border-t border-neutral-800 p-6">
         <button
           className="btn btn-ghost"
           disabled={loading || cursorStack.length === 0}
@@ -261,8 +261,8 @@ export function DashboardIncidentQueue() {
         </button>
       </div>
 
-      {loading ? <p className="px-5 pb-5 text-sm text-slate-500">Loading incidents...</p> : null}
-      {error ? <p className="px-5 pb-5 text-sm text-red-700">{error}</p> : null}
+      {loading ? <p className="px-6 pb-6 text-sm text-neutral-500">Loading incidents...</p> : null}
+      {error ? <p className="px-6 pb-6 text-sm text-red-700">{error}</p> : null}
     </section>
   );
 }

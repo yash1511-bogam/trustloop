@@ -76,7 +76,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1 text-sm">
           <span className="font-medium">Public status slug</span>
           <input
@@ -188,7 +188,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         ) : null}
       </div>
 
-      <div className="panel-card p-3 text-sm text-slate-700">
+      <div className="panel-card p-4 text-sm text-neutral-400">
         <p>
           Current plan: <strong>{workspace.planTier}</strong>
         </p>

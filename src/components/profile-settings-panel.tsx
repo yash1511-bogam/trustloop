@@ -47,7 +47,7 @@ export function ProfileSettingsPanel({ profile }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1 text-sm">
           <span className="font-medium">Name</span>
           <input

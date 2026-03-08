@@ -139,17 +139,17 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
           <article className="panel-card p-4" key={type}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">{type}</h3>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-neutral-500">
                 {record
                   ? `Secret ending ${record.keyLast4} • ${record.isActive ? "Active" : "Disabled"}`
                   : "Not configured"}
               </span>
             </div>
 
-            <p className="mb-2 text-xs text-slate-600">
+            <p className="mb-2 text-xs text-neutral-400">
               Endpoint: <code>{endpoints[type]}</code>
             </p>
-            <p className="mb-2 text-xs text-slate-600">
+            <p className="mb-2 text-xs text-neutral-400">
               Send headers: <code>x-trustloop-workspace</code>,{" "}
               <code>x-trustloop-signature</code>, <code>x-trustloop-timestamp</code>
             </p>

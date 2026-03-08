@@ -67,28 +67,190 @@ function isPlaceholder(value) {
   );
 }
 
+function buildEffectiveEnvMap(fileEnvMap) {
+  const effective = new Map(fileEnvMap);
+
+  for (const [key, value] of Object.entries(process.env)) {
+    if (typeof value === "string" && value.length > 0) {
+      effective.set(key, value);
+    }
+  }
+
+  return effective;
+}
+
+function applyEnvMapToProcess(envMap) {
+  for (const [key, value] of envMap.entries()) {
+    process.env[key] = value;
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldBootLocalstackDocker(awsEndpointUrl) {
+  if (!awsEndpointUrl) return false;
+
+  try {
+    const url = new URL(awsEndpointUrl);
+    const host = url.hostname.toLowerCase();
+
+    return host === "localhost" || host === "127.0.0.1" || host === "localstack";
+  } catch {
+    return false;
+  }
+}
+
+function isLocalDatabaseUrl(databaseUrl) {
+  if (!databaseUrl) return false;
+
+  try {
+    const url = new URL(databaseUrl);
+    const host = url.hostname.toLowerCase();
+
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "postgres" ||
+      host === "trustloop-postgres"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function formatStepError(error) {
+  if (!error || typeof error !== "object") {
+    return String(error ?? "").trim();
+  }
+
+  const candidates = [error.stderr, error.stdout, error.shortMessage, error.message].filter(
+    (part) => typeof part === "string" && part.trim().length > 0,
+  );
+
+  return candidates.join("\n").trim();
+}
+
+function listMigrationDirectories() {
+  const migrationsDir = path.join(rootDir, "prisma", "migrations");
+  if (!fs.existsSync(migrationsDir)) return [];
+
+  return fs
+    .readdirSync(migrationsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+}
+
+async function waitForCondition(title, checkFn, errorMessage) {
+  const spinner = ora({ text: title, color: "cyan" }).start();
+
+  for (let attempt = 1; attempt <= 60; attempt += 1) {
+    try {
+      const ready = await checkFn();
+      if (ready) {
+        spinner.succeed(chalk.green(title));
+        return;
+      }
+    } catch {}
+
+    await sleep(2000);
+  }
+
+  spinner.fail(chalk.red(title));
+  console.error(chalk.red(errorMessage));
+  process.exit(1);
+}
+
+async function waitForPostgres(databaseUrl) {
+  await waitForCondition(
+    "Waiting for Postgres readiness",
+    async () => {
+      const { Client } = await import("pg");
+      const client = new Client({
+        connectionString: databaseUrl,
+        connectionTimeoutMillis: 2000,
+        query_timeout: 2000,
+      });
+
+      try {
+        await client.connect();
+        await client.query("SELECT 1");
+        return true;
+      } finally {
+        await client.end().catch(() => {});
+      }
+    },
+    "Postgres did not become ready in time for DATABASE_URL.",
+  );
+}
+
+async function waitForRedis(redisUrl) {
+  await waitForCondition(
+    "Waiting for Redis readiness",
+    async () => {
+      const { default: Redis } = await import("ioredis");
+      const redis = new Redis(redisUrl, {
+        lazyConnect: true,
+        connectTimeout: 2000,
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+      });
+
+      try {
+        await redis.connect();
+        const pong = await redis.ping();
+        return pong === "PONG";
+      } finally {
+        await redis.quit().catch(() => {});
+        redis.disconnect();
+      }
+    },
+    "Redis did not become ready in time for REDIS_URL.",
+  );
+}
+
+async function waitForLocalstack(awsEndpointUrl) {
+  const healthUrl = new URL("/_localstack/health", awsEndpointUrl).toString();
+
+  await waitForCondition(
+    "Waiting for LocalStack readiness",
+    async () => {
+      const response = await fetch(healthUrl);
+      return response.ok;
+    },
+    "LocalStack did not become ready in time.",
+  );
+}
+
 async function runStep(title, command, args, options = {}) {
+  const { allowFailure = false, ...execaOptions } = options;
   const spinner = ora({ text: title, color: "cyan" }).start();
 
   try {
     const result = await execa(command, args, {
       cwd: rootDir,
       stdio: "pipe",
-      ...options,
+      env: process.env,
+      ...execaOptions,
     });
 
     spinner.succeed(chalk.green(title));
-    return result;
+    return { ok: true, result };
   } catch (error) {
     spinner.fail(chalk.red(title));
+    const errorText = formatStepError(error);
 
-    if (error.stderr) {
-      console.error(chalk.red(error.stderr.trim()));
-    } else if (error.message) {
-      console.error(chalk.red(error.message));
+    if (errorText) {
+      console.error(chalk.red(errorText));
     }
 
-    process.exit(1);
+    if (!allowFailure) {
+      process.exit(1);
+    }
+
+    return { ok: false, error, errorText };
   }
 }
 
@@ -102,7 +264,8 @@ function printHeader() {
     boxen(
       `${chalk.bold("One command local startup")}\n` +
         `${chalk.gray("- installs dependencies")}\n` +
-        `${chalk.gray("- boots Postgres + Redis + LocalStack")}\n` +
+        `${chalk.gray("- uses Postgres + Redis from .env")}\n` +
+        `${chalk.gray("- boots LocalStack when endpoint is local")}\n` +
         `${chalk.gray("- runs migrations and queue init")}\n` +
         `${chalk.gray("- launches web app + worker")}`,
       {
@@ -193,28 +356,38 @@ function ensureEnvFile() {
   console.log(chalk.yellow("Created .env from .env.example. Update secrets before production usage."));
 }
 
-async function checkPrerequisites() {
+async function baselineExistingDatabase() {
+  const migrationDirs = listMigrationDirectories();
+
+  if (migrationDirs.length === 0) {
+    console.error(chalk.red("No migration directories were found under prisma/migrations for P3005 recovery."));
+    process.exit(1);
+  }
+
+  console.log(chalk.yellow("Detected existing database schema without Prisma history. Baselining migrations..."));
+
+  for (const migration of migrationDirs) {
+    await runStep(`Baselining migration ${migration}`, "pnpm", [
+      "exec",
+      "prisma",
+      "migrate",
+      "resolve",
+      "--applied",
+      migration,
+    ]);
+  }
+}
+
+async function checkPrerequisites(bootLocalstackDocker) {
   await runStep("Checking pnpm", "pnpm", ["--version"]);
+
+  if (!bootLocalstackDocker) {
+    return;
+  }
+
   await runStep("Checking Docker CLI", "docker", ["--version"]);
   await runStep("Checking Docker Compose", "docker", ["compose", "version"]);
   await runStep("Checking Docker daemon", "docker", ["info"]);
-}
-
-async function waitForServices() {
-  await runStep("Waiting for Postgres readiness", "bash", [
-    "-lc",
-    "for i in {1..60}; do docker compose -f docker-compose.localstack.yml exec -T postgres pg_isready -U postgres -d trustloop >/dev/null 2>&1 && exit 0; sleep 2; done; echo 'Postgres did not become ready in time.'; exit 1",
-  ]);
-
-  await runStep("Waiting for Redis readiness", "bash", [
-    "-lc",
-    "for i in {1..60}; do docker compose -f docker-compose.localstack.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG && exit 0; sleep 2; done; echo 'Redis did not become ready in time.'; exit 1",
-  ]);
-
-  await runStep("Waiting for LocalStack readiness", "bash", [
-    "-lc",
-    "for i in {1..60}; do curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1 && exit 0; sleep 2; done; echo 'LocalStack did not become ready in time.'; exit 1",
-  ]);
 }
 
 async function main() {
@@ -222,22 +395,69 @@ async function main() {
 
   ensureEnvFile();
 
-  const envMap = parseEnv(fs.readFileSync(envPath, "utf8"));
-  validateEnv(envMap);
+  const fileEnvMap = parseEnv(fs.readFileSync(envPath, "utf8"));
+  applyEnvMapToProcess(fileEnvMap);
+  const effectiveEnvMap = buildEffectiveEnvMap(fileEnvMap);
+  validateEnv(effectiveEnvMap);
+  const databaseUrl = effectiveEnvMap.get("DATABASE_URL");
+  const redisUrl = effectiveEnvMap.get("REDIS_URL");
+  const awsEndpointUrl = effectiveEnvMap.get("AWS_ENDPOINT_URL");
+  const bootLocalstackDocker = shouldBootLocalstackDocker(awsEndpointUrl);
 
-  await checkPrerequisites();
-  await runStep("Starting local services (Postgres, Redis, LocalStack)", "docker", [
-    "compose",
-    "-f",
-    "docker-compose.localstack.yml",
-    "up",
-    "-d",
-  ]);
+  await checkPrerequisites(bootLocalstackDocker);
 
-  await waitForServices();
+  if (bootLocalstackDocker) {
+    await runStep("Starting local service (LocalStack)", "docker", [
+      "compose",
+      "-f",
+      "docker-compose.localstack.yml",
+      "up",
+      "-d",
+      "localstack",
+    ]);
+  } else {
+    console.log(chalk.yellow("Skipping LocalStack Docker startup because AWS_ENDPOINT_URL is not local."));
+  }
+
+  await waitForPostgres(databaseUrl);
+  await waitForRedis(redisUrl);
+
+  if (bootLocalstackDocker) {
+    await waitForLocalstack(awsEndpointUrl);
+  }
+
   await runStep("Validating Prisma schema", "pnpm", ["run", "prisma:validate"]);
   await runStep("Generating Prisma client", "pnpm", ["run", "prisma:generate"]);
-  await runStep("Applying database migrations", "pnpm", ["run", "prisma:deploy"]);
+  const migrationStep = await runStep("Applying database migrations", "pnpm", ["run", "prisma:deploy"], {
+    allowFailure: true,
+  });
+
+  if (!migrationStep.ok) {
+    const sawP3005 = migrationStep.errorText.includes("P3005");
+
+    if (sawP3005 && isLocalDatabaseUrl(databaseUrl)) {
+      console.log(
+        chalk.yellow(
+          "Detected P3005 on local Postgres. Resetting local database once to recover migration history.",
+        ),
+      );
+      await runStep("Resetting local database (P3005 recovery)", "pnpm", [
+        "exec",
+        "prisma",
+        "migrate",
+        "reset",
+        "--force",
+        "--skip-seed",
+      ]);
+      await runStep("Re-applying database migrations", "pnpm", ["run", "prisma:deploy"]);
+    } else if (sawP3005) {
+      await baselineExistingDatabase();
+      await runStep("Re-applying database migrations", "pnpm", ["run", "prisma:deploy"]);
+    } else {
+      process.exit(1);
+    }
+  }
+
   await runStep("Checking migration status", "pnpm", ["run", "prisma:status"]);
   await runStep("Introspecting database schema (pull/print)", "bash", [
     "-lc",
@@ -248,7 +468,7 @@ async function main() {
   await runStep("Running one worker polling cycle", "pnpm", ["run", "worker:once"]);
   await runStep("Running billing grace automation cycle", "pnpm", ["run", "billing:grace:once"]);
 
-  printLinks(envMap);
+  printLinks(effectiveEnvMap);
 
   if (setupOnly) {
     console.log(chalk.green("Setup-only mode complete. Skipping process launch."));

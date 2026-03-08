@@ -56,7 +56,7 @@ export default async function SettingsBillingPage() {
       <section className="surface p-6">
         <p className="kicker">Billing operations</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Plan, usage, and payment lifecycle</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
           Manage Dodo Payments subscription state, coupon usage, and daily usage utilization against workspace quotas.
         </p>
       </section>

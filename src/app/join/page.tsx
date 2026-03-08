@@ -31,10 +31,10 @@ export default async function JoinPage({
 
   if (!invite) {
     return (
-      <main className="container-shell fade-in py-12 md:py-14">
-        <section className="surface p-7 md:p-9">
+      <main className="container-shell fade-in py-12 md:py-16">
+        <section className="surface p-8 md:p-10">
           <h1 className="text-2xl font-semibold">Invite link unavailable</h1>
-          <p className="mt-2 text-sm text-slate-700">
+          <p className="mt-2 text-sm text-neutral-400">
             This invite is invalid, already used, or expired.
           </p>
           <Link className="btn btn-primary mt-4" href="/login">
@@ -46,14 +46,14 @@ export default async function JoinPage({
   }
 
   return (
-    <main className="container-shell fade-in py-12 md:py-14">
-      <section className="surface p-7 md:p-9">
+    <main className="container-shell fade-in py-12 md:py-16">
+      <section className="surface p-8 md:p-10">
         <p className="kicker">Workspace invite</p>
         <h1 className="mt-2 text-3xl font-semibold">Join {invite.workspace.name}</h1>
-        <p className="mt-2 text-sm text-slate-700">
+        <p className="mt-2 text-sm text-neutral-400">
           You were invited as <strong>{invite.role}</strong> using <strong>{invite.email}</strong>.
         </p>
-        <p className="mt-2 text-sm text-slate-700">
+        <p className="mt-2 text-sm text-neutral-400">
           Continue with OTP registration to accept the invite and join this workspace.
         </p>
 

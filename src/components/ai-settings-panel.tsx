@@ -139,10 +139,10 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
   }
 
   return (
-    <div className="space-y-7">
-      <section className="space-y-3">
+    <div className="space-y-8">
+      <section className="space-y-4">
         <p className="kicker">Provider keys</p>
-        <p className="text-sm text-slate-700">
+        <p className="text-sm text-neutral-400">
           Keys are encrypted at rest, never shown in full after save, and only used
           server-side for AI workflows.
         </p>
@@ -154,7 +154,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
             return (
               <div className="surface p-4" key={provider}>
                 <h3 className="text-lg font-semibold">{provider}</h3>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs text-neutral-400">
                   {record
                     ? `Saved key ending in ${record.keyLast4} • updated ${new Date(
                         record.updatedAt,
@@ -162,7 +162,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                     : "No key saved yet."}
                 </p>
                 {record ? (
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="mt-1 text-xs text-neutral-400">
                     Health: {record.healthStatus}
                     {record.lastVerifiedAt
                       ? ` • last checked ${new Date(record.lastVerifiedAt).toLocaleString()}`
@@ -174,7 +174,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                 ) : null}
 
                 <input
-                  className="input mt-3"
+                  className="input mt-4"
                   placeholder={`Enter ${provider} API key`}
                   value={keyInputs[provider] ?? ""}
                   onChange={(event) =>
@@ -185,7 +185,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                   }
                 />
 
-                <div className="mt-3 flex gap-2">
+                <div className="mt-4 flex gap-2">
                   <button
                     className="btn btn-ghost"
                     disabled={loading}
@@ -209,7 +209,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
         </div>
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-4">
         <p className="kicker">Workflow routing</p>
         <div className="space-y-4">
           {(Object.values(WorkflowType) as WorkflowType[]).map((workflowType) => {
@@ -220,10 +220,10 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
             };
 
             return (
-              <div className="surface grid gap-3 p-4 md:grid-cols-[1fr_1fr_1fr_auto]" key={workflowType}>
+              <div className="surface grid gap-4 p-4 md:grid-cols-[1fr_1fr_1fr_auto]" key={workflowType}>
                 <div>
                   <p className="font-semibold">{workflowType}</p>
-                  <p className="text-xs text-slate-600">
+                  <p className="text-xs text-neutral-400">
                     Select provider + model used for this workflow.
                   </p>
                 </div>

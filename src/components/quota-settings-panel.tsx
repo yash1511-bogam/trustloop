@@ -56,11 +56,11 @@ export function QuotaSettingsPanel({ initialQuota }: Props) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-700">
+      <p className="text-sm text-neutral-400">
         Configure tenant-aware limits for API traffic and daily workflow quotas.
       </p>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1 text-sm">
           <span className="font-medium">API requests / minute</span>
           <input

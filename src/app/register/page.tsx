@@ -51,25 +51,25 @@ export default async function RegisterPage({
   const inviteEmail = invite?.email ?? params.email ?? undefined;
 
   return (
-    <main className="container-shell fade-in py-12 md:py-14">
-      <div className="mx-auto grid max-w-6xl gap-7 md:grid-cols-[0.94fr_1.06fr]">
-        <section className="surface p-8 md:p-9">
+    <main className="container-shell fade-in py-12 md:py-16">
+      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.94fr_1.06fr]">
+        <section className="surface p-8 md:p-10">
           <p className="kicker">Create workspace</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Launch TrustLoop quickly</h1>
-          <p className="mt-2 text-sm text-slate-700">
+          <h1 className="mt-2 text-3xl font-bold text-white">Launch TrustLoop quickly</h1>
+          <p className="mt-2 text-sm text-neutral-400">
             Provision a workspace, verify team identity, and start structured AI incident response in minutes.
           </p>
 
-          <div className="mt-6 space-y-3">
-            <div className="flex items-start gap-2 text-sm text-slate-700">
+          <div className="mt-6 space-y-4">
+            <div className="flex items-start gap-2 text-sm text-neutral-400">
               <Building2 className="mt-0.5 h-4 w-4 text-cyan-700" />
               Workspace-level controls, quotas, and team roles from day one
             </div>
-            <div className="flex items-start gap-2 text-sm text-slate-700">
+            <div className="flex items-start gap-2 text-sm text-neutral-400">
               <Bot className="mt-0.5 h-4 w-4 text-cyan-700" />
               BYOK routing for OpenAI, Gemini, and Anthropic workflows
             </div>
-            <div className="flex items-start gap-2 text-sm text-slate-700">
+            <div className="flex items-start gap-2 text-sm text-neutral-400">
               <Sparkles className="mt-0.5 h-4 w-4 text-cyan-700" />
               Executive trends, exports, and automation history included
             </div>
@@ -79,17 +79,17 @@ export default async function RegisterPage({
         <section className="surface p-8">
           <p className="kicker mb-2">New workspace</p>
           <h2 className="mb-1 text-3xl font-semibold">Create TrustLoop account</h2>
-          <p className="mb-6 text-sm text-slate-600">
+          <p className="mb-6 text-sm text-neutral-400">
             Start with OAuth or verify ownership with one-time code.
           </p>
 
           {inviteToken && !invite ? (
-            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               Invite link is invalid or expired. Request a new invite from your workspace owner.
             </p>
           ) : null}
           {errorMessage ? (
-            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {errorMessage}
             </p>
           ) : null}
@@ -100,7 +100,7 @@ export default async function RegisterPage({
             inviteToken={invite?.token}
           />
 
-          <p className="mt-5 text-sm text-slate-600">
+          <p className="mt-6 text-sm text-neutral-400">
             Already have an account?{" "}
             <Link className="font-semibold text-cyan-700 underline" href="/login">
               Sign in

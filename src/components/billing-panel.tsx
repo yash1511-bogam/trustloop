@@ -109,8 +109,8 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
   }
 
   return (
-    <div className="space-y-5">
-      <p className="text-sm text-slate-700">
+    <div className="space-y-6">
+      <p className="text-sm text-neutral-400">
         Current plan: <strong>{planTier}</strong>
       </p>
 
@@ -139,10 +139,10 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
         ].map((row) => (
           <article className="panel-card p-4" key={row.label}>
             <p className="text-sm font-medium">{row.label}</p>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-neutral-400">
               {row.used} / {row.limit}
             </p>
-            <div className="mt-2 h-2 overflow-hidden rounded bg-slate-100">
+            <div className="mt-2 h-2 overflow-hidden rounded bg-neutral-900">
               <div
                 className="h-full bg-cyan-600"
                 style={{ width: `${percent(row.used, row.limit)}%` }}
@@ -189,7 +189,7 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
         </button>
       </div>
 
-      <div className="panel-card p-4 text-sm text-slate-700">
+      <div className="panel-card p-4 text-sm text-neutral-400">
         <p>
           Billing provider: <strong>Dodo Payments</strong>
         </p>

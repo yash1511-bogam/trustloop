@@ -73,47 +73,47 @@ export default async function PublicStatusPage({
 
   return (
     <main className="container-shell fade-in py-8">
-      <section className="surface p-5">
+      <section className="surface p-6">
         <p className="kicker">Public status</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900">{workspace.name}</h1>
-        <p className="mt-2 text-sm text-slate-700">Customer-facing incident communication stream.</p>
+        <h1 className="mt-2 text-3xl font-bold text-white">{workspace.name}</h1>
+        <p className="mt-2 text-sm text-neutral-400">Customer-facing incident communication stream.</p>
       </section>
 
-      <section className="surface mt-4 p-5">
+      <section className="surface mt-4 p-6">
         <h2 className="text-xl font-semibold">Current incidents</h2>
-        <div className="mt-3 space-y-2">
+        <div className="mt-4 space-y-2">
           {openIncidents.map((incident) => (
-            <article className="panel-card p-3" key={incident.id}>
+            <article className="panel-card p-4" key={incident.id}>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="badge">{incident.severity}</span>
                 <span className={statusTone(incident.status)}>{incident.status}</span>
               </div>
               <p className="mt-2 font-semibold">{incident.title}</p>
-              <p className="text-xs text-slate-500">Updated {incident.updatedAt.toLocaleString()}</p>
+              <p className="text-xs text-neutral-500">Updated {incident.updatedAt.toLocaleString()}</p>
             </article>
           ))}
 
-          {openIncidents.length === 0 ? <p className="text-sm text-slate-600">No active incidents.</p> : null}
+          {openIncidents.length === 0 ? <p className="text-sm text-neutral-400">No active incidents.</p> : null}
         </div>
       </section>
 
-      <section className="surface mt-4 p-5">
+      <section className="surface mt-4 p-6">
         <h2 className="text-xl font-semibold">Published updates</h2>
-        <div className="mt-3 space-y-3">
+        <div className="mt-4 space-y-4">
           {updates.map((update) => (
-            <article className="panel-card p-3" key={update.id}>
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <article className="panel-card p-4" key={update.id}>
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
                 <span className="badge">{update.incident.severity}</span>
                 <span>{update.incident.title}</span>
                 <span>•</span>
                 <time>{update.publishedAt.toLocaleString()}</time>
               </div>
-              <p className="whitespace-pre-wrap text-sm text-slate-800">{update.body}</p>
+              <p className="whitespace-pre-wrap text-sm text-white">{update.body}</p>
             </article>
           ))}
 
           {updates.length === 0 ? (
-            <p className="text-sm text-slate-600">No public updates published yet.</p>
+            <p className="text-sm text-neutral-400">No public updates published yet.</p>
           ) : null}
         </div>
       </section>
