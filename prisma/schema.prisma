@@ -194,6 +194,7 @@ model Incident {
   owner                User?                   @relation("IncidentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   modelVersion         String?
   sourceTicketRef      String?
+  searchVector         Unsupported("tsvector")? @map("search_vector")
   summary              String?
   triagedAt            DateTime?
   resolvedAt           DateTime?
@@ -213,6 +214,7 @@ model Incident {
   @@index([workspaceId, category])
   @@index([ownerUserId])
   @@index([workspaceId, updatedAt])
+  @@index([workspaceId, sourceTicketRef])
 }
 
 model IncidentEvent {

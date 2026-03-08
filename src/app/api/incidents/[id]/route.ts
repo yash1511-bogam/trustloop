@@ -4,10 +4,12 @@ import {
   EventType,
   IncidentSeverity,
   IncidentStatus,
+  Role,
 } from "@prisma/client";
 import { z } from "zod";
+import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
-import { badRequest, notFound } from "@/lib/http";
+import { badRequest, forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { sendOwnerAssignedEmail } from "@/lib/email";
@@ -203,4 +205,53 @@ export async function PATCH(
 
   await refreshWorkspaceReadModels(auth.workspaceId);
   return NextResponse.json({ incident: updated });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+): Promise<NextResponse> {
+  const access = await requireApiAuthAndRateLimit(request);
+  if (access.response) {
+    return access.response;
+  }
+  const auth = access.auth;
+  if (auth.kind !== "session") {
+    return forbidden();
+  }
+  if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
+    return forbidden();
+  }
+
+  const { id } = await params;
+  const incident = await prisma.incident.findFirst({
+    where: {
+      id,
+      workspaceId: auth.workspaceId,
+    },
+    select: { id: true },
+  });
+
+  if (!incident) {
+    return notFound("Incident not found.");
+  }
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: auth.workspaceId },
+    select: { complianceMode: true },
+  });
+
+  if (workspace?.complianceMode) {
+    return NextResponse.json(
+      { error: "Compliance mode prevents deletion." },
+      { status: 403 },
+    );
+  }
+
+  await prisma.incident.delete({
+    where: { id: incident.id },
+  });
+  await refreshWorkspaceReadModels(auth.workspaceId);
+
+  return NextResponse.json({ deleted: true });
 }

@@ -16,8 +16,19 @@ export function notFound(message = "Not found"): NextResponse {
   return NextResponse.json({ error: message }, { status: 404 });
 }
 
-export function tooManyRequests(message: string, retryAfterSeconds = 60): NextResponse {
-  const response = NextResponse.json({ error: message }, { status: 429 });
+export function tooManyRequests(
+  message: string,
+  retryAfterSeconds = 60,
+  details?: Record<string, unknown>,
+): NextResponse {
+  const response = NextResponse.json(
+    {
+      error: message,
+      retryAfterSeconds,
+      ...(details ?? {}),
+    },
+    { status: 429 },
+  );
   response.headers.set("Retry-After", String(retryAfterSeconds));
   return response;
 }

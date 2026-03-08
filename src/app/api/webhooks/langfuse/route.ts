@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { WebhookIntegrationType } from "@prisma/client";
-import { createIncidentRecord } from "@/lib/incident-service";
+import {
+  createIncidentRecord,
+  findIncidentBySourceTicketRef,
+} from "@/lib/incident-service";
 import { badRequest, quotaExceeded, unauthorized } from "@/lib/http";
 import { mapLangfuseWebhook } from "@/lib/webhook-mappers";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
@@ -21,6 +24,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const payload = JSON.parse(rawBody || "{}") as Record<string, unknown>;
   const mapped = mapLangfuseWebhook(payload);
+
+  const existing = await findIncidentBySourceTicketRef({
+    workspaceId: access.workspaceId,
+    sourceTicketRef: mapped.sourceTicketRef,
+  });
+  if (existing) {
+    return NextResponse.json(
+      { incidentId: existing.id, deduplicated: true },
+      { status: 200 },
+    );
+  }
 
   const quota = await enforceWorkspaceQuota(access.workspaceId, "incidents");
   if (!quota.allowed) {

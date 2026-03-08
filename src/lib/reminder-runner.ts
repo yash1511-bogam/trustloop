@@ -1,4 +1,10 @@
-import { EventType, IncidentSeverity, IncidentStatus, ReminderStatus } from "@prisma/client";
+import {
+  EventType,
+  IncidentSeverity,
+  IncidentStatus,
+  ReminderStatus,
+  Role,
+} from "@prisma/client";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
@@ -61,6 +67,7 @@ export async function processReminderPayload(input: {
           status: true,
           severity: true,
           title: true,
+          remindersSentCount: true,
           owner: {
             select: {
               email: true,
@@ -176,15 +183,43 @@ export async function processReminderPayload(input: {
       }
     }
 
-    if (
-      isOpen &&
-      incident.severity === IncidentSeverity.P1 &&
-      incident.owner?.phone
-    ) {
-      await sendSmsAlert({
-        toPhone: incident.owner.phone,
-        message: `TrustLoop P1 incident: ${incident.title} is still ${incident.status}.`,
-      }).catch(() => null);
+    if (isOpen && incident.severity === IncidentSeverity.P1) {
+      const smsTargets = new Set<string>();
+      const shouldEscalate = incident.remindersSentCount >= 1;
+
+      if (incident.owner?.phone) {
+        smsTargets.add(incident.owner.phone);
+      }
+
+      if (!incident.owner?.phone || shouldEscalate) {
+        const managers = await prisma.user.findMany({
+          where: {
+            workspaceId: payload.workspaceId,
+            role: {
+              in: [Role.OWNER, Role.MANAGER],
+            },
+            phone: {
+              not: null,
+            },
+          },
+          select: {
+            phone: true,
+          },
+        });
+
+        for (const manager of managers) {
+          if (manager.phone) {
+            smsTargets.add(manager.phone);
+          }
+        }
+      }
+
+      for (const phone of smsTargets) {
+        await sendSmsAlert({
+          toPhone: phone,
+          message: `TrustLoop P1 incident: ${incident.title} is still ${incident.status}.`,
+        }).catch(() => null);
+      }
     }
 
     if (isOpen) {

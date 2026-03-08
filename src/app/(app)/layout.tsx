@@ -2,6 +2,7 @@ import { CalendarClock, Siren } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
 import { AppShellNav } from "@/components/app-shell-nav";
 import { requireAuth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export default async function AppLayout({
   children,
@@ -9,6 +10,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const auth = await requireAuth();
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: auth.user.workspaceId },
+    select: { complianceMode: true },
+  });
 
   return (
     <main className="container-shell fade-in py-7 md:py-8">
@@ -22,6 +27,11 @@ export default async function AppLayout({
               <p className="kicker">{auth.user.workspaceName}</p>
               <h1 className="mt-1 text-xl font-semibold text-slate-100">TrustLoop Operations</h1>
               <p className="text-sm text-slate-500">{auth.user.name}</p>
+              {workspace?.complianceMode ? (
+                <span className="mt-2 inline-flex rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+                  Compliance mode
+                </span>
+              ) : null}
             </div>
           </div>
 

@@ -90,6 +90,31 @@ export async function createIncidentRecord(
   return created;
 }
 
+export async function findIncidentBySourceTicketRef(input: {
+  workspaceId: string;
+  sourceTicketRef?: string | null;
+  tx?: Prisma.TransactionClient;
+}): Promise<{ id: string } | null> {
+  const executor = input.tx ?? prisma;
+  const sourceTicketRef = sanitizeSingleLine(input.sourceTicketRef, 120);
+  if (!sourceTicketRef) {
+    return null;
+  }
+
+  return executor.incident.findFirst({
+    where: {
+      workspaceId: input.workspaceId,
+      sourceTicketRef,
+    },
+    select: {
+      id: true,
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+}
+
 export async function addIncidentNote(input: {
   incidentId: string;
   actorUserId?: string | null;

@@ -12,6 +12,7 @@ type WorkspaceSettings = {
   slackTeamId: string | null;
   samlEnabled: boolean;
   samlMetadataUrl: string | null;
+  complianceMode: boolean;
   billing: {
     dodoCustomerId: string | null;
     dodoSubscriptionId: string | null;
@@ -31,6 +32,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
     slackChannelId: workspace.slackChannelId ?? "",
     samlEnabled: workspace.samlEnabled,
     samlMetadataUrl: workspace.samlMetadataUrl ?? "",
+    complianceMode: workspace.complianceMode,
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -113,7 +115,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-                samlMetadataUrl: event.target.value,
+        samlMetadataUrl: event.target.value,
               }))
             }
             placeholder="https://idp.example.com/metadata"
@@ -149,7 +151,28 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           />
           Enable SAML SSO (enterprise)
         </label>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            checked={form.complianceMode}
+            disabled={workspace.complianceMode}
+            onChange={(event) =>
+              setForm((prev) => ({
+                ...prev,
+                complianceMode: event.target.checked,
+              }))
+            }
+            type="checkbox"
+          />
+          Enable compliance mode (cannot be disabled)
+        </label>
       </div>
+
+      {form.complianceMode ? (
+        <p className="text-xs text-amber-500">
+          Compliance mode prevents incident deletion and keeps historical records immutable.
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <button className="btn btn-primary" disabled={loading} onClick={save} type="button">

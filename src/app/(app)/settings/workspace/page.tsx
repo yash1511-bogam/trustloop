@@ -27,6 +27,7 @@ export default async function SettingsWorkspacePage() {
         slackTeamId: true,
         samlEnabled: true,
         samlMetadataUrl: true,
+        complianceMode: true,
         billing: {
           select: {
             dodoCustomerId: true,

@@ -7,17 +7,31 @@ import { badRequest, forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { slackInstallUrl } from "@/lib/slack";
 
+const statusSlugPattern = /^[a-z0-9-]{3,60}$/;
+
 const updateSchema = z.object({
   slug: z
     .string()
-    .min(2)
+    .trim()
     .max(60)
-    .regex(/^[a-z0-9-]+$/)
-    .optional(),
+    .optional()
+    .nullable(),
   statusPageEnabled: z.boolean().optional(),
-  slackChannelId: z.string().max(60).optional().nullable(),
+  complianceMode: z.boolean().optional(),
+  slackChannelId: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .nullable(),
   samlEnabled: z.boolean().optional(),
-  samlMetadataUrl: z.string().url().max(500).optional().nullable(),
+  samlMetadataUrl: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .optional()
+    .nullable(),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -42,6 +56,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       slackTeamId: true,
       samlEnabled: true,
       samlMetadataUrl: true,
+      complianceMode: true,
       billing: {
         select: {
           dodoCustomerId: true,
@@ -77,6 +92,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return badRequest("Invalid workspace settings payload.");
   }
 
+  const current = await prisma.workspace.findUnique({
+    where: { id: auth.workspaceId },
+    select: {
+      slug: true,
+      statusPageEnabled: true,
+      complianceMode: true,
+    },
+  });
+  if (!current) {
+    return forbidden();
+  }
+
+  const nextStatusPageEnabled =
+    parsed.data.statusPageEnabled ?? current.statusPageEnabled;
+  const providedSlug = parsed.data.slug;
+  const normalizedSlug =
+    providedSlug === undefined
+      ? current.slug
+      : (providedSlug?.trim().toLowerCase() || null);
+
+  if (normalizedSlug && !statusSlugPattern.test(normalizedSlug)) {
+    return badRequest(
+      "Status page slug must match ^[a-z0-9-]{3,60}$.",
+    );
+  }
+
+  if (nextStatusPageEnabled && !normalizedSlug) {
+    return badRequest("Status page slug is required when public status page is enabled.");
+  }
+
+  if (current.complianceMode && parsed.data.complianceMode === false) {
+    return badRequest("Compliance mode cannot be disabled once enabled.");
+  }
+
   let updated;
   try {
     updated = await prisma.workspace.update({
@@ -84,8 +133,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         id: auth.workspaceId,
       },
       data: {
-        slug: parsed.data.slug?.toLowerCase(),
+        slug: providedSlug === undefined ? undefined : normalizedSlug,
         statusPageEnabled: parsed.data.statusPageEnabled,
+        complianceMode: parsed.data.complianceMode,
         slackChannelId: parsed.data.slackChannelId?.trim() || null,
         samlEnabled: parsed.data.samlEnabled,
         samlMetadataUrl: parsed.data.samlMetadataUrl?.trim() || null,
@@ -100,6 +150,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         slackTeamId: true,
         samlEnabled: true,
         samlMetadataUrl: true,
+        complianceMode: true,
         billing: {
           select: {
             dodoCustomerId: true,

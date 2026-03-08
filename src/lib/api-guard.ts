@@ -76,11 +76,24 @@ export async function requireApiAuthAndRateLimit(
 
   const rateLimit = await enforceWorkspaceRateLimit(access.workspaceId);
   if (!rateLimit.allowed) {
+    const details =
+      access.kind === "api_key"
+        ? {
+            keyPrefix: access.apiKey.keyPrefix,
+            limit: rateLimit.limit,
+            remaining: rateLimit.remaining,
+          }
+        : {
+            limit: rateLimit.limit,
+            remaining: rateLimit.remaining,
+          };
+
     return {
       auth: null,
       response: tooManyRequests(
         "Workspace request rate exceeded. Please retry shortly.",
         rateLimit.retryAfterSeconds,
+        details,
       ),
     };
   }

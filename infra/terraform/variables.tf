@@ -158,6 +158,11 @@ variable "billing_automation_cron_secret" {
   sensitive = true
 }
 
+variable "ai_key_health_cron_secret" {
+  type      = string
+  sensitive = true
+}
+
 variable "reminder_stale_minutes" {
   type    = number
   default = 240
