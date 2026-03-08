@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processDodoWebhookEvent } from "@/lib/billing";
 import { dodoClient } from "@/lib/dodo";
+import { log } from "@/lib/logger";
 
 function requiredHeader(request: NextRequest, name: string): string {
   const value = request.headers.get(name);
@@ -30,6 +31,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       key: process.env.DODO_PAYMENTS_WEBHOOK_KEY?.trim() || undefined,
     });
   } catch (error) {
+    log.billing.warn("Billing webhook signature validation failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         error:
@@ -47,6 +51,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       eventId,
     });
 
+    log.billing.info("Billing webhook route processed event", {
+      eventId,
+      eventType: event.type,
+      status: processed.status,
+      workspaceId: processed.workspaceId ?? null,
+      reason: processed.reason ?? null,
+    });
     return NextResponse.json({
       received: true,
       status: processed.status,
@@ -55,6 +66,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       eventType: event.type,
     });
   } catch (error) {
+    log.billing.error("Billing webhook processing failed", {
+      eventId,
+      eventType: event.type,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         error:

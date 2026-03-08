@@ -1,0 +1,88 @@
+---
+title: Incident Workflow
+description: Run the end-to-end TrustLoop workflow from intake and triage to customer updates and status publishing.
+---
+
+<a id="top" />
+
+[Back to docs home](/docs)
+
+# Incident Workflow
+
+This guide covers the core operational loop your team runs every day.
+
+## 1. Ingest or Create Incident
+
+Incidents can come from:
+
+- Dashboard/API create (`POST /api/incidents`)
+- Webhook ingestion (`/api/webhooks/*`)
+- Slack incident command flow
+
+Required fields for direct create:
+
+- `title` (3-180 chars)
+- `description` (8-5000 chars)
+
+## 2. Run AI Triage (Optional)
+
+Endpoint: `POST /api/incidents/{id}/triage`
+
+Behavior:
+
+- Uses workspace workflow provider/model (`INCIDENT_TRIAGE`)
+- Falls back to OpenAI provider if workflow config is missing
+- Requires an active provider key in Settings -> AI
+- Updates incident severity/category/summary and records a `TRIAGE_RUN` event
+
+For P1 and P2 outcomes, TrustLoop automatically enqueues reminder jobs.
+
+## 3. Assign Owner and Update Status
+
+Endpoint: `PATCH /api/incidents/{id}`
+
+Common updates:
+
+- `status`: `NEW`, `INVESTIGATING`, `MONITORING`, `RESOLVED`
+- `severity`: `P1`, `P2`, `P3`
+- `ownerUserId`
+- `summary`
+
+Owner changes and status changes are recorded in incident events.
+
+## 4. Draft Customer Update (Optional)
+
+Endpoint: `POST /api/incidents/{id}/customer-update`
+
+Behavior:
+
+- Uses `CUSTOMER_UPDATE` workflow config when present
+- Falls back to triage workflow provider/model
+- Appends a `CUSTOMER_UPDATE` event with the generated draft text
+
+## 5. Publish Status Page Update
+
+Endpoint: `POST /api/incidents/{id}/status-updates`
+
+Payload:
+
+- `body` (8-2000 chars)
+- `isVisible` (optional, default `true`)
+
+Each publish writes a status update row and an event timeline entry.
+
+## 6. Reminder Automation
+
+Open incidents are re-queued for reminders based on workspace policy:
+
+- P1 interval: `reminderIntervalHoursP1`
+- P2/P3 interval: `reminderIntervalHoursP2`
+
+P1 incidents also trigger SMS escalation to owner/managers based on escalation logic.
+
+## Related Guides
+
+- [Webhook Integrations](/docs/guides/webhook-integrations)
+- [Billing and Plan Limits](/docs/guides/billing-and-plan-limits)
+
+[Back to top](#top)

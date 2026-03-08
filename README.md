@@ -51,6 +51,11 @@ Copy `.env.example` to `.env` and fill values.
 - `DATABASE_URL`
 - `REDIS_URL`
 - `KEY_ENCRYPTION_SECRET`
+- `LOG_LEVEL` (`debug|info|warn|error|fatal`, default `info`)
+- `LOG_MODE` (`auto|file|console`, default `auto`)
+  - `auto`: writes `/logs/*.log` on long-running hosts and falls back to console-only in serverless runtimes
+  - `file`: always tries file streams + console
+  - `console`: disables file streams and writes to stdout/stderr only (recommended on Vercel)
 
 ### Stytch auth
 - `STYTCH_PROJECT_ID`

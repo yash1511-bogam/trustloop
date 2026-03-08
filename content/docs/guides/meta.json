@@ -3,6 +3,10 @@
   "defaultOpen": true,
   "pages": [
     "getting-started",
+    "webhook-integrations",
+    "api-key-authentication",
+    "incident-workflow",
+    "billing-and-plan-limits",
     "documentation-style-and-citations",
     "navigation-and-backlinks"
   ]

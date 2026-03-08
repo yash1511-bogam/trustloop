@@ -6,6 +6,7 @@ import {
   Role,
 } from "@prisma/client";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { sendReminderEmail } from "@/lib/email";
@@ -18,6 +19,10 @@ export type ReminderPayload = {
   queuedAt: string;
   dueAt?: string;
 };
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function safeDate(value: string | undefined): Date | null {
   if (!value) {
@@ -54,6 +59,14 @@ export async function processReminderPayload(input: {
 }): Promise<void> {
   const payload = input.payload;
 
+  log.worker.debug("Processing reminder payload", {
+    workspaceId: payload.workspaceId,
+    incidentId: payload.incidentId,
+    messageId: input.messageId ?? null,
+    queuedAt: payload.queuedAt,
+    dueAt: payload.dueAt ?? null,
+  });
+
   try {
     const [incident, quotaPolicy] = await Promise.all([
       prisma.incident.findFirst({
@@ -86,6 +99,11 @@ export async function processReminderPayload(input: {
     ]);
 
     if (!incident) {
+      log.worker.warn("Reminder payload incident not found", {
+        workspaceId: payload.workspaceId,
+        incidentId: payload.incidentId,
+        messageId: input.messageId ?? null,
+      });
       return;
     }
 
@@ -130,6 +148,13 @@ export async function processReminderPayload(input: {
         });
       });
 
+      log.worker.debug("Reminder deferred until due time", {
+        workspaceId: payload.workspaceId,
+        incidentId: incident.id,
+        messageId: input.messageId ?? null,
+        deferredQueueMessageId: messageId,
+        dueAt: dueAt.toISOString(),
+      });
       return;
     }
 
@@ -179,7 +204,19 @@ export async function processReminderPayload(input: {
 
         if (emailResult.success) {
           await consumeWorkspaceQuota(payload.workspaceId, "reminder_emails", 1);
+        } else {
+          log.worker.warn("Reminder email provider did not confirm send", {
+            workspaceId: payload.workspaceId,
+            incidentId: incident.id,
+            toEmail: incident.owner.email,
+          });
         }
+      } else {
+        log.worker.warn("Reminder email blocked by quota", {
+          workspaceId: payload.workspaceId,
+          incidentId: incident.id,
+          quotaLimit: quota.limit,
+        });
       }
     }
 
@@ -215,10 +252,19 @@ export async function processReminderPayload(input: {
       }
 
       for (const phone of smsTargets) {
-        await sendSmsAlert({
-          toPhone: phone,
-          message: `TrustLoop P1 incident: ${incident.title} is still ${incident.status}.`,
-        }).catch(() => null);
+        try {
+          await sendSmsAlert({
+            toPhone: phone,
+            message: `TrustLoop P1 incident: ${incident.title} is still ${incident.status}.`,
+          });
+        } catch (error) {
+          log.worker.error("P1 SMS escalation failed", {
+            workspaceId: payload.workspaceId,
+            incidentId: incident.id,
+            toPhone: phone,
+            error: errorMessage(error),
+          });
+        }
       }
     }
 
@@ -242,6 +288,16 @@ export async function processReminderPayload(input: {
         },
       });
       await refreshWorkspaceReadModels(payload.workspaceId);
+      log.worker.info("Reminder processed and re-queued", {
+        workspaceId: payload.workspaceId,
+        incidentId: incident.id,
+        nextQueueMessageId: messageId,
+      });
+    } else {
+      log.worker.info("Reminder processed for resolved incident", {
+        workspaceId: payload.workspaceId,
+        incidentId: incident.id,
+      });
     }
 
   } catch (error) {
@@ -259,6 +315,12 @@ export async function processReminderPayload(input: {
       });
     }
 
+    log.worker.error("Reminder payload processing failed", {
+      workspaceId: payload.workspaceId,
+      incidentId: payload.incidentId,
+      messageId: input.messageId ?? null,
+      error: errorMessage(error),
+    });
     throw error;
   }
 }
@@ -269,13 +331,31 @@ export async function processReminderMessage(rawMessage: {
   body?: string;
 }): Promise<void> {
   if (!rawMessage.body || !rawMessage.receiptHandle) {
+    log.worker.warn("Skipping malformed reminder queue message", {
+      messageId: rawMessage.messageId ?? null,
+      hasBody: Boolean(rawMessage.body),
+      hasReceiptHandle: Boolean(rawMessage.receiptHandle),
+    });
     return;
   }
 
-  const payload = JSON.parse(rawMessage.body) as ReminderPayload;
+  let payload: ReminderPayload;
+  try {
+    payload = JSON.parse(rawMessage.body) as ReminderPayload;
+  } catch (error) {
+    log.worker.error("Failed to parse reminder queue payload JSON", {
+      messageId: rawMessage.messageId ?? null,
+      error: errorMessage(error),
+    });
+    throw error;
+  }
+
   await processReminderPayload({
     payload,
     messageId: rawMessage.messageId,
   });
   await deleteReminderMessage(rawMessage.receiptHandle);
+  log.worker.debug("Deleted processed reminder queue message", {
+    messageId: rawMessage.messageId ?? null,
+  });
 }

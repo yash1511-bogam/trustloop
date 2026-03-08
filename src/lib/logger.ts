@@ -49,15 +49,46 @@ const LEVEL_RANK: Record<LogLevel, number> = {
   error: 3,
   fatal: 4,
 };
+type LogMode = "auto" | "file" | "console";
+const DEFAULT_LEVEL: LogLevel = "info";
+const LEVELS: readonly LogLevel[] = ["debug", "info", "warn", "error", "fatal"];
+const requestedLevel = process.env.LOG_LEVEL?.trim().toLowerCase();
 const MIN_LEVEL: LogLevel =
-  (process.env.LOG_LEVEL as LogLevel | undefined) ?? "info";
+  requestedLevel && LEVELS.includes(requestedLevel as LogLevel)
+    ? (requestedLevel as LogLevel)
+    : DEFAULT_LEVEL;
+const LOG_MODES: readonly LogMode[] = ["auto", "file", "console"];
+const requestedMode = process.env.LOG_MODE?.trim().toLowerCase();
+const configuredLogMode: LogMode =
+  requestedMode && LOG_MODES.includes(requestedMode as LogMode)
+    ? (requestedMode as LogMode)
+    : "auto";
+
+function isServerlessRuntime(): boolean {
+  return Boolean(
+    process.env.VERCEL === "1" ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      process.env.AWS_EXECUTION_ENV?.includes("AWS_Lambda") ||
+      process.env.NETLIFY ||
+      process.env.K_SERVICE,
+  );
+}
+
+const EFFECTIVE_LOG_MODE: "file" | "console" =
+  IS_BROWSER || configuredLogMode === "console"
+    ? "console"
+    : configuredLogMode === "file"
+      ? "file"
+      : isServerlessRuntime()
+        ? "console"
+        : "file";
 
 // ─── File writer (server-side only) ──────────────────────────────────────────
 
 const fileStreams = new Map<string, fs.WriteStream>();
 
 function getStream(filename: string): fs.WriteStream | null {
-  if (IS_BROWSER) return null;
+  if (IS_BROWSER || EFFECTIVE_LOG_MODE !== "file") return null;
   if (!fileStreams.has(filename)) {
     try {
       if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });

@@ -9,7 +9,15 @@ import { docsSource } from "@/lib/docs-source";
 export default function DocsRootLayout({ children }: { children: ReactNode }) {
   return (
     <div className="dark">
-      <RootProvider search={{ enabled: false }} theme={{ enabled: false }}>
+      <RootProvider
+        search={{
+          enabled: true,
+          options: {
+            api: "/api/search",
+          },
+        }}
+        theme={{ enabled: false }}
+      >
         <DocsLayout
           tree={docsSource.getPageTree()}
           nav={{
@@ -30,7 +38,7 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
               on: "menu",
             },
           ]}
-          searchToggle={{ enabled: false }}
+          searchToggle={{ enabled: true }}
           sidebar={{
             enabled: true,
             collapsible: true,

@@ -1,0 +1,73 @@
+---
+title: API Key Authentication
+description: Create, use, and revoke workspace-scoped API keys for server-to-server TrustLoop automation.
+---
+
+<a id="top" />
+
+[Back to docs home](/docs)
+
+# API Key Authentication
+
+TrustLoop API keys are workspace-scoped and intended for automation or external systems.
+
+## Key Format
+
+Generated key shape:
+
+`sk-tl-<8-char-prefix>.<secret>`
+
+Example:
+
+`sk-tl-a1b2c3d4.G7fQ...`
+
+The full key is shown only once at creation time.
+
+## Create a Key
+
+1. Open **Settings -> Workspace API Keys**.
+2. Create a key with a descriptive name.
+3. Copy the key immediately.
+
+Programmatic endpoint:
+
+- `POST /api/workspace/api-keys`
+- Session auth required
+- Role required: `OWNER` or `MANAGER`
+
+## Use a Key
+
+Send the key as a Bearer token:
+
+```http
+Authorization: Bearer sk-tl-...
+```
+
+Routes that support API keys include incident APIs and webhook ingestion routes.
+
+## Revoke a Key
+
+1. Open **Settings -> Workspace API Keys**.
+2. Revoke the key.
+
+Programmatic endpoint:
+
+- `DELETE /api/workspace/api-keys`
+- Session auth required
+- Role required: `OWNER` or `MANAGER`
+
+Revoked keys are immediately invalid for future authentication checks.
+
+## Security Model
+
+- Keys are bcrypt-hashed in storage.
+- Keys are never returned in full after creation.
+- Auth cache is short-lived and scoped to token hash.
+- Rate limits and daily quotas still apply to API-key requests.
+
+## Related Guides
+
+- [Webhook Integrations](/docs/guides/webhook-integrations)
+- [Incident Workflow](/docs/guides/incident-workflow)
+
+[Back to top](#top)

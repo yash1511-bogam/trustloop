@@ -8,6 +8,7 @@ import {
   sendPaymentReceiptEmail,
   sendPlanCanceledEmail,
 } from "@/lib/email";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 type DodoWebhookEvent = DodoPayments.Webhooks.UnwrapWebhookEvent;
@@ -16,6 +17,10 @@ type Recipient = {
   email: string;
   name: string;
 };
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -159,8 +164,17 @@ export async function processDodoWebhookEvent(input: {
   workspaceId?: string;
   reason?: string;
 }> {
+  log.billing.info("Processing Dodo webhook event", {
+    eventId: input.eventId,
+    eventType: input.event.type,
+  });
+
   const workspaceId = await resolveWorkspaceId(input.event);
   if (!workspaceId) {
+    log.billing.warn("Ignoring Dodo webhook: workspace unresolved", {
+      eventId: input.eventId,
+      eventType: input.event.type,
+    });
     return { status: "ignored", reason: "workspace_not_resolved" };
   }
 
@@ -195,6 +209,11 @@ export async function processDodoWebhookEvent(input: {
       select: { id: true },
     });
     if (existing) {
+      log.billing.info("Skipping duplicate Dodo webhook event", {
+        workspaceId,
+        eventId: input.eventId,
+        eventType: input.event.type,
+      });
       return { status: "duplicate", workspaceId };
     }
   }
@@ -208,6 +227,11 @@ export async function processDodoWebhookEvent(input: {
     },
   });
   if (!workspace) {
+    log.billing.warn("Ignoring Dodo webhook: workspace missing", {
+      workspaceId,
+      eventId: input.eventId,
+      eventType: input.event.type,
+    });
     return { status: "ignored", reason: "workspace_missing" };
   }
 
@@ -243,6 +267,11 @@ export async function processDodoWebhookEvent(input: {
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
     ) {
+      log.billing.info("Skipping duplicate Dodo webhook event (race)", {
+        workspaceId,
+        eventId: input.eventId,
+        eventType: input.event.type,
+      });
       return { status: "duplicate", workspaceId };
     }
     throw error;
@@ -394,53 +423,98 @@ export async function processDodoWebhookEvent(input: {
 
   if (shouldSendPaymentConfirmation) {
     for (const email of primaryRecipientEmails) {
-      await sendPaymentConfirmationEmail({
-        workspaceId,
-        toEmail: email,
-        workspaceName: workspace.name,
-        planTier: planHint ?? currentPlanTier,
-        amountCents: amount,
-        currency,
-      }).catch(() => null);
+      try {
+        await sendPaymentConfirmationEmail({
+          workspaceId,
+          toEmail: email,
+          workspaceName: workspace.name,
+          planTier: planHint ?? currentPlanTier,
+          amountCents: amount,
+          currency,
+        });
+      } catch (error) {
+        log.billing.error("Payment confirmation email send failed", {
+          workspaceId,
+          toEmail: email,
+          eventType: input.event.type,
+          error: errorMessage(error),
+        });
+      }
     }
   }
 
   if (shouldSendPaymentReceipt) {
     for (const email of primaryRecipientEmails) {
-      await sendPaymentReceiptEmail({
-        workspaceId,
-        toEmail: email,
-        workspaceName: workspace.name,
-        invoiceUrl,
-      }).catch(() => null);
+      try {
+        await sendPaymentReceiptEmail({
+          workspaceId,
+          toEmail: email,
+          workspaceName: workspace.name,
+          invoiceUrl,
+        });
+      } catch (error) {
+        log.billing.error("Payment receipt email send failed", {
+          workspaceId,
+          toEmail: email,
+          eventType: input.event.type,
+          error: errorMessage(error),
+        });
+      }
     }
   }
 
   if (shouldSendFailureReminder) {
     for (const email of primaryRecipientEmails) {
-      await sendPaymentFailureReminderEmail({
-        workspaceId,
-        toEmail: email,
-        workspaceName: workspace.name,
-        planTier: currentPlanTier,
-        hoursSinceFailure: 0,
-        cancelAfterHours: 48,
-      }).catch(() => null);
+      try {
+        await sendPaymentFailureReminderEmail({
+          workspaceId,
+          toEmail: email,
+          workspaceName: workspace.name,
+          planTier: currentPlanTier,
+          hoursSinceFailure: 0,
+          cancelAfterHours: 48,
+        });
+      } catch (error) {
+        log.billing.error("Payment failure reminder email send failed", {
+          workspaceId,
+          toEmail: email,
+          eventType: input.event.type,
+          error: errorMessage(error),
+        });
+      }
     }
   }
 
   if (shouldSendPlanCanceled) {
     for (const email of primaryRecipientEmails) {
-      await sendPlanCanceledEmail({
-        workspaceId,
-        toEmail: email,
-        workspaceName: workspace.name,
-        previousPlanTier: currentPlanTier,
-        reason: "Subscription canceled by payment provider.",
-      }).catch(() => null);
+      try {
+        await sendPlanCanceledEmail({
+          workspaceId,
+          toEmail: email,
+          workspaceName: workspace.name,
+          previousPlanTier: currentPlanTier,
+          reason: "Subscription canceled by payment provider.",
+        });
+      } catch (error) {
+        log.billing.error("Plan canceled email send failed", {
+          workspaceId,
+          toEmail: email,
+          eventType: input.event.type,
+          error: errorMessage(error),
+        });
+      }
     }
   }
 
+  log.billing.info("Dodo webhook processed", {
+    workspaceId,
+    eventId: input.eventId,
+    eventType: input.event.type,
+    shouldSendPaymentConfirmation,
+    shouldSendPaymentReceipt,
+    shouldSendFailureReminder,
+    shouldSendPlanCanceled,
+  });
   return { status: "processed", workspaceId };
 }
 
@@ -452,6 +526,7 @@ export async function processPastDueBillingAutomation(input?: {
   canceled: number;
 }> {
   const now = input?.now ?? new Date();
+  log.billing.info("Starting past-due billing automation", { now: now.toISOString() });
 
   const rows = await prisma.workspaceBilling.findMany({
     where: {
@@ -497,12 +572,18 @@ export async function processPastDueBillingAutomation(input?: {
 
     if (elapsedHours >= 48) {
       if (row.dodoSubscriptionId) {
-        await dodoClient()
-          .subscriptions.update(row.dodoSubscriptionId, {
+        try {
+          await dodoClient().subscriptions.update(row.dodoSubscriptionId, {
             status: "cancelled",
             cancel_at_next_billing_date: false,
-          })
-          .catch(() => null);
+          });
+        } catch (error) {
+          log.billing.error("Failed to cancel Dodo subscription during grace automation", {
+            workspaceId: row.workspaceId,
+            subscriptionId: row.dodoSubscriptionId,
+            error: errorMessage(error),
+          });
+        }
       }
 
       await applyWorkspacePlan({
@@ -521,13 +602,21 @@ export async function processPastDueBillingAutomation(input?: {
       });
 
       for (const email of recipientEmails) {
-        await sendPlanCanceledEmail({
-          workspaceId: row.workspaceId,
-          toEmail: email,
-          workspaceName: row.workspace.name,
-          previousPlanTier: currentPlanTier,
-          reason: "Payment was not recovered within 48 hours after failure.",
-        }).catch(() => null);
+        try {
+          await sendPlanCanceledEmail({
+            workspaceId: row.workspaceId,
+            toEmail: email,
+            workspaceName: row.workspace.name,
+            previousPlanTier: currentPlanTier,
+            reason: "Payment was not recovered within 48 hours after failure.",
+          });
+        } catch (error) {
+          log.billing.error("Grace automation plan cancellation email failed", {
+            workspaceId: row.workspaceId,
+            toEmail: email,
+            error: errorMessage(error),
+          });
+        }
       }
 
       canceled += 1;
@@ -540,14 +629,23 @@ export async function processPastDueBillingAutomation(input?: {
       (!row.lastFailureReminderAt || hoursBetween(row.lastFailureReminderAt, now) >= 20)
     ) {
       for (const email of recipientEmails) {
-        await sendPaymentFailureReminderEmail({
-          workspaceId: row.workspaceId,
-          toEmail: email,
-          workspaceName: row.workspace.name,
-          planTier: currentPlanTier,
-          hoursSinceFailure: elapsedHours,
-          cancelAfterHours: 48,
-        }).catch(() => null);
+        try {
+          await sendPaymentFailureReminderEmail({
+            workspaceId: row.workspaceId,
+            toEmail: email,
+            workspaceName: row.workspace.name,
+            planTier: currentPlanTier,
+            hoursSinceFailure: elapsedHours,
+            cancelAfterHours: 48,
+          });
+        } catch (error) {
+          log.billing.error("Grace automation payment reminder email failed", {
+            workspaceId: row.workspaceId,
+            toEmail: email,
+            hoursSinceFailure: elapsedHours,
+            error: errorMessage(error),
+          });
+        }
       }
 
       await prisma.workspaceBilling.update({
@@ -562,6 +660,11 @@ export async function processPastDueBillingAutomation(input?: {
     }
   }
 
+  log.billing.info("Completed past-due billing automation", {
+    checked: rows.length,
+    remindersSent,
+    canceled,
+  });
   return {
     checked: rows.length,
     remindersSent,
