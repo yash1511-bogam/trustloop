@@ -33,7 +33,17 @@
     "video:studio": "remotion studio remotion/index.ts",
     "video:render:landing": "remotion render remotion/index.ts TrustLoopHowItWorks public/videos/trustloop-how-it-works.mp4 --codec=h264 --crf=20 --overwrite",
     "localstack:init": "tsx scripts/init-localstack.ts",
-    "ai-keys:verify": "tsx scripts/verify-ai-keys.ts"
+    "ai-keys:verify": "tsx scripts/verify-ai-keys.ts",
+    "logs": "node scripts/tail-logs.mjs",
+    "logs:error": "node scripts/tail-logs.mjs error",
+    "logs:db": "node scripts/tail-logs.mjs db",
+    "logs:redis": "node scripts/tail-logs.mjs redis",
+    "logs:aws": "node scripts/tail-logs.mjs aws",
+    "logs:worker": "node scripts/tail-logs.mjs worker",
+    "logs:billing": "node scripts/tail-logs.mjs billing",
+    "logs:auth": "node scripts/tail-logs.mjs auth",
+    "logs:ui": "node scripts/tail-logs.mjs ui",
+    "logs:list": "node scripts/tail-logs.mjs --list"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.1004.0",

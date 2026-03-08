@@ -7,6 +7,7 @@ import {
 import { processPastDueBillingAutomation } from "../src/lib/billing";
 import { processReminderMessage } from "../src/lib/reminder-runner";
 import { prisma } from "../src/lib/prisma";
+import log from "../src/lib/logger";
 
 const BILLING_SWEEP_INTERVAL_MS = 15 * 60 * 1000;
 
@@ -15,14 +16,17 @@ async function run(): Promise<void> {
   let lastBillingSweepAt = 0;
 
   await ensureReminderQueue();
-  console.log("Worker started. once=", once);
+  log.worker.info("Worker started", { once });
 
   do {
     const now = Date.now();
     if (once || now - lastBillingSweepAt >= BILLING_SWEEP_INTERVAL_MS) {
-      const result = await processPastDueBillingAutomation().catch(() => null);
+      const result = await processPastDueBillingAutomation().catch((err) => {
+        log.billing.error("Billing grace automation failed", { error: String(err) });
+        return null;
+      });
       if (result) {
-        console.log("Billing grace automation", result);
+        log.billing.info("Billing grace automation completed", { result });
       }
       lastBillingSweepAt = now;
     }
@@ -44,6 +48,10 @@ async function run(): Promise<void> {
         receiptHandle: msg.ReceiptHandle,
         body: msg.Body,
       }).catch(async (error) => {
+        log.worker.error("Failed to process reminder message", {
+          messageId: msg.MessageId,
+          error: error instanceof Error ? error.message : String(error),
+        });
         if (msg.MessageId) {
           await prisma.reminderJobLog.updateMany({
             where: { queueMessageId: msg.MessageId },
@@ -59,11 +67,11 @@ async function run(): Promise<void> {
   } while (!once);
 
   await prisma.$disconnect();
-  console.log("Worker stopped.");
+  log.worker.info("Worker stopped");
 }
 
 run().catch(async (error) => {
-  console.error(error);
+  log.worker.fatal("Worker crashed", { error: error instanceof Error ? error.message : String(error) });
   await prisma.$disconnect();
   process.exit(1);
 });
