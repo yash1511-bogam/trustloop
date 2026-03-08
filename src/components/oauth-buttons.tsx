@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { Chrome, Github } from "lucide-react";
 
 type Mode = "login" | "register";
 
@@ -12,8 +13,8 @@ type Props = {
 };
 
 const providerOptions = [
-  { id: "google", label: "Google" },
-  { id: "github", label: "GitHub" },
+  { id: "google", label: "Google", icon: Chrome },
+  { id: "github", label: "GitHub", icon: Github },
 ] as const;
 
 function oauthHref(input: {
@@ -59,10 +60,11 @@ export function OAuthButtons({ mode, workspaceName, inviteToken, disabled }: Pro
         {hrefs.map((provider) => (
           <a
             aria-disabled={disabled}
-            className={`btn btn-ghost text-center ${disabled ? "pointer-events-none opacity-60" : ""}`}
+            className={`btn btn-ghost justify-center text-center ${disabled ? "pointer-events-none opacity-60" : ""}`}
             href={provider.href}
             key={provider.id}
           >
+            <provider.icon className="h-4 w-4" />
             Continue with {provider.label}
           </a>
         ))}

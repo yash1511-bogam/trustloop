@@ -136,7 +136,7 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
       {Object.values(WebhookIntegrationType).map((type) => {
         const record = byType.get(type);
         return (
-          <article className="rounded-xl border border-slate-200 bg-white p-4" key={type}>
+          <article className="panel-card p-4" key={type}>
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-semibold">{type}</h3>
               <span className="text-xs text-slate-500">

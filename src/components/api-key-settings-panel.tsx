@@ -104,7 +104,7 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
       </div>
 
       {revealedKey ? (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+        <div className="panel-card p-3">
           <p className="kicker mb-1">One-time key reveal</p>
           <code className="block overflow-x-auto rounded bg-white p-2 text-xs">{revealedKey}</code>
         </div>

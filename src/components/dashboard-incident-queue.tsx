@@ -137,7 +137,7 @@ export function DashboardIncidentQueue() {
         <h2 className="text-xl font-semibold">Incident queue</h2>
       </div>
 
-      <div className="grid gap-2 border-b border-slate-200 bg-slate-50 p-4 md:grid-cols-6">
+      <div className="grid gap-2 border-b border-slate-200 bg-slate-50/80 p-4 md:grid-cols-6">
         <select className="select" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="">All status</option>
           {Object.values(IncidentStatus).map((option) => (
@@ -219,7 +219,7 @@ export function DashboardIncidentQueue() {
                   <span className={severityBadgeClass(incident.severity)}>{incident.severity}</span>
                 </td>
                 <td className="px-4 py-3">
-                  <Link className="font-medium text-teal-800 underline" href={`/incidents/${incident.id}`}>
+                  <Link className="font-medium text-teal-800 hover:underline" href={`/incidents/${incident.id}`}>
                     {incident.title}
                   </Link>
                   <p className="mt-1 text-xs text-slate-500">{incident.category ?? "Uncategorized"}</p>

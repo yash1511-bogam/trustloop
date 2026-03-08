@@ -26,19 +26,19 @@ export default async function LoginPage({
 
   return (
     <main className="container-shell fade-in py-10">
-      <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-[0.92fr_1.08fr]">
+      <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-[0.94fr_1.06fr]">
         <section className="surface p-6 md:p-8">
           <p className="kicker">Welcome back</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Continue incident operations</h1>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Resume incident operations</h1>
           <p className="mt-2 text-sm text-slate-700">
-            Sign in with your work email. Verification is handled through Stytch one-time passcodes.
+            Sign in with your work email and continue triage, communication, and executive reporting.
           </p>
 
           <div className="mt-6 space-y-3">
             {[
-              "Secure email OTP login",
-              "Workspace-scoped access control",
-              "No password reset workflows",
+              "Secure OTP sign-in powered by Stytch",
+              "Workspace-scoped role and quota enforcement",
+              "No shared passwords or reset tickets",
             ].map((item) => (
               <div className="flex items-start gap-2 text-sm text-slate-700" key={item}>
                 <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-700" />
@@ -52,7 +52,7 @@ export default async function LoginPage({
           <p className="kicker mb-2">Sign in</p>
           <h2 className="mb-1 text-3xl font-semibold">Access your workspace</h2>
           <p className="mb-6 text-sm text-slate-600">
-            Continue with Google, GitHub, or verify with a one-time code from Stytch.
+            Continue with Google, GitHub, or one-time code verification.
           </p>
 
           {errorMessage ? (
@@ -79,10 +79,10 @@ export default async function LoginPage({
         </section>
       </div>
 
-      <div className="mx-auto mt-6 max-w-5xl rounded-2xl border border-slate-200/80 bg-white/80 p-4 text-xs text-slate-600">
+      <div className="mx-auto mt-6 max-w-5xl panel-card p-4 text-xs text-slate-600">
         <p className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-cyan-700" />
-          Looking for onboarding docs and architecture details? Start from the dashboard after login.
+          After sign-in, open dashboard workflows, incident queue filters, and automation settings.
           <ArrowRight className="h-3.5 w-3.5" />
         </p>
       </div>

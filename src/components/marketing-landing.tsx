@@ -368,6 +368,23 @@ export function MarketingLanding() {
               ))}
             </div>
 
+            <div className="mt-4 overflow-hidden rounded-[26px] border border-slate-200/90 bg-slate-950 shadow-[0_16px_36px_rgba(15,23,42,0.2)]">
+              <video
+                aria-label="TrustLoop explainer video"
+                className="block h-auto w-full rounded-[26px]"
+                controls
+                playsInline
+                poster="/videos/trustloop-how-it-works-poster.svg"
+                preload="metadata"
+              >
+                <source src="/videos/trustloop-how-it-works.mp4" type="video/mp4" />
+                Your browser does not support embedded video playback.
+              </video>
+            </div>
+            <p className="mt-2 text-xs text-slate-600">
+              12-second walkthrough: intake, AI triage, customer updates, and executive visibility.
+            </p>
+
             <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
               <div className="flex items-center gap-2 font-semibold">
                 <Handshake className="h-4 w-4" />

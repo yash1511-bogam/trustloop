@@ -165,7 +165,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         ) : null}
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+      <div className="panel-card p-3 text-sm text-slate-700">
         <p>
           Current plan: <strong>{workspace.planTier}</strong>
         </p>

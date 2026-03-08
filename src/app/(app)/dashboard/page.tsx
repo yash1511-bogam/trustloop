@@ -78,19 +78,19 @@ export default async function DashboardPage() {
         </div>
 
         <div className="grid gap-3 md:grid-cols-3">
-          <article className="rounded-xl border border-slate-200 bg-white p-3">
+          <article className="panel-card p-3">
             <p className="kicker">Triage coverage (30d)</p>
             <p className="mt-1 text-2xl font-semibold">
               {snapshot?.triageCoveragePct ?? 0}%
             </p>
           </article>
-          <article className="rounded-xl border border-slate-200 bg-white p-3">
+          <article className="panel-card p-3">
             <p className="kicker">Customer update coverage (30d)</p>
             <p className="mt-1 text-2xl font-semibold">
               {snapshot?.customerUpdateCoveragePct ?? 0}%
             </p>
           </article>
-          <article className="rounded-xl border border-slate-200 bg-white p-3">
+          <article className="panel-card p-3">
             <p className="kicker">Snapshot updated</p>
             <p className="mt-1 text-sm font-medium">
               {snapshot?.updatedAt ? new Date(snapshot.updatedAt).toLocaleString() : "N/A"}

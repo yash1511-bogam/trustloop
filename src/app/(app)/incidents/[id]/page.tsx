@@ -98,7 +98,7 @@ export default async function IncidentDetailPage({
         <h3 className="mb-3 text-lg font-semibold">Timeline</h3>
         <div className="space-y-3">
           {incident.events.map((event) => (
-            <article className="rounded-xl border border-slate-200 bg-white p-3" key={event.id}>
+            <article className="panel-card p-3" key={event.id}>
               <div className="mb-1 flex items-center justify-between gap-2 text-xs text-slate-500">
                 <span>
                   {event.eventType}

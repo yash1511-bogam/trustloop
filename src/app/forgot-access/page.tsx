@@ -12,35 +12,35 @@ export default async function ForgotAccessPage() {
 
   return (
     <main className="container-shell fade-in py-10">
-      <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-[0.92fr_1.08fr]">
+      <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-[0.94fr_1.06fr]">
         <section className="surface p-6 md:p-8">
           <p className="kicker">Recover access</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900">Get back into your workspace</h1>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">Restore workspace access safely</h1>
           <p className="mt-2 text-sm text-slate-700">
-            Request a recovery OTP with your work email. We also send extra guidance emails to help you safely restore access.
+            Request a recovery OTP on your work email and continue with secure verification.
           </p>
 
           <div className="mt-6 space-y-3">
             <div className="flex items-start gap-2 text-sm text-slate-700">
               <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Security notification email when OTP is requested
+              Security notification email whenever recovery starts
             </div>
             <div className="flex items-start gap-2 text-sm text-slate-700">
               <LifeBuoy className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Recovery instructions sent automatically
+              Auto guidance with safe account recovery sequence
             </div>
             <div className="flex items-start gap-2 text-sm text-slate-700">
               <Sparkles className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Same no-password login flow powered by Stytch OTP
+              Same passwordless flow as standard workspace login
             </div>
           </div>
         </section>
 
         <section className="surface p-7">
           <p className="kicker mb-2">Account recovery</p>
-          <h2 className="mb-1 text-3xl font-semibold">Reset your session safely</h2>
+          <h2 className="mb-1 text-3xl font-semibold">Reset your session</h2>
           <p className="mb-6 text-sm text-slate-600">
-            Enter your work email to receive a code. If your account exists, you can verify and continue.
+            Enter your work email to get a recovery code and verify identity.
           </p>
 
           <ForgotAccessForm />

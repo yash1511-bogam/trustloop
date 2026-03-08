@@ -1,0 +1,18 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" rx="36" fill="url(#bg)"/>
+  <rect x="86" y="86" width="1108" height="548" rx="28" fill="rgba(255,255,255,0.84)" stroke="rgba(255,255,255,0.65)"/>
+  <text x="138" y="194" fill="#44403C" font-family="sans-serif" font-size="26" letter-spacing="2.4">TRUSTLOOP EXPLAINER</text>
+  <text x="138" y="264" fill="#111827" font-family="sans-serif" font-size="62" font-weight="700">How TrustLoop Works</text>
+  <text x="138" y="318" fill="#57534E" font-family="sans-serif" font-size="30">Intake → AI triage → customer updates → executive insight</text>
+  <rect x="138" y="372" width="520" height="54" rx="27" fill="#1C1917"/>
+  <text x="168" y="407" fill="#FDE68A" font-family="sans-serif" font-size="24" font-weight="700">12-second product walkthrough video</text>
+  <circle cx="1006" cy="360" r="96" fill="#CA8A04" opacity="0.95"/>
+  <polygon points="980,314 980,406 1060,360" fill="white"/>
+  <defs>
+    <linearGradient id="bg" x1="140" y1="0" x2="1204" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FAFAF9"/>
+      <stop offset="0.52" stop-color="#F5EFE4"/>
+      <stop offset="1" stop-color="#EFE7DB"/>
+    </linearGradient>
+  </defs>
+</svg>

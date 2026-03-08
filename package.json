@@ -30,6 +30,8 @@
     "worker": "tsx scripts/worker.ts",
     "worker:once": "tsx scripts/worker.ts --once",
     "billing:grace:once": "tsx scripts/process-billing-grace.ts",
+    "video:studio": "remotion studio remotion/index.ts",
+    "video:render:landing": "remotion render remotion/index.ts TrustLoopHowItWorks public/videos/trustloop-how-it-works.mp4 --codec=h264 --crf=20 --overwrite",
     "localstack:init": "tsx scripts/init-localstack.ts",
     "ai-keys:verify": "tsx scripts/verify-ai-keys.ts"
   },
@@ -60,6 +62,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@remotion/cli": "^4.0.434",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^25.3.5",
     "@types/pdfkit": "^0.17.5",
@@ -74,6 +77,7 @@
     "execa": "^9.6.1",
     "gradient-string": "^3.0.0",
     "ora": "^9.3.0",
+    "remotion": "^4.0.434",
     "tailwindcss": "^4.2.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

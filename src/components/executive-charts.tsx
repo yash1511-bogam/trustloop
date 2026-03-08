@@ -40,7 +40,7 @@ export function ExecutiveCharts({ data }: Props) {
               <Line
                 type="monotone"
                 dataKey="incidentsCreated"
-                stroke="#0284c7"
+                stroke="#a16207"
                 strokeWidth={2}
                 dot={false}
                 name="Created"
@@ -48,7 +48,7 @@ export function ExecutiveCharts({ data }: Props) {
               <Line
                 type="monotone"
                 dataKey="incidentsResolved"
-                stroke="#16a34a"
+                stroke="#0f766e"
                 strokeWidth={2}
                 dot={false}
                 name="Resolved"
@@ -68,7 +68,7 @@ export function ExecutiveCharts({ data }: Props) {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="p1Created" fill="#ef4444" name="P1 created" />
+              <Bar dataKey="p1Created" fill="#b42318" name="P1 created" />
             </BarChart>
           </ResponsiveContainer>
         </div>

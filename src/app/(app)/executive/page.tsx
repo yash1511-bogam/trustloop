@@ -64,17 +64,17 @@ export default async function ExecutivePage() {
       <section className="surface p-5">
         <h3 className="mb-3 text-lg font-semibold">Coverage and timing</h3>
         <div className="grid gap-3 md:grid-cols-3">
-          <article className="rounded-xl border border-slate-200 bg-white p-3">
+          <article className="panel-card p-3">
             <p className="kicker">Avg resolution (hrs, 30d)</p>
             <p className="mt-1 text-2xl font-semibold">
               {snapshot?.avgResolutionHoursLast30d ?? 0}
             </p>
           </article>
-          <article className="rounded-xl border border-slate-200 bg-white p-3">
+          <article className="panel-card p-3">
             <p className="kicker">Triage coverage (30d)</p>
             <p className="mt-1 text-2xl font-semibold">{snapshot?.triageCoveragePct ?? 0}%</p>
           </article>
-          <article className="rounded-xl border border-slate-200 bg-white p-3">
+          <article className="panel-card p-3">
             <p className="kicker">Customer update coverage (30d)</p>
             <p className="mt-1 text-2xl font-semibold">
               {snapshot?.customerUpdateCoveragePct ?? 0}%

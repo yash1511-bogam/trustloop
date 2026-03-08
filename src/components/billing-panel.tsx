@@ -137,7 +137,7 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
             limit: quota.reminderEmailsPerDay,
           },
         ].map((row) => (
-          <article className="rounded-xl border border-slate-200 bg-white p-3" key={row.label}>
+          <article className="panel-card p-3" key={row.label}>
             <p className="text-sm font-medium">{row.label}</p>
             <p className="mt-1 text-sm text-slate-600">
               {row.used} / {row.limit}
@@ -189,7 +189,7 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
         </button>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700">
+      <div className="panel-card p-3 text-sm text-slate-700">
         <p>
           Billing provider: <strong>Dodo Payments</strong>
         </p>
