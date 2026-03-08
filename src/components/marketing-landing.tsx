@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState, useEffect, type ComponentType } from "react";
+import { useRef, type ComponentType } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -10,7 +10,6 @@ import {
   useScroll,
   useSpring,
   useTransform,
-  useMotionTemplate,
 } from "framer-motion";
 import { motion as motionDev } from "motion/react";
 import {

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Activity, AlertCircle, CheckCircle2, ShieldAlert, Zap } from "lucide-react";
+import { Activity, CheckCircle2, ShieldAlert, Zap } from "lucide-react";
 
 export function HeroIllustration() {
   return (
