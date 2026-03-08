@@ -3,11 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function RegisterForm() {
+type Props = {
+  initialWorkspaceName?: string;
+  initialEmail?: string;
+  inviteToken?: string;
+};
+
+export function RegisterForm({
+  initialWorkspaceName,
+  initialEmail,
+  inviteToken,
+}: Props) {
   const router = useRouter();
-  const [workspaceName, setWorkspaceName] = useState("Acme AI Apps");
+  const [workspaceName, setWorkspaceName] = useState(
+    initialWorkspaceName ?? "Acme AI Apps",
+  );
   const [name, setName] = useState("Team Lead");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +39,7 @@ export function RegisterForm() {
         workspaceName,
         name,
         email,
+        inviteToken: inviteToken ?? undefined,
       }),
     });
 
@@ -92,6 +105,7 @@ export function RegisterForm() {
             className="input"
             value={workspaceName}
             onChange={(event) => setWorkspaceName(event.target.value)}
+            disabled={Boolean(inviteToken)}
             required
           />
         </div>
@@ -120,6 +134,7 @@ export function RegisterForm() {
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            disabled={Boolean(initialEmail)}
             required
           />
         </div>

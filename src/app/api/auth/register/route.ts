@@ -9,6 +9,7 @@ const registerStartSchema = z.object({
   name: z.string().min(2).max(80),
   email: z.email().max(160),
   workspaceName: z.string().min(2).max(80),
+  inviteToken: z.string().uuid().optional(),
 });
 
 type PendingRegisterPayload = {
@@ -16,6 +17,7 @@ type PendingRegisterPayload = {
   email: string;
   workspaceName: string;
   stytchUserId: string;
+  inviteToken?: string;
 };
 
 function pendingRegisterKey(methodId: string): string {
@@ -31,6 +33,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const email = parsed.data.email.toLowerCase().trim();
+  let workspaceName = parsed.data.workspaceName.trim();
+  let inviteToken: string | undefined;
+
+  if (parsed.data.inviteToken) {
+    const invite = await prisma.workspaceInvite.findFirst({
+      where: {
+        token: parsed.data.inviteToken,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        workspace: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!invite) {
+      return NextResponse.json({ error: "Invite is invalid or expired." }, { status: 400 });
+    }
+
+    if (invite.email.toLowerCase() !== email) {
+      return NextResponse.json(
+        { error: "Invite email does not match this registration email." },
+        { status: 400 },
+      );
+    }
+
+    workspaceName = invite.workspace.name;
+    inviteToken = invite.token;
+  }
 
   const existing = await prisma.user.findFirst({
     where: { email },
@@ -50,8 +85,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const pendingPayload: PendingRegisterPayload = {
       name: parsed.data.name.trim(),
       email,
-      workspaceName: parsed.data.workspaceName.trim(),
+      workspaceName,
       stytchUserId: otp.stytchUserId,
+      inviteToken,
     };
 
     await redisSetJson<PendingRegisterPayload>(

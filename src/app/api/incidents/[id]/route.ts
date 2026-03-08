@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EventType, IncidentSeverity, IncidentStatus } from "@prisma/client";
+import {
+  AIIncidentCategory,
+  EventType,
+  IncidentSeverity,
+  IncidentStatus,
+} from "@prisma/client";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { badRequest, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
+import { sendOwnerAssignedEmail } from "@/lib/email";
 
 const patchSchema = z.object({
   status: z.nativeEnum(IncidentStatus).optional(),
   severity: z.nativeEnum(IncidentSeverity).optional(),
-  category: z.string().max(80).optional().nullable(),
+  category: z.nativeEnum(AIIncidentCategory).optional().nullable(),
   summary: z.string().max(1000).optional().nullable(),
   ownerUserId: z.string().optional().nullable(),
 });
@@ -18,7 +24,7 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(_request, { allowApiKey: true });
   if (access.response) {
     return access.response;
   }
@@ -27,7 +33,7 @@ export async function GET(
   const { id } = await params;
 
   const incident = await prisma.incident.findFirst({
-    where: { id, workspaceId: auth.user.workspaceId },
+    where: { id, workspaceId: auth.workspaceId },
     include: {
       owner: {
         select: { id: true, name: true, email: true },
@@ -54,7 +60,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
   if (access.response) {
     return access.response;
   }
@@ -70,11 +76,35 @@ export async function PATCH(
   const { id } = await params;
 
   const existing = await prisma.incident.findFirst({
-    where: { id, workspaceId: auth.user.workspaceId },
+    where: { id, workspaceId: auth.workspaceId },
+    include: {
+      owner: {
+        select: { id: true, email: true, name: true },
+      },
+    },
   });
 
   if (!existing) {
     return notFound("Incident not found.");
+  }
+
+  let nextOwnerName: string | null = null;
+  if (parsed.data.ownerUserId) {
+    const nextOwner = await prisma.user.findFirst({
+      where: {
+        id: parsed.data.ownerUserId,
+        workspaceId: auth.workspaceId,
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    if (!nextOwner) {
+      return badRequest("Owner must belong to this workspace.");
+    }
+    nextOwnerName = nextOwner.name;
   }
 
   let resolvedAtValue: Date | null | undefined = undefined;
@@ -89,7 +119,7 @@ export async function PATCH(
       data: {
         status: parsed.data.status,
         severity: parsed.data.severity,
-        category: parsed.data.category?.trim() || null,
+        category: parsed.data.category ?? undefined,
         summary: parsed.data.summary?.trim() || null,
         ownerUserId: parsed.data.ownerUserId ?? undefined,
         resolvedAt: resolvedAtValue,
@@ -110,13 +140,32 @@ export async function PATCH(
       changed.push("owner updated");
     }
 
-    if (changed.length > 0) {
+    if (
+      changed.length > 0 &&
+      (parsed.data.status !== undefined ||
+        parsed.data.severity !== undefined ||
+        parsed.data.category !== undefined)
+    ) {
       await tx.incidentEvent.create({
         data: {
           incidentId: incident.id,
-          actorUserId: auth.user.id,
+          actorUserId: auth.actorUserId,
           eventType: EventType.STATUS_CHANGED,
           body: `Incident updated: ${changed.join(", ")}.`,
+        },
+      });
+    }
+
+    if (
+      parsed.data.ownerUserId !== undefined &&
+      parsed.data.ownerUserId !== existing.ownerUserId
+    ) {
+      await tx.incidentEvent.create({
+        data: {
+          incidentId: incident.id,
+          actorUserId: auth.actorUserId,
+          eventType: EventType.OWNER_CHANGED,
+          body: `Owner changed from ${existing.owner?.name ?? "Unassigned"} to ${parsed.data.ownerUserId ? (nextOwnerName ?? "Assigned owner") : "Unassigned"}.`,
         },
       });
     }
@@ -124,6 +173,28 @@ export async function PATCH(
     return incident;
   });
 
-  await refreshWorkspaceReadModels(auth.user.workspaceId);
+  if (
+    parsed.data.ownerUserId &&
+    parsed.data.ownerUserId !== existing.ownerUserId
+  ) {
+    const newOwner = await prisma.user.findUnique({
+      where: { id: parsed.data.ownerUserId },
+      select: {
+        email: true,
+        name: true,
+      },
+    });
+    if (newOwner?.email) {
+      await sendOwnerAssignedEmail({
+        workspaceId: auth.workspaceId,
+        incidentId: existing.id,
+        toEmail: newOwner.email,
+        ownerName: newOwner.name,
+        incidentTitle: updated.title,
+      }).catch(() => null);
+    }
+  }
+
+  await refreshWorkspaceReadModels(auth.workspaceId);
   return NextResponse.json({ incident: updated });
 }

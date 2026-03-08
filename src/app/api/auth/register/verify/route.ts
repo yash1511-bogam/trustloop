@@ -18,6 +18,7 @@ type PendingRegisterPayload = {
   email: string;
   workspaceName: string;
   stytchUserId: string;
+  inviteToken?: string;
 };
 
 function pendingRegisterKey(methodId: string): string {
@@ -79,6 +80,42 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const created = await prisma.$transaction(async (tx) => {
+      if (pending.inviteToken) {
+        const invite = await tx.workspaceInvite.findUnique({
+          where: { token: pending.inviteToken },
+          include: {
+            workspace: true,
+          },
+        });
+
+        if (!invite || invite.usedAt || invite.expiresAt <= new Date()) {
+          throw new Error("Invite is invalid or expired.");
+        }
+
+        if (invite.email.toLowerCase() !== pending.email.toLowerCase()) {
+          throw new Error("Invite email mismatch.");
+        }
+
+        const createdUser = await tx.user.create({
+          data: {
+            workspaceId: invite.workspaceId,
+            email: pending.email,
+            name: pending.name,
+            role: invite.role,
+            stytchUserId: authResult.stytchUserId,
+          },
+        });
+
+        await tx.workspaceInvite.update({
+          where: { id: invite.id },
+          data: {
+            usedAt: new Date(),
+          },
+        });
+
+        return { user: createdUser, workspace: invite.workspace };
+      }
+
       const workspace = await tx.workspace.create({
         data: {
           name: pending.workspaceName,

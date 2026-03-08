@@ -8,12 +8,13 @@ import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { enqueueReminder } from "@/lib/queue";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
+import { postIncidentAlert } from "@/lib/slack";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
   if (access.response) {
     return access.response;
   }
@@ -22,14 +23,14 @@ export async function POST(
   const { id } = await params;
 
   const incident = await prisma.incident.findFirst({
-    where: { id, workspaceId: auth.user.workspaceId },
+    where: { id, workspaceId: auth.workspaceId },
   });
 
   if (!incident) {
     return notFound("Incident not found.");
   }
 
-  const quota = await enforceWorkspaceQuota(auth.user.workspaceId, "triage");
+  const quota = await enforceWorkspaceQuota(auth.workspaceId, "triage");
   if (!quota.allowed) {
     return quotaExceeded(`Daily AI triage quota reached (${quota.limit}/day).`);
   }
@@ -37,7 +38,7 @@ export async function POST(
   const workflow = await prisma.workflowSetting.findUnique({
     where: {
       workspaceId_workflowType: {
-        workspaceId: auth.user.workspaceId,
+        workspaceId: auth.workspaceId,
         workflowType: WorkflowType.INCIDENT_TRIAGE,
       },
     },
@@ -48,7 +49,7 @@ export async function POST(
   const key = await prisma.aiProviderKey.findUnique({
     where: {
       workspaceId_provider: {
-        workspaceId: auth.user.workspaceId,
+        workspaceId: auth.workspaceId,
         provider,
       },
     },
@@ -88,7 +89,7 @@ export async function POST(
     await tx.incidentEvent.create({
       data: {
         incidentId: incident.id,
-        actorUserId: auth.user.id,
+        actorUserId: auth.actorUserId,
         eventType: EventType.TRIAGE_RUN,
         body: `AI triage set severity ${triage.severity} and category ${triage.category}. Next steps: ${triage.nextSteps.join("; ")}`,
       },
@@ -98,23 +99,74 @@ export async function POST(
   });
 
   if (triage.severity === "P1" || triage.severity === "P2") {
+    const quotaPolicy = await prisma.workspaceQuota.findUnique({
+      where: { workspaceId: auth.workspaceId },
+      select: {
+        reminderIntervalHoursP1: true,
+        reminderIntervalHoursP2: true,
+      },
+    });
+
+    const reminderHours =
+      triage.severity === "P1"
+        ? (quotaPolicy?.reminderIntervalHoursP1 ?? 4)
+        : (quotaPolicy?.reminderIntervalHoursP2 ?? 24);
+    const delaySeconds = Math.min(Math.max(60, reminderHours * 3600), 900);
+
     const messageId = await enqueueReminder({
-      workspaceId: auth.user.workspaceId,
+      workspaceId: auth.workspaceId,
       incidentId: incident.id,
       queuedAt: new Date().toISOString(),
+      delaySeconds,
     });
 
     await prisma.reminderJobLog.create({
       data: {
-        workspaceId: auth.user.workspaceId,
+        workspaceId: auth.workspaceId,
         incidentId: incident.id,
         queueMessageId: messageId,
       },
     });
   }
 
-  await consumeWorkspaceQuota(auth.user.workspaceId, "triage", 1);
-  await refreshWorkspaceReadModels(auth.user.workspaceId);
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: auth.workspaceId },
+    select: {
+      slackBotToken: true,
+      slackChannelId: true,
+    },
+  });
+
+  if (workspace?.slackBotToken && workspace.slackChannelId) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const alert = await postIncidentAlert({
+      botToken: decryptSecret(workspace.slackBotToken),
+      channelId: workspace.slackChannelId,
+      incidentTitle: incident.title,
+      incidentId: incident.id,
+      severity: triage.severity,
+      summary: triage.summary,
+      url: `${appUrl.replace(/\/$/, "")}/incidents/${incident.id}`,
+    }).catch(() => null);
+
+    if (alert?.ts) {
+      await prisma.incidentEvent.create({
+        data: {
+          incidentId: incident.id,
+          actorUserId: auth.actorUserId,
+          eventType: EventType.NOTE,
+          body: "Slack incident alert posted.",
+          metadataJson: JSON.stringify({
+            slackThreadTs: alert.ts,
+            slackChannelId: workspace.slackChannelId,
+          }),
+        },
+      });
+    }
+  }
+
+  await consumeWorkspaceQuota(auth.workspaceId, "triage", 1);
+  await refreshWorkspaceReadModels(auth.workspaceId);
 
   return NextResponse.json({
     incident: updated,

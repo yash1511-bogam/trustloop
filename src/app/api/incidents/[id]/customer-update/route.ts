@@ -7,12 +7,13 @@ import { generateCustomerUpdateDraft } from "@/lib/ai/service";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
+import { postSlackMessage } from "@/lib/slack";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
   if (access.response) {
     return access.response;
   }
@@ -21,7 +22,7 @@ export async function POST(
   const { id } = await params;
 
   const incident = await prisma.incident.findFirst({
-    where: { id, workspaceId: auth.user.workspaceId },
+    where: { id, workspaceId: auth.workspaceId },
     include: {
       events: {
         orderBy: { createdAt: "desc" },
@@ -35,7 +36,7 @@ export async function POST(
   }
 
   const quota = await enforceWorkspaceQuota(
-    auth.user.workspaceId,
+    auth.workspaceId,
     "customer_updates",
   );
   if (!quota.allowed) {
@@ -48,7 +49,7 @@ export async function POST(
     (await prisma.workflowSetting.findUnique({
       where: {
         workspaceId_workflowType: {
-          workspaceId: auth.user.workspaceId,
+          workspaceId: auth.workspaceId,
           workflowType: WorkflowType.CUSTOMER_UPDATE,
         },
       },
@@ -56,7 +57,7 @@ export async function POST(
     (await prisma.workflowSetting.findUnique({
       where: {
         workspaceId_workflowType: {
-          workspaceId: auth.user.workspaceId,
+          workspaceId: auth.workspaceId,
           workflowType: WorkflowType.INCIDENT_TRIAGE,
         },
       },
@@ -67,7 +68,7 @@ export async function POST(
   const key = await prisma.aiProviderKey.findUnique({
     where: {
       workspaceId_provider: {
-        workspaceId: auth.user.workspaceId,
+        workspaceId: auth.workspaceId,
         provider,
       },
     },
@@ -105,15 +106,54 @@ export async function POST(
     await tx.incidentEvent.create({
       data: {
         incidentId: incident.id,
-        actorUserId: auth.user.id,
+        actorUserId: auth.actorUserId,
         eventType: EventType.CUSTOMER_UPDATE,
         body: draft,
       },
     });
   });
 
-  await consumeWorkspaceQuota(auth.user.workspaceId, "customer_updates", 1);
-  await refreshWorkspaceReadModels(auth.user.workspaceId);
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: auth.workspaceId },
+    select: {
+      slackBotToken: true,
+      slackChannelId: true,
+    },
+  });
+
+  if (workspace?.slackBotToken && workspace.slackChannelId) {
+    const threadEvent = incident.events.find((event) => {
+      if (!event.metadataJson) {
+        return false;
+      }
+      try {
+        const metadata = JSON.parse(event.metadataJson) as {
+          slackThreadTs?: string;
+        };
+        return Boolean(metadata.slackThreadTs);
+      } catch {
+        return false;
+      }
+    });
+
+    let threadTs: string | undefined;
+    if (threadEvent?.metadataJson) {
+      const parsed = JSON.parse(threadEvent.metadataJson) as {
+        slackThreadTs?: string;
+      };
+      threadTs = parsed.slackThreadTs;
+    }
+
+    await postSlackMessage({
+      botToken: decryptSecret(workspace.slackBotToken),
+      channelId: workspace.slackChannelId,
+      threadTs,
+      text: `Customer update draft for *${incident.title}*:\n${draft}`,
+    }).catch(() => null);
+  }
+
+  await consumeWorkspaceQuota(auth.workspaceId, "customer_updates", 1);
+  await refreshWorkspaceReadModels(auth.workspaceId);
 
   return NextResponse.json({ draft });
 }

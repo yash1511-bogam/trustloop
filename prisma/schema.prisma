@@ -33,6 +33,21 @@ enum IncidentChannel {
   OTHER
 }
 
+enum AIIncidentCategory {
+  HALLUCINATION
+  BIAS
+  DATA_DRIFT
+  MODEL_DEGRADATION
+  PROMPT_INJECTION
+  ADVERSARIAL_INPUT
+  OUTPUT_FILTER_FAILURE
+  LATENCY
+  AVAILABILITY
+  DATA_PRIVACY
+  COMPLIANCE
+  OTHER
+}
+
 enum EventType {
   CREATED
   NOTE
@@ -64,6 +79,8 @@ enum EmailNotificationType {
   REMINDER
   CUSTOMER_UPDATE
   INCIDENT_ALERT
+  OWNER_ASSIGNED
+  WORKSPACE_INVITE
   AUTH_OTP
   AUTH_RECOVERY
   ONBOARDING_WELCOME
@@ -75,22 +92,50 @@ enum EmailDeliveryStatus {
   FAILED
 }
 
+enum WebhookIntegrationType {
+  DATADOG
+  PAGERDUTY
+  SENTRY
+  GENERIC
+  LANGFUSE
+  HELICONE
+}
+
+enum AiKeyHealthStatus {
+  UNKNOWN
+  OK
+  FAILED
+}
+
 model Workspace {
-  id                String                     @id @default(cuid())
-  name              String
-  planTier          String                     @default("pro")
-  timezone          String                     @default("UTC")
-  createdAt         DateTime                   @default(now())
-  updatedAt         DateTime                   @updatedAt
-  users             User[]
-  incidents         Incident[]
-  aiProviderKeys    AiProviderKey[]
-  workflowSettings  WorkflowSetting[]
-  reminderJobs      ReminderJobLog[]
-  quotas            WorkspaceQuota?
-  dailyUsage        WorkspaceDailyUsage[]
-  analyticsDaily    IncidentAnalyticsDaily[]
-  executiveSnapshot WorkspaceExecutiveSnapshot?
+  id                 String                       @id @default(cuid())
+  name               String
+  slug               String?                      @unique
+  statusPageEnabled  Boolean                      @default(false)
+  planTier           String                       @default("pro")
+  timezone           String                       @default("UTC")
+  slackBotToken      String?
+  slackChannelId     String?
+  slackTeamId        String?
+  stripeCustomerId   String?
+  samlEnabled        Boolean                      @default(false)
+  samlMetadataUrl    String?
+  complianceMode     Boolean                      @default(false)
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+  users              User[]
+  incidents          Incident[]
+  aiProviderKeys     AiProviderKey[]
+  workflowSettings   WorkflowSetting[]
+  reminderJobs       ReminderJobLog[]
+  quotas             WorkspaceQuota?
+  dailyUsage         WorkspaceDailyUsage[]
+  analyticsDaily     IncidentAnalyticsDaily[]
+  executiveSnapshot  WorkspaceExecutiveSnapshot?
+  apiKeys            WorkspaceApiKey[]
+  invites            WorkspaceInvite[]
+  statusUpdates      StatusUpdate[]
+  webhookIntegrations WorkspaceWebhookIntegration[]
   emailNotifications EmailNotificationLog[]
 }
 
@@ -101,9 +146,12 @@ model User {
   stytchUserId   String          @unique
   email          String
   name           String
+  phone          String?
   role           Role            @default(AGENT)
   ownedIncidents Incident[]      @relation("IncidentOwner")
   events         IncidentEvent[] @relation("EventActor")
+  statusUpdates  StatusUpdate[]
+  sentInvites    WorkspaceInvite[] @relation("InviteSender")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -122,7 +170,7 @@ model Incident {
   channel              IncidentChannel         @default(EMAIL)
   status               IncidentStatus          @default(NEW)
   severity             IncidentSeverity        @default(P3)
-  category             String?
+  category             AIIncidentCategory?
   ownerUserId          String?
   owner                User?                   @relation("IncidentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   modelVersion         String?
@@ -139,9 +187,11 @@ model Incident {
   events               IncidentEvent[]
   reminderJobs         ReminderJobLog[]
   emailNotifications   EmailNotificationLog[]
+  statusUpdates        StatusUpdate[]
 
   @@index([workspaceId, status])
   @@index([workspaceId, severity])
+  @@index([workspaceId, category])
   @@index([ownerUserId])
   @@index([workspaceId, updatedAt])
 }
@@ -161,15 +211,18 @@ model IncidentEvent {
 }
 
 model AiProviderKey {
-  id           String     @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  provider     AiProvider
-  encryptedKey String
-  keyLast4     String
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                    String          @id @default(cuid())
+  workspaceId           String
+  workspace             Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  provider              AiProvider
+  encryptedKey          String
+  keyLast4              String
+  isActive              Boolean         @default(true)
+  healthStatus          AiKeyHealthStatus @default(UNKNOWN)
+  lastVerifiedAt        DateTime?
+  lastVerificationError String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
   @@unique([workspaceId, provider])
   @@index([workspaceId])
@@ -213,6 +266,8 @@ model WorkspaceQuota {
   triageRunsPerDay      Int       @default(300)
   customerUpdatesPerDay Int       @default(300)
   reminderEmailsPerDay  Int       @default(500)
+  reminderIntervalHoursP1 Int     @default(4)
+  reminderIntervalHoursP2 Int     @default(24)
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
@@ -282,4 +337,68 @@ model EmailNotificationLog {
 
   @@index([workspaceId, createdAt])
   @@index([incidentId])
+}
+
+model WorkspaceApiKey {
+  id         String    @id @default(cuid())
+  workspaceId String
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name       String
+  keyHash    String
+  keyPrefix  String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  isActive   Boolean   @default(true)
+
+  @@unique([keyPrefix])
+  @@index([workspaceId, isActive])
+}
+
+model WorkspaceInvite {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email           String
+  role            Role
+  token           String    @unique
+  expiresAt       DateTime
+  usedAt          DateTime?
+  createdByUserId String?
+  createdByUser   User?     @relation("InviteSender", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+
+  @@index([workspaceId, email])
+  @@index([workspaceId, expiresAt])
+}
+
+model StatusUpdate {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  incidentId      String
+  incident        Incident  @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  body            String
+  publishedAt     DateTime
+  isVisible       Boolean   @default(true)
+  createdByUserId String?
+  createdByUser   User?     @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+
+  @@index([workspaceId, publishedAt])
+  @@index([incidentId, publishedAt])
+}
+
+model WorkspaceWebhookIntegration {
+  id              String                 @id @default(cuid())
+  workspaceId     String
+  workspace       Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type            WebhookIntegrationType
+  encryptedSecret String
+  keyLast4        String
+  isActive        Boolean                @default(true)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@unique([workspaceId, type])
+  @@index([workspaceId, isActive])
 }

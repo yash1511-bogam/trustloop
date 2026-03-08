@@ -3,12 +3,39 @@ import { Bot, Building2, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/register-form";
 import { getAuth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
-export default async function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string; email?: string }>;
+}) {
   const auth = await getAuth();
   if (auth) {
     redirect("/dashboard");
   }
+
+  const params = await searchParams;
+  const inviteToken = params.invite;
+  const invite =
+    inviteToken
+      ? await prisma.workspaceInvite.findFirst({
+          where: {
+            token: inviteToken,
+            usedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          include: {
+            workspace: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        })
+      : null;
+
+  const inviteEmail = invite?.email ?? params.email ?? undefined;
 
   return (
     <main className="container-shell fade-in py-10">
@@ -43,7 +70,17 @@ export default async function RegisterPage() {
             Start with your work email and verify ownership with a one-time code.
           </p>
 
-          <RegisterForm />
+          {inviteToken && !invite ? (
+            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              Invite link is invalid or expired. Request a new invite from your workspace owner.
+            </p>
+          ) : null}
+
+          <RegisterForm
+            initialEmail={inviteEmail}
+            initialWorkspaceName={invite?.workspace.name}
+            inviteToken={invite?.token}
+          />
 
           <p className="mt-5 text-sm text-slate-600">
             Already have an account?{" "}

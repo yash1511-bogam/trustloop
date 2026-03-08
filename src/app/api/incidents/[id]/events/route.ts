@@ -13,7 +13,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit();
+  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
   if (access.response) {
     return access.response;
   }
@@ -22,7 +22,7 @@ export async function POST(
   const { id } = await params;
 
   const incident = await prisma.incident.findFirst({
-    where: { id, workspaceId: auth.user.workspaceId },
+    where: { id, workspaceId: auth.workspaceId },
     select: { id: true },
   });
 
@@ -39,7 +39,7 @@ export async function POST(
   const event = await prisma.incidentEvent.create({
     data: {
       incidentId: incident.id,
-      actorUserId: auth.user.id,
+      actorUserId: auth.actorUserId,
       eventType: EventType.NOTE,
       body: parsed.data.body.trim(),
     },
