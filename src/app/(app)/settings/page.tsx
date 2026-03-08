@@ -74,7 +74,7 @@ export default async function SettingsOverviewPage() {
     listWebhookIntegrations(auth.user.workspaceId),
   ]);
 
-  const activeIntegrations = integrations.filter((item) => item.enabled).length;
+  const activeIntegrations = integrations.filter((item) => item.isActive).length;
 
   return (
     <>

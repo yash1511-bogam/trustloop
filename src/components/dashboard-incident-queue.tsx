@@ -133,11 +133,11 @@ export function DashboardIncidentQueue() {
 
   return (
     <section className="surface overflow-hidden">
-      <div className="border-b border-slate-200 p-4">
-        <h2 className="text-xl font-semibold">Incident queue</h2>
+      <div className="border-b border-slate-200 p-5">
+        <h2 className="text-xl font-semibold text-slate-100">Incident queue</h2>
       </div>
 
-      <div className="grid gap-2 border-b border-slate-200 bg-slate-50/80 p-4 md:grid-cols-6">
+      <div className="grid gap-3 border-b border-slate-200 bg-slate-50/80 p-5 md:grid-cols-6">
         <select className="select" value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="">All status</option>
           {Object.values(IncidentStatus).map((option) => (
@@ -184,7 +184,7 @@ export function DashboardIncidentQueue() {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <div className="flex flex-wrap gap-2 md:col-span-6">
+        <div className="mt-1 flex flex-wrap gap-2 md:col-span-6">
           <button className="btn btn-primary" onClick={applyFilters} type="button">
             Apply filters
           </button>
@@ -201,7 +201,7 @@ export function DashboardIncidentQueue() {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[780px] text-left text-sm">
+        <table className="w-full min-w-[860px] text-left text-sm">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
               <th className="px-4 py-3">Severity</th>
@@ -242,7 +242,7 @@ export function DashboardIncidentQueue() {
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-200 p-4">
+      <div className="flex items-center justify-between border-t border-slate-200 p-5">
         <button
           className="btn btn-ghost"
           disabled={loading || cursorStack.length === 0}
@@ -261,8 +261,8 @@ export function DashboardIncidentQueue() {
         </button>
       </div>
 
-      {loading ? <p className="px-4 pb-4 text-sm text-slate-500">Loading incidents...</p> : null}
-      {error ? <p className="px-4 pb-4 text-sm text-red-700">{error}</p> : null}
+      {loading ? <p className="px-5 pb-5 text-sm text-slate-500">Loading incidents...</p> : null}
+      {error ? <p className="px-5 pb-5 text-sm text-red-700">{error}</p> : null}
     </section>
   );
 }

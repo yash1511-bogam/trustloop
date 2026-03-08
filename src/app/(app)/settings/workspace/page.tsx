@@ -27,6 +27,13 @@ export default async function SettingsWorkspacePage() {
         slackTeamId: true,
         samlEnabled: true,
         samlMetadataUrl: true,
+        billing: {
+          select: {
+            dodoCustomerId: true,
+            dodoSubscriptionId: true,
+            status: true,
+          },
+        },
       },
     }),
     listWebhookIntegrations(auth.user.workspaceId),

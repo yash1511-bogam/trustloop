@@ -227,7 +227,7 @@ export function MarketingLanding() {
   );
 
   return (
-    <div ref={scope} className="relative overflow-clip pb-16">
+    <div ref={scope} className="relative overflow-clip pb-20">
       <framerMotion.div
         aria-hidden
         className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,_rgba(32,154,205,0.35),_rgba(32,154,205,0))] blur-3xl parallax-slow"
@@ -238,7 +238,7 @@ export function MarketingLanding() {
         className="pointer-events-none absolute right-[-90px] top-[320px] h-96 w-96 rounded-full bg-[radial-gradient(circle,_rgba(250,173,20,0.32),_rgba(250,173,20,0))] blur-3xl parallax-fast"
       />
 
-      <header className="sticky top-0 z-40 border-b border-white/55 bg-[rgba(255,255,255,0.72)] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-[rgba(2,6,23,0.78)] backdrop-blur-xl">
         <div className="container-shell flex items-center justify-between gap-4 py-4">
           <Link className="flex items-center gap-2 text-sm font-bold tracking-wide text-slate-900" href="#top">
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-950 text-white">
@@ -266,12 +266,12 @@ export function MarketingLanding() {
         </div>
       </header>
 
-      <main id="top" className="container-shell relative pt-16 md:pt-20">
-        <section className="grid gap-10 pb-12 md:grid-cols-[1.1fr_0.9fr] md:items-center md:pb-20">
+      <main id="top" className="container-shell relative pt-20 md:pt-24">
+        <section className="grid gap-12 pb-14 md:grid-cols-[1.1fr_0.9fr] md:items-center md:pb-24">
           <div className="space-y-6">
             <motionDev.div
               animate={{ opacity: [0.85, 1, 0.85] }}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_12px_30px_rgba(15,23,42,0.09)]"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/85 px-4 py-2 text-xs font-semibold text-slate-700 shadow-[0_14px_32px_rgba(2,6,23,0.4)]"
               transition={{ duration: 5, repeat: Number.POSITIVE_INFINITY }}
             >
               <Sparkles className="h-4 w-4 text-cyan-600" />
@@ -308,14 +308,14 @@ export function MarketingLanding() {
               </Link>
             </div>
 
-            <div className="grid max-w-2xl gap-3 sm:grid-cols-3">
+            <div className="grid max-w-2xl gap-4 sm:grid-cols-3">
               {[
                 { label: "Faster time to owner", value: "74%" },
                 { label: "AI draft coverage", value: "92%" },
                 { label: "Median incident update", value: "11 min" },
               ].map((stat) => (
                 <div
-                  className="rounded-2xl border border-white/65 bg-white/80 px-4 py-3 shadow-[0_20px_35px_rgba(15,23,42,0.08)]"
+                  className="rounded-2xl border border-slate-200/70 bg-white/80 px-5 py-4 shadow-[0_20px_35px_rgba(2,6,23,0.32)]"
                   key={stat.label}
                 >
                   <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
@@ -326,7 +326,7 @@ export function MarketingLanding() {
           </div>
 
           <framerMotion.aside
-            className="relative rounded-3xl border border-white/60 bg-white/86 p-6 shadow-[0_24px_60px_rgba(15,23,42,0.15)]"
+            className="relative rounded-3xl border border-slate-200/75 bg-white/86 p-7 shadow-[0_24px_60px_rgba(2,6,23,0.48)]"
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
             transition={{ duration: 0.6, delay: 0.12 }}
             whileInView={{ opacity: 1, scale: 1, y: 0 }}
@@ -352,7 +352,7 @@ export function MarketingLanding() {
                 },
               ].map((item) => (
                 <article
-                  className="rounded-2xl border border-slate-200/85 bg-gradient-to-br from-white to-slate-50 p-4"
+                  className="rounded-2xl border border-slate-200/85 bg-gradient-to-br from-slate-900 to-slate-800 p-4"
                   key={item.title}
                 >
                   <div className="flex items-start gap-3">
@@ -368,7 +368,7 @@ export function MarketingLanding() {
               ))}
             </div>
 
-            <div className="mt-4 overflow-hidden rounded-[26px] border border-slate-200/90 bg-slate-950 shadow-[0_16px_36px_rgba(15,23,42,0.2)]">
+            <div className="mt-5 overflow-hidden rounded-[26px] border border-slate-200/90 bg-slate-950 shadow-[0_16px_36px_rgba(2,6,23,0.56)]">
               <video
                 aria-label="TrustLoop explainer video"
                 className="block h-auto w-full rounded-[26px]"
@@ -397,7 +397,7 @@ export function MarketingLanding() {
           </framerMotion.aside>
         </section>
 
-        <section className="pb-12 md:pb-16">
+        <section className="pb-14 md:pb-20">
           <p className="kicker mb-3">Trusted by AI product and support teams</p>
           <div className="flex flex-wrap gap-2">
             {["VectorCore", "CloudRidge", "DeltaStack", "PairSignal", "PromptLoop", "StackWorks"].map(
@@ -413,7 +413,7 @@ export function MarketingLanding() {
           </div>
         </section>
 
-        <section className="pb-14 md:pb-20" id="features">
+        <section className="pb-16 md:pb-24" id="features">
           <div className="mb-8 max-w-3xl">
             <p className="kicker">Core capabilities</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
@@ -423,7 +423,7 @@ export function MarketingLanding() {
           <div className="reveal-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {features.map((feature, index) => (
               <framerMotion.article
-                className="reveal-in rounded-2xl border border-slate-200/85 bg-white/85 p-5 shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
+                className="reveal-in rounded-2xl border border-slate-200/85 bg-white/85 p-6 shadow-[0_18px_38px_rgba(2,6,23,0.35)]"
                 initial={{ opacity: 0, y: 16 }}
                 key={feature.title}
                 transition={{ delay: index * 0.03, duration: 0.4 }}
@@ -440,14 +440,14 @@ export function MarketingLanding() {
           </div>
         </section>
 
-        <section className="grid gap-8 pb-14 md:grid-cols-[1.02fr_0.98fr] md:items-start md:pb-20" id="workflow">
-          <div className="rounded-3xl border border-slate-200/90 bg-white/85 p-6 shadow-[0_18px_42px_rgba(15,23,42,0.09)]">
+        <section className="grid gap-8 pb-16 md:grid-cols-[1.02fr_0.98fr] md:items-start md:pb-24" id="workflow">
+          <div className="rounded-3xl border border-slate-200/90 bg-white/85 p-7 shadow-[0_18px_42px_rgba(2,6,23,0.35)]">
             <p className="kicker">Workflow</p>
             <h3 className="mt-2 text-2xl font-bold text-slate-950">From alert to executive signal.</h3>
             <div className="mt-5 space-y-4">
               {steps.map((step, index) => (
                 <div className="flex gap-3" key={step.title}>
-                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white text-xs font-bold text-slate-900">
+                  <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-900 text-xs font-bold text-slate-100">
                     {index + 1}
                   </span>
                   <div>
@@ -460,7 +460,7 @@ export function MarketingLanding() {
           </div>
 
           <motionDev.div
-            className="rounded-3xl border border-cyan-200/85 bg-gradient-to-br from-cyan-50 to-slate-50 p-6 shadow-[0_18px_42px_rgba(8,145,178,0.17)]"
+            className="rounded-3xl border border-cyan-300/60 bg-gradient-to-br from-slate-900 to-cyan-950 p-7 shadow-[0_18px_42px_rgba(2,132,199,0.32)]"
             transition={{ duration: 0.4 }}
             whileHover={{ y: -4 }}
           >
@@ -479,7 +479,7 @@ export function MarketingLanding() {
                 </li>
               ))}
             </ul>
-            <div className="mt-5 rounded-2xl border border-slate-200/80 bg-white/90 p-4">
+            <div className="mt-5 rounded-2xl border border-slate-200/80 bg-white/90 p-5">
               <p className="text-sm font-semibold text-slate-900">Production-ready stack</p>
               <p className="mt-1 text-sm text-slate-700">
                 Postgres, Redis, autoscaled workers, tenant-aware limits, and Stytch + Resend integrations.
@@ -488,7 +488,7 @@ export function MarketingLanding() {
           </motionDev.div>
         </section>
 
-        <section className="pb-14 md:pb-20" id="pricing">
+        <section className="pb-16 md:pb-24" id="pricing">
           <div className="mb-8 max-w-3xl">
             <p className="kicker">Pricing</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
@@ -499,8 +499,8 @@ export function MarketingLanding() {
           <div className="grid gap-4 lg:grid-cols-3">
             {plans.map((plan) => {
               const cardClass = plan.featured
-                ? "rounded-3xl border border-cyan-400 bg-gradient-to-b from-cyan-600 to-cyan-700 p-6 text-white shadow-[0_22px_48px_rgba(8,145,178,0.35)]"
-                : "rounded-3xl border border-slate-200/90 bg-white/90 p-6 shadow-[0_16px_38px_rgba(15,23,42,0.1)]";
+                ? "rounded-3xl border border-cyan-300 bg-gradient-to-b from-cyan-700 to-blue-700 p-7 text-white shadow-[0_22px_48px_rgba(8,145,178,0.45)]"
+                : "rounded-3xl border border-slate-200/90 bg-white/90 p-7 shadow-[0_16px_38px_rgba(2,6,23,0.34)]";
 
               return (
                 <motionDev.article
@@ -524,7 +524,7 @@ export function MarketingLanding() {
                     ))}
                   </ul>
                   <Link
-                    className={`btn mt-5 w-full justify-center ${plan.featured ? "bg-white text-cyan-700 hover:bg-slate-100" : "btn-primary"}`}
+                    className={`btn mt-6 w-full justify-center ${plan.featured ? "bg-white text-cyan-700 hover:bg-slate-100" : "btn-primary"}`}
                     href="/register"
                   >
                     {plan.cta}
@@ -535,7 +535,7 @@ export function MarketingLanding() {
           </div>
         </section>
 
-        <section className="pb-14 md:pb-20" id="faq">
+        <section className="pb-16 md:pb-24" id="faq">
           <div className="mb-8 max-w-3xl">
             <p className="kicker">FAQ</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 md:text-4xl">
@@ -545,7 +545,7 @@ export function MarketingLanding() {
           <div className="space-y-3">
             {faqs.map((faq) => (
               <details
-                className="group rounded-2xl border border-slate-200/90 bg-white/88 p-5 shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
+                className="group rounded-2xl border border-slate-200/90 bg-white/88 p-5 shadow-[0_12px_28px_rgba(2,6,23,0.32)]"
                 key={faq.question}
               >
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-base font-semibold text-slate-900">
@@ -558,9 +558,9 @@ export function MarketingLanding() {
           </div>
         </section>
 
-        <section className="pb-12">
+        <section className="pb-14">
           <framerMotion.div
-            className="rounded-3xl border border-slate-200/90 bg-[linear-gradient(120deg,#0f172a_0%,#134e5e_55%,#0891b2_100%)] p-8 text-white shadow-[0_24px_60px_rgba(2,6,23,0.45)] md:p-10"
+            className="rounded-3xl border border-slate-200/90 bg-[linear-gradient(120deg,#0f172a_0%,#1e3a8a_55%,#0e7490_100%)] p-8 text-white shadow-[0_24px_60px_rgba(2,6,23,0.45)] md:p-10"
             initial={{ opacity: 0, y: 14 }}
             transition={{ duration: 0.45 }}
             viewport={{ once: true, amount: 0.4 }}
@@ -583,7 +583,7 @@ export function MarketingLanding() {
         </section>
       </main>
 
-      <footer className="border-t border-white/60 bg-white/72 backdrop-blur-md">
+      <footer className="border-t border-slate-200/75 bg-[rgba(2,6,23,0.75)] backdrop-blur-md">
         <div className="container-shell grid gap-6 py-8 md:grid-cols-4">
           <div>
             <p className="text-base font-bold text-slate-900">TrustLoop</p>

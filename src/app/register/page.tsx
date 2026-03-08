@@ -51,9 +51,9 @@ export default async function RegisterPage({
   const inviteEmail = invite?.email ?? params.email ?? undefined;
 
   return (
-    <main className="container-shell fade-in py-10">
-      <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-[0.94fr_1.06fr]">
-        <section className="surface p-6 md:p-8">
+    <main className="container-shell fade-in py-12 md:py-14">
+      <div className="mx-auto grid max-w-6xl gap-7 md:grid-cols-[0.94fr_1.06fr]">
+        <section className="surface p-8 md:p-9">
           <p className="kicker">Create workspace</p>
           <h1 className="mt-2 text-3xl font-bold text-slate-900">Launch TrustLoop quickly</h1>
           <p className="mt-2 text-sm text-slate-700">
@@ -76,7 +76,7 @@ export default async function RegisterPage({
           </div>
         </section>
 
-        <section className="surface p-7">
+        <section className="surface p-8">
           <p className="kicker mb-2">New workspace</p>
           <h2 className="mb-1 text-3xl font-semibold">Create TrustLoop account</h2>
           <p className="mb-6 text-sm text-slate-600">

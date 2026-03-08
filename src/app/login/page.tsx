@@ -25,9 +25,9 @@ export default async function LoginPage({
   const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
 
   return (
-    <main className="container-shell fade-in py-10">
-      <div className="mx-auto grid max-w-5xl gap-5 md:grid-cols-[0.94fr_1.06fr]">
-        <section className="surface p-6 md:p-8">
+    <main className="container-shell fade-in py-12 md:py-14">
+      <div className="mx-auto grid max-w-6xl gap-7 md:grid-cols-[0.94fr_1.06fr]">
+        <section className="surface p-8 md:p-9">
           <p className="kicker">Welcome back</p>
           <h1 className="mt-2 text-3xl font-bold text-slate-900">Resume incident operations</h1>
           <p className="mt-2 text-sm text-slate-700">
@@ -48,7 +48,7 @@ export default async function LoginPage({
           </div>
         </section>
 
-        <section className="surface p-7">
+        <section className="surface p-8">
           <p className="kicker mb-2">Sign in</p>
           <h2 className="mb-1 text-3xl font-semibold">Access your workspace</h2>
           <p className="mb-6 text-sm text-slate-600">
@@ -79,7 +79,7 @@ export default async function LoginPage({
         </section>
       </div>
 
-      <div className="mx-auto mt-6 max-w-5xl panel-card p-4 text-xs text-slate-600">
+      <div className="mx-auto mt-8 max-w-6xl panel-card p-5 text-xs text-slate-600">
         <p className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-cyan-700" />
           After sign-in, open dashboard workflows, incident queue filters, and automation settings.

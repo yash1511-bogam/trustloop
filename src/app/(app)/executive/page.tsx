@@ -26,11 +26,12 @@ export default async function ExecutivePage() {
   const snapshot = dashboard.snapshot;
 
   return (
-    <div className="space-y-5">
-      <section className="surface p-5">
-        <h2 className="text-2xl font-semibold">Executive dashboard</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Tenant-scoped read models for incident operations and reliability leadership.
+    <>
+      <section className="surface p-6">
+        <p className="kicker">Executive visibility</p>
+        <h2 className="mt-2 text-3xl font-semibold text-slate-100">Reliability and response analytics</h2>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">
+          Tenant-scoped read models for incident operations, response coverage, and leadership reviews.
         </p>
       </section>
 
@@ -41,9 +42,7 @@ export default async function ExecutivePage() {
         </article>
         <article className="metric-card">
           <p className="kicker">P1 open</p>
-          <p className="mt-2 text-3xl font-semibold text-red-700">
-            {snapshot?.p1OpenIncidents ?? 0}
-          </p>
+          <p className="mt-2 text-3xl font-semibold text-red-700">{snapshot?.p1OpenIncidents ?? 0}</p>
         </article>
         <article className="metric-card">
           <p className="kicker">Created (7d)</p>
@@ -51,9 +50,7 @@ export default async function ExecutivePage() {
         </article>
         <article className="metric-card">
           <p className="kicker">Resolved (7d)</p>
-          <p className="mt-2 text-3xl font-semibold text-emerald-700">
-            {snapshot?.incidentsResolvedLast7d ?? 0}
-          </p>
+          <p className="mt-2 text-3xl font-semibold text-emerald-700">{snapshot?.incidentsResolvedLast7d ?? 0}</p>
         </article>
         <article className="metric-card">
           <p className="kicker">Failed reminders (7d)</p>
@@ -61,32 +58,28 @@ export default async function ExecutivePage() {
         </article>
       </section>
 
-      <section className="surface p-5">
-        <h3 className="mb-3 text-lg font-semibold">Coverage and timing</h3>
+      <section className="surface p-6">
+        <h3 className="mb-3 text-lg font-semibold text-slate-100">Coverage and timing</h3>
         <div className="grid gap-3 md:grid-cols-3">
-          <article className="panel-card p-3">
+          <article className="panel-card p-4">
             <p className="kicker">Avg resolution (hrs, 30d)</p>
-            <p className="mt-1 text-2xl font-semibold">
-              {snapshot?.avgResolutionHoursLast30d ?? 0}
-            </p>
+            <p className="mt-1 text-2xl font-semibold">{snapshot?.avgResolutionHoursLast30d ?? 0}</p>
           </article>
-          <article className="panel-card p-3">
+          <article className="panel-card p-4">
             <p className="kicker">Triage coverage (30d)</p>
             <p className="mt-1 text-2xl font-semibold">{snapshot?.triageCoveragePct ?? 0}%</p>
           </article>
-          <article className="panel-card p-3">
+          <article className="panel-card p-4">
             <p className="kicker">Customer update coverage (30d)</p>
-            <p className="mt-1 text-2xl font-semibold">
-              {snapshot?.customerUpdateCoveragePct ?? 0}%
-            </p>
+            <p className="mt-1 text-2xl font-semibold">{snapshot?.customerUpdateCoveragePct ?? 0}%</p>
           </article>
         </div>
       </section>
 
       <section className="surface overflow-hidden">
-        <div className="border-b border-slate-200 p-4">
+        <div className="border-b border-slate-200 p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-semibold">14-day analytics trend</h3>
+            <h3 className="text-lg font-semibold text-slate-100">14-day analytics trend</h3>
             <div className="flex gap-2">
               <Link className="btn btn-ghost" href="/api/incidents/export?format=csv">
                 Export CSV
@@ -99,10 +92,10 @@ export default async function ExecutivePage() {
             </div>
           </div>
         </div>
-        <div className="p-4">
+        <div className="p-5">
           <ExecutiveCharts data={dashboard.series} />
         </div>
       </section>
-    </div>
+    </>
   );
 }

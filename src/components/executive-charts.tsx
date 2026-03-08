@@ -25,6 +25,15 @@ type Props = {
 };
 
 export function ExecutiveCharts({ data }: Props) {
+  const axisStroke = "#6b7c99";
+  const gridStroke = "rgba(148, 163, 184, 0.2)";
+  const tooltipStyle = {
+    background: "rgba(15, 23, 42, 0.95)",
+    border: "1px solid rgba(148, 163, 184, 0.35)",
+    borderRadius: "12px",
+    color: "#e5edf8",
+  } as const;
+
   return (
     <div className="space-y-5">
       <section className="surface p-4">
@@ -32,15 +41,18 @@ export function ExecutiveCharts({ data }: Props) {
         <div className="h-72 w-full">
           <ResponsiveContainer>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
+              <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" />
+              <XAxis dataKey="day" stroke={axisStroke} tick={{ fill: axisStroke, fontSize: 12 }} />
+              <YAxis stroke={axisStroke} tick={{ fill: axisStroke, fontSize: 12 }} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                labelStyle={{ color: "#cbd5e1", fontWeight: 600 }}
+              />
+              <Legend wrapperStyle={{ color: "#cbd5e1" }} />
               <Line
                 type="monotone"
                 dataKey="incidentsCreated"
-                stroke="#a16207"
+                stroke="#38bdf8"
                 strokeWidth={2}
                 dot={false}
                 name="Created"
@@ -48,7 +60,7 @@ export function ExecutiveCharts({ data }: Props) {
               <Line
                 type="monotone"
                 dataKey="incidentsResolved"
-                stroke="#0f766e"
+                stroke="#34d399"
                 strokeWidth={2}
                 dot={false}
                 name="Resolved"
@@ -63,12 +75,15 @@ export function ExecutiveCharts({ data }: Props) {
         <div className="h-72 w-full">
           <ResponsiveContainer>
             <BarChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="p1Created" fill="#b42318" name="P1 created" />
+              <CartesianGrid stroke={gridStroke} strokeDasharray="3 3" />
+              <XAxis dataKey="day" stroke={axisStroke} tick={{ fill: axisStroke, fontSize: 12 }} />
+              <YAxis stroke={axisStroke} tick={{ fill: axisStroke, fontSize: 12 }} />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                labelStyle={{ color: "#cbd5e1", fontWeight: 600 }}
+              />
+              <Legend wrapperStyle={{ color: "#cbd5e1" }} />
+              <Bar dataKey="p1Created" fill="#fb7185" name="P1 created" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

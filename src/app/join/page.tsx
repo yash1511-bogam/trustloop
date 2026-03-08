@@ -31,8 +31,8 @@ export default async function JoinPage({
 
   if (!invite) {
     return (
-      <main className="container-shell fade-in py-10">
-        <section className="surface p-6 md:p-8">
+      <main className="container-shell fade-in py-12 md:py-14">
+        <section className="surface p-7 md:p-9">
           <h1 className="text-2xl font-semibold">Invite link unavailable</h1>
           <p className="mt-2 text-sm text-slate-700">
             This invite is invalid, already used, or expired.
@@ -46,8 +46,8 @@ export default async function JoinPage({
   }
 
   return (
-    <main className="container-shell fade-in py-10">
-      <section className="surface p-6 md:p-8">
+    <main className="container-shell fade-in py-12 md:py-14">
+      <section className="surface p-7 md:p-9">
         <p className="kicker">Workspace invite</p>
         <h1 className="mt-2 text-3xl font-semibold">Join {invite.workspace.name}</h1>
         <p className="mt-2 text-sm text-slate-700">

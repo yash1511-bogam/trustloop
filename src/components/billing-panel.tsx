@@ -109,12 +109,12 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <p className="text-sm text-slate-700">
         Current plan: <strong>{planTier}</strong>
       </p>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {[
           {
             label: "Incidents/day",
@@ -137,7 +137,7 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
             limit: quota.reminderEmailsPerDay,
           },
         ].map((row) => (
-          <article className="panel-card p-3" key={row.label}>
+          <article className="panel-card p-4" key={row.label}>
             <p className="text-sm font-medium">{row.label}</p>
             <p className="mt-1 text-sm text-slate-600">
               {row.used} / {row.limit}
@@ -189,7 +189,7 @@ export function BillingPanel({ planTier, usage, quota, billing }: Props) {
         </button>
       </div>
 
-      <div className="panel-card p-3 text-sm text-slate-700">
+      <div className="panel-card p-4 text-sm text-slate-700">
         <p>
           Billing provider: <strong>Dodo Payments</strong>
         </p>

@@ -65,8 +65,8 @@ export function CreateIncidentForm() {
   }
 
   return (
-    <form className="space-y-3" onSubmit={onSubmit}>
-      <div className="grid gap-3 md:grid-cols-2">
+    <form className="space-y-4" onSubmit={onSubmit}>
+      <div className="grid gap-4 md:grid-cols-2">
         <input
           className="input"
           placeholder="Incident title"
@@ -95,7 +95,7 @@ export function CreateIncidentForm() {
         required
       />
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         <input
           className="input"
           placeholder="Customer name"
@@ -111,7 +111,7 @@ export function CreateIncidentForm() {
         />
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4">
         <select
           className="select"
           value={severity}
