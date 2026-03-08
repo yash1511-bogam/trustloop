@@ -104,7 +104,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const workspaceName = oauthContext?.workspaceName ?? parsed.data.workspaceName;
 
   try {
-    const authResult = await authenticateOAuthToken(parsed.data.token);
+    const authResult = await authenticateOAuthToken(parsed.data.token, {
+      intent,
+      organizationName: workspaceName,
+    });
     if (!authResult.email) {
       const fallbackPath = intent === "register" ? "/register" : "/login";
       return buildRedirectWithClear(request, fallbackPath, {

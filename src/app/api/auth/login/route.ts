@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequest } from "@/lib/http";
-import { sendAuthOtpNoticeEmail } from "@/lib/email";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
 import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 
 const loginStartSchema = z.object({
@@ -30,10 +31,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
       select: {
         id: true,
-        name: true,
-        email: true,
-        workspaceId: true,
-        workspace: { select: { name: true } },
       },
     });
 
@@ -44,18 +41,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    await sendAuthOtpNoticeEmail({
-      workspaceId: account.workspaceId,
-      toEmail: account.email,
-      workspaceName: account.workspace.name,
-      userName: account.name,
-    }).catch(() => null);
-
     return NextResponse.json({
       methodId: otp.methodId,
       message: "A verification code has been sent to your email.",
     });
-  } catch {
-    return NextResponse.json({ error: "Unable to start login challenge." }, { status: 400 });
+  } catch (error) {
+    const stytchError = extractStytchError(error);
+    log.auth.error("Failed to start login challenge", {
+      email,
+      errorType: stytchError?.error_type,
+      errorMessage: stytchError?.error_message,
+      requestId: stytchError?.request_id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      {
+        error: authChallengeErrorMessage(error, "Unable to start login challenge."),
+      },
+      { status: 400 },
+    );
   }
 }

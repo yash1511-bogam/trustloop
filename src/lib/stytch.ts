@@ -6,6 +6,9 @@ import {
 } from "@/lib/constants";
 
 export type OAuthProvider = "google" | "github";
+type AuthIntent = "login" | "register";
+const OTP_PENDING_STYTCH_ID_PREFIX = "pending_email:";
+const STYTCH_AUTH_OTP_TEMPLATE_ID = "initial_style_template";
 
 function stytchEnvBaseUrl(): string {
   const env = (process.env.STYTCH_ENV ?? "test").toLowerCase();
@@ -44,6 +47,27 @@ function oauthProviderStartUrl(provider: OAuthProvider): string | null {
     return optionalValue("STYTCH_OAUTH_GOOGLE_START_URL") ?? optionalValue("STYTCH_GOOGLE_START_URL");
   }
   return optionalValue("STYTCH_OAUTH_GITHUB_START_URL") ?? optionalValue("STYTCH_GITHUB_START_URL");
+}
+
+function pendingStytchIdForEmail(email: string): string {
+  return `${OTP_PENDING_STYTCH_ID_PREFIX}${email.toLowerCase().trim()}`;
+}
+
+export function isPendingStytchUserId(stytchUserId: string): boolean {
+  return stytchUserId.startsWith(OTP_PENDING_STYTCH_ID_PREFIX);
+}
+
+function parseEmailChallengeMethodId(methodId: string): string | null {
+  const candidate = methodId.toLowerCase().trim();
+  return candidate.includes("@") ? candidate : null;
+}
+
+function clampOtpExpirationMinutes(minutes: number): number {
+  if (!Number.isFinite(minutes)) {
+    return 10;
+  }
+  const rounded = Math.round(minutes);
+  return Math.min(15, Math.max(2, rounded));
 }
 
 const globalForStytch = globalThis as unknown as {
@@ -89,10 +113,28 @@ export type OtpAuthResult = {
 };
 
 export async function sendEmailOtpLoginOrCreate(email: string): Promise<OtpStartResult> {
+  const normalizedEmail = email.toLowerCase().trim();
+
+  if (oauthStartMode() === "b2b_discovery") {
+    await stytchB2BClient.otps.email.discovery.send({
+      email_address: normalizedEmail,
+      discovery_expiration_minutes: clampOtpExpirationMinutes(STYTCH_OTP_EXPIRATION_MINUTES),
+      login_template_id: STYTCH_AUTH_OTP_TEMPLATE_ID,
+    });
+
+    return {
+      methodId: normalizedEmail,
+      stytchUserId: pendingStytchIdForEmail(normalizedEmail),
+      userCreated: false,
+    };
+  }
+
   const response = await stytchClient.otps.email.loginOrCreate({
-    email,
+    email: normalizedEmail,
     expiration_minutes: STYTCH_OTP_EXPIRATION_MINUTES,
     create_user_as_pending: false,
+    login_template_id: STYTCH_AUTH_OTP_TEMPLATE_ID,
+    signup_template_id: STYTCH_AUTH_OTP_TEMPLATE_ID,
   });
 
   return {
@@ -105,7 +147,35 @@ export async function sendEmailOtpLoginOrCreate(email: string): Promise<OtpStart
 export async function authenticateEmailOtp(input: {
   methodId: string;
   code: string;
+  intent?: AuthIntent;
+  organizationName?: string;
 }): Promise<OtpAuthResult> {
+  if (oauthStartMode() === "b2b_discovery") {
+    const emailAddress = parseEmailChallengeMethodId(input.methodId);
+    if (!emailAddress) {
+      throw new Error("otp_invalid_method_id");
+    }
+
+    const discoveryResponse = await stytchB2BClient.otps.email.discovery.authenticate({
+      email_address: emailAddress,
+      code: input.code,
+    });
+
+    const session = await exchangeOrCreateB2BDiscoverySession({
+      intermediateSessionToken: discoveryResponse.intermediate_session_token,
+      discoveredOrganizations: discoveryResponse.discovered_organizations,
+      intent: input.intent ?? "login",
+      organizationName: input.organizationName,
+    });
+
+    return {
+      stytchUserId: session.memberId,
+      sessionToken: session.sessionToken,
+      sessionJwt: session.sessionJwt,
+      expiresAt: session.expiresAt,
+    };
+  }
+
   const response = await stytchClient.otps.authenticate({
     method_id: input.methodId,
     code: input.code,
@@ -242,48 +312,115 @@ function firstDiscoveredOrganizationId(input: {
   return null;
 }
 
-async function authenticateOAuthTokenB2BDiscovery(token: string): Promise<OAuthAuthResult> {
-  const discoveryResponse = await stytchB2BClient.oauth.discovery.authenticate({
-    discovery_oauth_token: token,
-    session_duration_minutes: STYTCH_SESSION_DURATION_MINUTES,
+async function exchangeOrCreateB2BDiscoverySession(input: {
+  intermediateSessionToken: string;
+  discoveredOrganizations: Array<{
+    organization?: { organization_id?: string } | null;
+    membership?: { member?: { organization_id?: string } | null } | null;
+  }>;
+  intent: AuthIntent;
+  organizationName?: string;
+}): Promise<{
+  memberId: string;
+  sessionToken: string;
+  sessionJwt: string;
+  expiresAt: Date;
+  memberName: string | null;
+}> {
+  const organizationId = firstDiscoveredOrganizationId({
+    discoveredOrganizations: input.discoveredOrganizations,
   });
 
-  const organizationId = firstDiscoveredOrganizationId({
-    discoveredOrganizations: discoveryResponse.discovered_organizations,
-  });
-  if (!organizationId) {
+  if (organizationId) {
+    const exchangeResponse = await stytchB2BClient.discovery.intermediateSessions.exchange({
+      intermediate_session_token: input.intermediateSessionToken,
+      organization_id: organizationId,
+      session_duration_minutes: STYTCH_SESSION_DURATION_MINUTES,
+    });
+
+    if (!exchangeResponse.session_token || !exchangeResponse.session_jwt) {
+      throw new Error("oauth_mfa_required");
+    }
+
+    return {
+      memberId: exchangeResponse.member_id,
+      sessionToken: exchangeResponse.session_token,
+      sessionJwt: exchangeResponse.session_jwt,
+      expiresAt: exchangeResponse.member_session?.expires_at
+        ? new Date(exchangeResponse.member_session.expires_at)
+        : new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000),
+      memberName: exchangeResponse.member?.name?.trim() || null,
+    };
+  }
+
+  if (input.intent !== "register") {
     throw new Error("oauth_no_discovered_organization");
   }
 
-  const exchangeResponse = await stytchB2BClient.discovery.intermediateSessions.exchange({
-    intermediate_session_token: discoveryResponse.intermediate_session_token,
-    organization_id: organizationId,
+  const createResponse = await stytchB2BClient.discovery.organizations.create({
+    intermediate_session_token: input.intermediateSessionToken,
     session_duration_minutes: STYTCH_SESSION_DURATION_MINUTES,
+    organization_name: input.organizationName?.trim() || undefined,
   });
 
-  if (!exchangeResponse.session_token || !exchangeResponse.session_jwt) {
+  if (!createResponse.session_token || !createResponse.session_jwt) {
     throw new Error("oauth_mfa_required");
   }
 
+  return {
+    memberId: createResponse.member_id,
+    sessionToken: createResponse.session_token,
+    sessionJwt: createResponse.session_jwt,
+    expiresAt: createResponse.member_session?.expires_at
+      ? new Date(createResponse.member_session.expires_at)
+      : new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000),
+    memberName: createResponse.member?.name?.trim() || null,
+  };
+}
+
+async function authenticateOAuthTokenB2BDiscovery(input: {
+  token: string;
+  intent: AuthIntent;
+  organizationName?: string;
+}): Promise<OAuthAuthResult> {
+  const discoveryResponse = await stytchB2BClient.oauth.discovery.authenticate({
+    discovery_oauth_token: input.token,
+    session_duration_minutes: STYTCH_SESSION_DURATION_MINUTES,
+  });
+
+  const session = await exchangeOrCreateB2BDiscoverySession({
+    intermediateSessionToken: discoveryResponse.intermediate_session_token,
+    discoveredOrganizations: discoveryResponse.discovered_organizations,
+    intent: input.intent,
+    organizationName: input.organizationName,
+  });
+
   const normalizedEmail = discoveryResponse.email_address?.toLowerCase().trim() ?? null;
-  const normalizedName =
-    exchangeResponse.member?.name?.trim() || discoveryResponse.full_name?.trim() || null;
+  const normalizedName = session.memberName || discoveryResponse.full_name?.trim() || null;
 
   return {
-    stytchUserId: exchangeResponse.member_id,
-    sessionToken: exchangeResponse.session_token,
-    sessionJwt: exchangeResponse.session_jwt,
-    expiresAt: exchangeResponse.member_session?.expires_at
-      ? new Date(exchangeResponse.member_session.expires_at)
-      : new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000),
+    stytchUserId: session.memberId,
+    sessionToken: session.sessionToken,
+    sessionJwt: session.sessionJwt,
+    expiresAt: session.expiresAt,
     email: normalizedEmail,
     name: normalizedName,
   };
 }
 
-export async function authenticateOAuthToken(token: string): Promise<OAuthAuthResult> {
+export async function authenticateOAuthToken(
+  token: string,
+  options?: {
+    intent?: AuthIntent;
+    organizationName?: string;
+  },
+): Promise<OAuthAuthResult> {
   if (oauthStartMode() === "b2b_discovery") {
-    return authenticateOAuthTokenB2BDiscovery(token);
+    return authenticateOAuthTokenB2BDiscovery({
+      token,
+      intent: options?.intent ?? "login",
+      organizationName: options?.organizationName,
+    });
   }
 
   const response = await stytchClient.oauth.authenticate({

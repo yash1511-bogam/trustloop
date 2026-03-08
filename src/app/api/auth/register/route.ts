@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequest } from "@/lib/http";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { redisSetJson } from "@/lib/redis";
-import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
+import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
+import { isPendingStytchUserId, sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 
 const registerStartSchema = z.object({
   name: z.string().min(2).max(80),
@@ -16,7 +18,7 @@ type PendingRegisterPayload = {
   name: string;
   email: string;
   workspaceName: string;
-  stytchUserId: string;
+  expectedStytchUserId?: string;
   inviteToken?: string;
 };
 
@@ -86,7 +88,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       name: parsed.data.name.trim(),
       email,
       workspaceName,
-      stytchUserId: otp.stytchUserId,
+      expectedStytchUserId: isPendingStytchUserId(otp.stytchUserId)
+        ? undefined
+        : otp.stytchUserId,
       inviteToken,
     };
 
@@ -100,9 +104,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       methodId: otp.methodId,
       message: "A verification code has been sent to your email.",
     });
-  } catch {
+  } catch (error) {
+    const stytchError = extractStytchError(error);
+    log.auth.error("Failed to start registration challenge", {
+      email,
+      errorType: stytchError?.error_type,
+      errorMessage: stytchError?.error_message,
+      requestId: stytchError?.request_id,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
-      { error: "Unable to start registration challenge." },
+      {
+        error: authChallengeErrorMessage(
+          error,
+          "Unable to start registration challenge.",
+        ),
+      },
       { status: 400 },
     );
   }

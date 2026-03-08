@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { sendAuthOtpNoticeEmail, sendRecoveryInstructionsEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
 import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 
 const forgotStartSchema = z.object({
@@ -23,10 +24,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     where: { email },
     select: {
       id: true,
-      name: true,
-      email: true,
-      workspaceId: true,
-      workspace: { select: { name: true } },
     },
   });
 
@@ -40,25 +37,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const otp = await sendEmailOtpLoginOrCreate(email);
 
-    await sendRecoveryInstructionsEmail({
-      workspaceId: user.workspaceId,
-      toEmail: user.email,
-      workspaceName: user.workspace.name,
-      userName: user.name,
-    }).catch(() => null);
-
-    await sendAuthOtpNoticeEmail({
-      workspaceId: user.workspaceId,
-      toEmail: user.email,
-      workspaceName: user.workspace.name,
-      userName: user.name,
-    }).catch(() => null);
-
     return NextResponse.json({
       methodId: otp.methodId,
       message: "If an account exists for that email, a recovery code has been sent.",
     });
-  } catch {
-    return NextResponse.json({ error: "Unable to start recovery challenge." }, { status: 400 });
+  } catch (error) {
+    const stytchError = extractStytchError(error);
+    log.auth.error("Failed to start forgot-access challenge", {
+      email,
+      errorType: stytchError?.error_type,
+      errorMessage: stytchError?.error_message,
+      requestId: stytchError?.request_id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      {
+        error: authChallengeErrorMessage(error, "Unable to start recovery challenge."),
+      },
+      { status: 400 },
+    );
   }
 }

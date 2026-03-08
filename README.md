@@ -65,10 +65,12 @@ Copy `.env.example` to `.env` and fill values.
   - `STYTCH_OAUTH_GITHUB_START_URL`
 - Optional for B2B discovery:
   - `STYTCH_B2B_DISCOVERY_ORGANIZATION_ID`
+- Email OTP (login/register/forgot-access) is sent by Stytch, not Resend.
 
 ### AI + notifications
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
+- Resend is used for non-auth app emails (welcome/onboarding/reminders/invites/billing).
 - `TWILIO_ACCOUNT_SID`
 - `TWILIO_AUTH_TOKEN`
 - `TWILIO_FROM_NUMBER`

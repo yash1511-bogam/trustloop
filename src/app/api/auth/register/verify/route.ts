@@ -4,6 +4,7 @@ import { z } from "zod";
 import { setSessionCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { authenticateEmailOtp } from "@/lib/stytch";
@@ -17,7 +18,7 @@ type PendingRegisterPayload = {
   name: string;
   email: string;
   workspaceName: string;
-  stytchUserId: string;
+  expectedStytchUserId?: string;
   inviteToken?: string;
 };
 
@@ -53,9 +54,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const authResult = await authenticateEmailOtp({
       methodId: parsed.data.methodId,
       code: parsed.data.code.trim(),
+      intent: "register",
+      organizationName: pending.workspaceName,
     });
 
-    if (authResult.stytchUserId !== pending.stytchUserId) {
+    if (pending.expectedStytchUserId && authResult.stytchUserId !== pending.expectedStytchUserId) {
       return NextResponse.json(
         { error: "Stytch identity mismatch. Restart registration." },
         { status: 400 },
@@ -199,7 +202,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
 
     return response;
-  } catch {
+  } catch (error) {
+    log.auth.error("Failed to verify registration OTP", {
+      methodId: parsed.data.methodId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json({ error: "Invalid or expired verification code." }, { status: 401 });
   }
 }
