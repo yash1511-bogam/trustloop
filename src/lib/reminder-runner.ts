@@ -10,6 +10,7 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { sendReminderEmail } from "@/lib/email";
+import { sendWorkspaceUserPushNotifications } from "@/lib/push";
 import { deleteReminderMessage, enqueueReminder } from "@/lib/queue";
 import { sendSmsAlert } from "@/lib/sms";
 
@@ -53,6 +54,21 @@ function delaySecondsUntil(targetMs: number): number {
   return Math.min(900, Math.max(60, remainingSeconds));
 }
 
+function onCallRotationIndex(input: {
+  anchorAt: Date;
+  intervalHours: number;
+  poolSize: number;
+}): number {
+  if (input.poolSize <= 1) {
+    return 0;
+  }
+
+  const intervalMs = Math.max(1, Math.floor(input.intervalHours)) * 3_600_000;
+  const elapsedMs = Date.now() - input.anchorAt.getTime();
+  const elapsedBuckets = Math.max(0, Math.floor(elapsedMs / intervalMs));
+  return elapsedBuckets % input.poolSize;
+}
+
 export async function processReminderPayload(input: {
   payload: ReminderPayload;
   messageId?: string;
@@ -83,6 +99,7 @@ export async function processReminderPayload(input: {
           remindersSentCount: true,
           owner: {
             select: {
+              id: true,
               email: true,
               phone: true,
             },
@@ -94,6 +111,9 @@ export async function processReminderPayload(input: {
         select: {
           reminderIntervalHoursP1: true,
           reminderIntervalHoursP2: true,
+          onCallRotationEnabled: true,
+          onCallRotationIntervalHours: true,
+          onCallRotationAnchorAt: true,
         },
       }),
     ]);
@@ -222,31 +242,74 @@ export async function processReminderPayload(input: {
 
     if (isOpen && incident.severity === IncidentSeverity.P1) {
       const smsTargets = new Set<string>();
+      const pushTargetUserIds = new Set<string>();
       const shouldEscalate = incident.remindersSentCount >= 1;
+      const managers = await prisma.user.findMany({
+        where: {
+          workspaceId: payload.workspaceId,
+          role: {
+            in: [Role.OWNER, Role.MANAGER],
+          },
+          phone: {
+            not: null,
+          },
+        },
+        select: {
+          id: true,
+          phone: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
 
       if (incident.owner?.phone) {
         smsTargets.add(incident.owner.phone);
       }
+      if (incident.owner?.id) {
+        pushTargetUserIds.add(incident.owner.id);
+      }
 
-      if (!incident.owner?.phone || shouldEscalate) {
-        const managers = await prisma.user.findMany({
-          where: {
+      if (managers.length > 0) {
+        if (quotaPolicy?.onCallRotationEnabled) {
+          const activeIndex = onCallRotationIndex({
+            anchorAt: quotaPolicy.onCallRotationAnchorAt,
+            intervalHours: quotaPolicy.onCallRotationIntervalHours,
+            poolSize: managers.length,
+          });
+          const onCall = managers[activeIndex];
+
+          if (onCall?.phone) {
+            smsTargets.add(onCall.phone);
+          }
+          if (onCall?.id) {
+            pushTargetUserIds.add(onCall.id);
+          }
+
+          if (shouldEscalate) {
+            for (const manager of managers) {
+              if (manager.phone) {
+                smsTargets.add(manager.phone);
+              }
+              pushTargetUserIds.add(manager.id);
+            }
+          }
+
+          log.worker.info("P1 escalation on-call rotation recipients selected", {
             workspaceId: payload.workspaceId,
-            role: {
-              in: [Role.OWNER, Role.MANAGER],
-            },
-            phone: {
-              not: null,
-            },
-          },
-          select: {
-            phone: true,
-          },
-        });
-
-        for (const manager of managers) {
-          if (manager.phone) {
-            smsTargets.add(manager.phone);
+            incidentId: incident.id,
+            managerCount: managers.length,
+            activeOnCallUserId: onCall?.id ?? null,
+            shouldEscalate,
+            recipientCount: smsTargets.size,
+          });
+        } else if (!incident.owner?.phone || shouldEscalate) {
+          for (const manager of managers) {
+            if (manager.phone) {
+              smsTargets.add(manager.phone);
+            }
+            pushTargetUserIds.add(manager.id);
           }
         }
       }
@@ -265,6 +328,31 @@ export async function processReminderPayload(input: {
             error: errorMessage(error),
           });
         }
+      }
+
+      const pushResult = await sendWorkspaceUserPushNotifications({
+        workspaceId: payload.workspaceId,
+        userIds: Array.from(pushTargetUserIds),
+        payload: {
+          title: "TrustLoop P1 escalation",
+          body: `${incident.title} is still ${incident.status}.`,
+          url: `/incidents/${incident.id}`,
+          tag: `incident-${incident.id}`,
+          data: {
+            incidentId: incident.id,
+            severity: incident.severity,
+          },
+        },
+      });
+
+      if (!pushResult.skipped) {
+        log.worker.info("P1 push notifications sent", {
+          workspaceId: payload.workspaceId,
+          incidentId: incident.id,
+          sent: pushResult.sent,
+          failed: pushResult.failed,
+          disabled: pushResult.disabled,
+        });
       }
     }
 

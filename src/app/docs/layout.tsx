@@ -8,7 +8,7 @@ import { docsSource } from "@/lib/docs-source";
 
 export default function DocsRootLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="dark">
+    <div>
       <RootProvider
         search={{
           enabled: true,

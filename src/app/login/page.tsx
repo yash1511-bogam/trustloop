@@ -15,6 +15,18 @@ const oauthErrorMessages: Record<string, string> = {
   oauth_mfa_required:
     "Your Stytch organization requires additional verification. Complete MFA in Stytch and retry.",
   oauth_failed: "OAuth sign-in failed. Try again or use email OTP.",
+  saml_not_configured:
+    "SAML SSO is not configured for this environment. Ask your admin to enable Stytch B2B SSO.",
+  saml_workspace_not_found:
+    "Workspace not found. Enter the workspace slug configured by your TrustLoop admin.",
+  saml_workspace_not_ready:
+    "SAML is not fully configured for that workspace yet. Contact your workspace owner.",
+  saml_callback_invalid: "SAML callback was invalid. Start sign-in again.",
+  saml_email_missing:
+    "SAML response did not include an email address. Contact your identity provider admin.",
+  saml_invite_required:
+    "Your SAML identity is valid, but your account is not provisioned in this workspace. Ask for an invite.",
+  saml_auth_failed: "SAML sign-in failed. Try again or use email OTP.",
 };
 
 export default async function LoginPage({
@@ -60,7 +72,7 @@ export default async function LoginPage({
           <p className="kicker mb-3">Sign in</p>
           <h2 className="mb-2 text-3xl font-bold text-white">Access your workspace</h2>
           <p className="mb-8 text-sm text-neutral-400">
-            Continue with Google, GitHub, or one-time code verification.
+            Continue with Google, GitHub, SAML SSO, or one-time code verification.
           </p>
 
           {errorMessage ? (

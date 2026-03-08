@@ -17,5 +17,6 @@ dodo_product_id_starter = "prod_starter_xxx"
 dodo_product_id_pro    = "prod_pro_xxx"
 dodo_product_id_enterprise = "prod_enterprise_xxx"
 billing_automation_cron_secret = "replace-with-long-random-secret"
+reminder_enqueue_cron_secret = "replace-with-long-random-secret"
 ai_key_health_cron_secret = "replace-with-long-random-secret"
 reminder_stale_minutes = 240

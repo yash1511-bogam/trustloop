@@ -7,6 +7,7 @@ import {
 
 export type OAuthProvider = "google" | "github";
 type AuthIntent = "login" | "register";
+export type StytchAuthMode = "b2c" | "b2b_discovery";
 const OTP_PENDING_STYTCH_ID_PREFIX = "pending_email:";
 const STYTCH_AUTH_OTP_TEMPLATE_ID = "initial_style_template";
 
@@ -37,9 +38,13 @@ function optionalValue(name: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function oauthStartMode(): "b2c" | "b2b_discovery" {
+function oauthStartMode(): StytchAuthMode {
   const mode = (process.env.STYTCH_OAUTH_START_MODE ?? "b2c").toLowerCase().trim();
   return mode === "b2b_discovery" || mode === "b2b-discovery" ? "b2b_discovery" : "b2c";
+}
+
+export function stytchAuthMode(): StytchAuthMode {
+  return oauthStartMode();
 }
 
 function oauthProviderStartUrl(provider: OAuthProvider): string | null {
@@ -234,6 +239,112 @@ export async function revokeSessionToken(sessionToken: string): Promise<void> {
   });
 }
 
+export function isSamlSsoSupported(): boolean {
+  return oauthStartMode() === "b2b_discovery" && Boolean(optionalValue("STYTCH_PUBLIC_TOKEN"));
+}
+
+type B2BMemberSessionContext = {
+  memberId: string;
+  organizationId: string;
+  organizationSlug: string | null;
+  expiresAt: Date;
+};
+
+function assertB2BSamlMode(): void {
+  if (oauthStartMode() !== "b2b_discovery") {
+    throw new Error("saml_requires_b2b_discovery_mode");
+  }
+}
+
+export async function authenticateB2BMemberSession(
+  sessionToken: string,
+): Promise<B2BMemberSessionContext> {
+  assertB2BSamlMode();
+
+  const response = await stytchB2BClient.sessions.authenticate({
+    session_token: sessionToken,
+  });
+
+  return {
+    memberId: response.member.member_id,
+    organizationId: response.member_session.organization_id,
+    organizationSlug: response.member_session.organization_slug || null,
+    expiresAt: response.member_session.expires_at
+      ? new Date(response.member_session.expires_at)
+      : new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000),
+  };
+}
+
+type SyncWorkspaceSamlConnectionInput = {
+  organizationId: string;
+  metadataUrl: string;
+  workspaceName: string;
+  connectionId?: string | null;
+};
+
+type SyncWorkspaceSamlConnectionResult = {
+  organizationId: string;
+  connectionId: string;
+  idpSsoUrl: string | null;
+  status: string | null;
+};
+
+export async function syncWorkspaceSamlConnection(
+  input: SyncWorkspaceSamlConnectionInput,
+): Promise<SyncWorkspaceSamlConnectionResult> {
+  assertB2BSamlMode();
+
+  const normalizedMetadataUrl = input.metadataUrl.trim();
+  if (!normalizedMetadataUrl) {
+    throw new Error("saml_metadata_url_required");
+  }
+
+  let connectionId = input.connectionId?.trim() || null;
+
+  if (!connectionId) {
+    const created = await stytchB2BClient.sso.saml.createConnection({
+      organization_id: input.organizationId,
+      display_name: `TrustLoop - ${input.workspaceName.trim().slice(0, 60) || "Workspace"}`,
+      identity_provider: "generic",
+    });
+    connectionId = created.connection?.connection_id ?? null;
+  }
+
+  if (!connectionId) {
+    throw new Error("saml_connection_create_failed");
+  }
+
+  const updated = await stytchB2BClient.sso.saml.updateByURL({
+    organization_id: input.organizationId,
+    connection_id: connectionId,
+    metadata_url: normalizedMetadataUrl,
+  });
+
+  return {
+    organizationId: input.organizationId,
+    connectionId,
+    idpSsoUrl: updated.connection?.idp_sso_url ?? null,
+    status: updated.connection?.status ?? null,
+  };
+}
+
+export function buildSamlStartUrl(input: {
+  connectionId: string;
+  loginRedirectUrl: string;
+  signupRedirectUrl?: string;
+}): string {
+  assertB2BSamlMode();
+
+  const params = new URLSearchParams({
+    connection_id: input.connectionId,
+    public_token: requiredValue("STYTCH_PUBLIC_TOKEN"),
+    login_redirect_url: input.loginRedirectUrl,
+    signup_redirect_url: input.signupRedirectUrl ?? input.loginRedirectUrl,
+  });
+
+  return `${stytchApiOrigin()}/v1/public/sso/start?${params.toString()}`;
+}
+
 export function buildOAuthStartUrl(input: {
   provider: OAuthProvider;
   loginRedirectUrl: string;
@@ -264,6 +375,14 @@ export function buildOAuthStartUrl(input: {
 type OAuthAuthResult = OtpAuthResult & {
   email: string | null;
   name: string | null;
+};
+
+export type SamlAuthResult = OtpAuthResult & {
+  organizationId: string;
+  organizationSlug: string | null;
+  email: string | null;
+  name: string | null;
+  connectionId: string | null;
 };
 
 function formatName(
@@ -405,6 +524,33 @@ async function authenticateOAuthTokenB2BDiscovery(input: {
     expiresAt: session.expiresAt,
     email: normalizedEmail,
     name: normalizedName,
+  };
+}
+
+export async function authenticateSamlToken(token: string): Promise<SamlAuthResult> {
+  assertB2BSamlMode();
+
+  const response = await stytchB2BClient.sso.authenticate({
+    sso_token: token,
+    session_duration_minutes: STYTCH_SESSION_DURATION_MINUTES,
+  });
+
+  const registrations = response.member.sso_registrations ?? [];
+  const latestRegistration =
+    registrations.length > 0 ? registrations[registrations.length - 1] : null;
+
+  return {
+    stytchUserId: response.member_id,
+    sessionToken: response.session_token,
+    sessionJwt: response.session_jwt,
+    expiresAt: response.member_session?.expires_at
+      ? new Date(response.member_session.expires_at)
+      : new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000),
+    organizationId: response.organization_id,
+    organizationSlug: response.member_session?.organization_slug ?? null,
+    email: response.member.email_address?.toLowerCase().trim() ?? null,
+    name: response.member.name?.trim() || null,
+    connectionId: latestRegistration?.connection_id ?? null,
   };
 }
 

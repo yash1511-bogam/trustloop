@@ -12,6 +12,8 @@ type WorkspaceSettings = {
   slackTeamId: string | null;
   samlEnabled: boolean;
   samlMetadataUrl: string | null;
+  samlOrganizationId: string | null;
+  samlConnectionId: string | null;
   complianceMode: boolean;
   billing: {
     dodoCustomerId: string | null;
@@ -115,7 +117,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
             onChange={(event) =>
               setForm((prev) => ({
                 ...prev,
-        samlMetadataUrl: event.target.value,
+                samlMetadataUrl: event.target.value,
               }))
             }
             placeholder="https://idp.example.com/metadata"
@@ -194,6 +196,20 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         </p>
         <p>
           Slack team connected: <strong>{workspace.slackTeamId ?? "No"}</strong>
+        </p>
+        <p>
+          SAML organization: <strong>{workspace.samlOrganizationId ?? "Not linked"}</strong>
+        </p>
+        <p>
+          SAML connection: <strong>{workspace.samlConnectionId ?? "Not linked"}</strong>
+        </p>
+        <p>
+          SAML ready:{" "}
+          <strong>
+            {workspace.samlEnabled && workspace.samlMetadataUrl && workspace.samlConnectionId
+              ? "Yes"
+              : "No"}
+          </strong>
         </p>
         <p>
           Dodo customer: <strong>{workspace.billing?.dodoCustomerId ?? "Not linked"}</strong>

@@ -10,7 +10,20 @@ type Quota = {
   reminderEmailsPerDay: number;
   reminderIntervalHoursP1: number;
   reminderIntervalHoursP2: number;
+  onCallRotationEnabled: boolean;
+  onCallRotationIntervalHours: number;
+  onCallRotationAnchorAt: string;
 };
+
+type NumericQuotaField =
+  | "apiRequestsPerMinute"
+  | "incidentsPerDay"
+  | "triageRunsPerDay"
+  | "customerUpdatesPerDay"
+  | "reminderEmailsPerDay"
+  | "reminderIntervalHoursP1"
+  | "reminderIntervalHoursP2"
+  | "onCallRotationIntervalHours";
 
 type Props = {
   initialQuota: Quota;
@@ -46,7 +59,7 @@ export function QuotaSettingsPanel({ initialQuota }: Props) {
     setMessage("Workspace quota settings saved.");
   }
 
-  function updateField(field: keyof Quota, value: string) {
+  function updateField(field: NumericQuotaField, value: string) {
     const parsed = Number(value);
     setQuota((prev) => ({
       ...prev,
@@ -144,6 +157,51 @@ export function QuotaSettingsPanel({ initialQuota }: Props) {
             onChange={(event) => updateField("reminderIntervalHoursP2", event.target.value)}
           />
         </label>
+
+        <label className="flex items-center gap-2 text-sm md:col-span-2">
+          <input
+            checked={quota.onCallRotationEnabled}
+            onChange={(event) =>
+              setQuota((prev) => ({
+                ...prev,
+                onCallRotationEnabled: event.target.checked,
+              }))
+            }
+            type="checkbox"
+          />
+          Enable on-call rotation for P1 SMS escalations
+        </label>
+
+        <label className="space-y-1 text-sm">
+          <span className="font-medium">On-call rotation interval (hours)</span>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={168}
+            value={quota.onCallRotationIntervalHours}
+            onChange={(event) => updateField("onCallRotationIntervalHours", event.target.value)}
+          />
+        </label>
+
+        <div className="space-y-2 text-sm">
+          <span className="font-medium">On-call rotation anchor</span>
+          <p className="text-xs text-neutral-500">
+            {new Date(quota.onCallRotationAnchorAt).toLocaleString()}
+          </p>
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={() =>
+              setQuota((prev) => ({
+                ...prev,
+                onCallRotationAnchorAt: new Date().toISOString(),
+              }))
+            }
+          >
+            Reset anchor to now
+          </button>
+        </div>
       </div>
 
       <button className="btn btn-primary" disabled={loading} onClick={save} type="button">

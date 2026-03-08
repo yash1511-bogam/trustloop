@@ -4,6 +4,7 @@ import { CalendarClock, PanelLeftClose, PanelLeftOpen, Siren } from "lucide-reac
 import { useEffect, useState } from "react";
 import { AppShellNav } from "@/components/app-shell-nav";
 import { LogoutButton } from "@/components/logout-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type AppShellFrameProps = {
   workspaceName: string;
@@ -69,6 +70,9 @@ export function AppShellFrame({
             <Siren className="h-4 w-4" />
             <span>TrustLoop</span>
           </div>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </header>
       ) : null}
 
@@ -83,20 +87,23 @@ export function AppShellFrame({
 
       <aside className={drawerClass}>
         <div className={compactDesktopMenu ? "menu-drawer-top menu-drawer-top-compact" : "menu-drawer-top"}>
-          <button
-            aria-label={menuOpen ? "Collapse menu" : "Expand menu"}
-            className="menu-toggle"
-            onClick={() => setMenuOpen((value) => !value)}
-            type="button"
-          >
-            {menuOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-          </button>
-          {compactDesktopMenu ? null : (
-            <div className="menu-drawer-brand">
-              <Siren className="h-4 w-4" />
-              <span>TrustLoop</span>
-            </div>
-          )}
+          <div className="inline-flex items-center gap-2">
+            <button
+              aria-label={menuOpen ? "Collapse menu" : "Expand menu"}
+              className="menu-toggle"
+              onClick={() => setMenuOpen((value) => !value)}
+              type="button"
+            >
+              {menuOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
+            </button>
+            {compactDesktopMenu ? null : (
+              <div className="menu-drawer-brand">
+                <Siren className="h-4 w-4" />
+                <span>TrustLoop</span>
+              </div>
+            )}
+          </div>
+          <ThemeToggle />
         </div>
 
         {compactDesktopMenu ? null : (

@@ -18,6 +18,28 @@
   --warning: #f59e0b;
   --focus: rgba(255, 255, 255, 0.2);
   --radius: 16px; /* 2026 Bento Grid Squircle standard */
+  --bg-radial-a: rgba(28, 41, 74, 0.15);
+  --bg-radial-b: rgba(14, 165, 233, 0.08);
+  --noise-opacity: 0.25;
+}
+
+[data-theme="light"] {
+  --bg-base: #f6f7fb;
+  --bg-soft: #ffffff;
+  --bg-elev: #eef2ff;
+  --bg-elev-strong: #e2e8f0;
+  --ink: #111827;
+  --ink-soft: #475569;
+  --line: #d1d5db;
+  --line-strong: #94a3b8;
+  --brand: #111827;
+  --brand-strong: #0f172a;
+  --brand-deep: #e5e7eb;
+  --brand-accent: #0f172a;
+  --focus: rgba(17, 24, 39, 0.2);
+  --bg-radial-a: rgba(59, 130, 246, 0.12);
+  --bg-radial-b: rgba(16, 185, 129, 0.1);
+  --noise-opacity: 0.08;
 }
 
 * {
@@ -38,8 +60,8 @@ body {
   font-family: var(--font-display), sans-serif;
   background-color: var(--bg-base);
   background-image: 
-    radial-gradient(ellipse at 15% 0%, rgba(28, 41, 74, 0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 85% 100%, rgba(14, 165, 233, 0.08) 0%, transparent 50%);
+    radial-gradient(ellipse at 15% 0%, var(--bg-radial-a) 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 100%, var(--bg-radial-b) 0%, transparent 50%);
   background-attachment: fixed;
 }
 
@@ -49,7 +71,7 @@ body::before {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.25;
+  opacity: var(--noise-opacity);
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   mix-blend-mode: overlay;
 }
@@ -599,14 +621,43 @@ summary:focus-visible {
   color: var(--ink-soft) !important;
 }
 
+.text-white,
+.text-slate-100,
+.text-slate-200,
+.text-slate-300 {
+  color: var(--ink) !important;
+}
+
+.text-neutral-300,
+.text-neutral-400,
+.text-neutral-500,
+.text-neutral-600 {
+  color: var(--ink-soft) !important;
+}
+
 .border-slate-300,
 .border-slate-200,
 .border-slate-100 {
   border-color: var(--line) !important;
 }
 
+.border-neutral-900,
+.border-neutral-800,
+.border-neutral-700 {
+  border-color: var(--line) !important;
+}
+
 .bg-slate-950 {
   background-color: var(--bg-base) !important;
+}
+
+.bg-neutral-950,
+.bg-neutral-900,
+.bg-neutral-900\/30,
+.bg-neutral-900\/50,
+.bg-neutral-900\/96,
+.bg-neutral-900\/20 {
+  background-color: var(--bg-soft) !important;
 }
 
 .bg-slate-100,

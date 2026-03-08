@@ -73,6 +73,10 @@ locals {
       value = var.billing_automation_cron_secret
     },
     {
+      name  = "REMINDER_ENQUEUE_CRON_SECRET"
+      value = var.reminder_enqueue_cron_secret
+    },
+    {
       name  = "AI_KEY_HEALTH_CRON_SECRET"
       value = var.ai_key_health_cron_secret
     },
@@ -460,6 +464,25 @@ resource "aws_cloudwatch_event_connection" "automation_billing_grace" {
   }
 }
 
+resource "aws_cloudwatch_event_connection" "automation_enqueue_reminders" {
+  name               = "${local.name}-automation-enqueue-reminders"
+  authorization_type = "API_KEY"
+
+  auth_parameters {
+    api_key {
+      key   = "x-cron-secret"
+      value = var.reminder_enqueue_cron_secret
+    }
+
+    invocation_http_parameters {
+      header {
+        key   = "Content-Type"
+        value = "application/json"
+      }
+    }
+  }
+}
+
 resource "aws_cloudwatch_event_api_destination" "automation_ai_key_health" {
   name                             = "${local.name}-automation-ai-key-health"
   connection_arn                   = aws_cloudwatch_event_connection.automation_ai_key_health.arn
@@ -472,6 +495,14 @@ resource "aws_cloudwatch_event_api_destination" "automation_billing_grace" {
   name                             = "${local.name}-automation-billing-grace"
   connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace.arn
   invocation_endpoint              = "${local.app_url}/api/automation/process-billing-grace"
+  http_method                      = "POST"
+  invocation_rate_limit_per_second = 1
+}
+
+resource "aws_cloudwatch_event_api_destination" "automation_enqueue_reminders" {
+  name                             = "${local.name}-automation-enqueue-reminders"
+  connection_arn                   = aws_cloudwatch_event_connection.automation_enqueue_reminders.arn
+  invocation_endpoint              = "${local.app_url}/api/automation/enqueue-reminders"
   http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
@@ -490,7 +521,8 @@ resource "aws_iam_role_policy" "eventbridge_api_destination_invoke" {
         ]
         Resource = [
           aws_cloudwatch_event_api_destination.automation_ai_key_health.arn,
-          aws_cloudwatch_event_api_destination.automation_billing_grace.arn
+          aws_cloudwatch_event_api_destination.automation_billing_grace.arn,
+          aws_cloudwatch_event_api_destination.automation_enqueue_reminders.arn
         ]
       }
     ]
@@ -507,6 +539,11 @@ resource "aws_cloudwatch_event_rule" "automation_billing_grace" {
   schedule_expression = "cron(0 */6 * * ? *)"
 }
 
+resource "aws_cloudwatch_event_rule" "automation_enqueue_reminders" {
+  name                = "${local.name}-automation-enqueue-reminders"
+  schedule_expression = "cron(*/30 * * * ? *)"
+}
+
 resource "aws_cloudwatch_event_target" "automation_ai_key_health" {
   rule           = aws_cloudwatch_event_rule.automation_ai_key_health.name
   event_bus_name = "default"
@@ -519,6 +556,14 @@ resource "aws_cloudwatch_event_target" "automation_billing_grace" {
   rule           = aws_cloudwatch_event_rule.automation_billing_grace.name
   event_bus_name = "default"
   arn            = aws_cloudwatch_event_api_destination.automation_billing_grace.arn
+  role_arn       = aws_iam_role.eventbridge_api_destination.arn
+  input          = jsonencode({})
+}
+
+resource "aws_cloudwatch_event_target" "automation_enqueue_reminders" {
+  rule           = aws_cloudwatch_event_rule.automation_enqueue_reminders.name
+  event_bus_name = "default"
+  arn            = aws_cloudwatch_event_api_destination.automation_enqueue_reminders.arn
   role_arn       = aws_iam_role.eventbridge_api_destination.arn
   input          = jsonencode({})
 }

@@ -1,4 +1,5 @@
 import { IntegrationsPanel } from "@/components/integrations-panel";
+import { PushNotificationPanel } from "@/components/push-notification-panel";
 import { QuotaSettingsPanel } from "@/components/quota-settings-panel";
 import { WorkspaceSettingsPanel } from "@/components/workspace-settings-panel";
 import { requireAuth } from "@/lib/auth";
@@ -27,6 +28,8 @@ export default async function SettingsWorkspacePage() {
         slackTeamId: true,
         samlEnabled: true,
         samlMetadataUrl: true,
+        samlOrganizationId: true,
+        samlConnectionId: true,
         complianceMode: true,
         billing: {
           select: {
@@ -73,6 +76,9 @@ export default async function SettingsWorkspacePage() {
               reminderEmailsPerDay: quota.reminderEmailsPerDay,
               reminderIntervalHoursP1: quota.reminderIntervalHoursP1,
               reminderIntervalHoursP2: quota.reminderIntervalHoursP2,
+              onCallRotationEnabled: quota.onCallRotationEnabled,
+              onCallRotationIntervalHours: quota.onCallRotationIntervalHours,
+              onCallRotationAnchorAt: quota.onCallRotationAnchorAt.toISOString(),
             }}
           />
         </div>
@@ -99,6 +105,16 @@ export default async function SettingsWorkspacePage() {
             endpoints={endpoints}
             initialIntegrations={integrations}
           />
+        </div>
+      </section>
+
+      <section className="surface p-6">
+        <h2 className="text-2xl font-semibold text-slate-100">Browser push notifications</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Enable browser push for reminder and escalation alerts for your account.
+        </p>
+        <div className="mt-4">
+          <PushNotificationPanel />
         </div>
       </section>
     </>

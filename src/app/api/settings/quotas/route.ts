@@ -15,6 +15,9 @@ const quotaSchema = z.object({
   reminderEmailsPerDay: z.int().min(10).max(100000),
   reminderIntervalHoursP1: z.int().min(1).max(168).optional(),
   reminderIntervalHoursP2: z.int().min(1).max(336).optional(),
+  onCallRotationEnabled: z.boolean().optional(),
+  onCallRotationIntervalHours: z.int().min(1).max(168).optional(),
+  onCallRotationAnchorAt: z.string().datetime().optional(),
 });
 
 function quotaCacheKey(workspaceId: string): string {
@@ -66,9 +69,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     create: {
       workspaceId: auth.workspaceId,
       ...parsed.data,
+      onCallRotationAnchorAt: parsed.data.onCallRotationAnchorAt
+        ? new Date(parsed.data.onCallRotationAnchorAt)
+        : undefined,
     },
     update: {
       ...parsed.data,
+      onCallRotationAnchorAt: parsed.data.onCallRotationAnchorAt
+        ? new Date(parsed.data.onCallRotationAnchorAt)
+        : undefined,
     },
   });
 

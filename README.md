@@ -12,7 +12,7 @@ TrustLoop is a domain-specific SaaS for AI software companies to run customer-fa
 - Reminder automation via SQS + worker (email + P1 SMS)
 - Billing via Dodo Payments subscriptions + quota plan mapping
 - Executive analytics charts and compliance exports (CSV + incident PDF)
-- PWA manifest/service worker scaffold for installable app behavior
+- PWA manifest + service worker with browser push subscriptions and test notifications
 - Public documentation site at `/docs` (Fumadocs with sidebar navigation, citations, and backlinks)
 
 ## Tech Stack
@@ -65,6 +65,7 @@ Copy `.env.example` to `.env` and fill values.
 - `STYTCH_OTP_EXPIRATION_MINUTES`
 - `STYTCH_SESSION_DURATION_MINUTES`
 - `STYTCH_OAUTH_START_MODE` (`b2c` default, or `b2b_discovery`)
+- SAML SSO is enabled when `STYTCH_OAUTH_START_MODE=b2b_discovery` and workspace SAML metadata is configured.
 - Optional direct start URL overrides:
   - `STYTCH_OAUTH_GOOGLE_START_URL`
   - `STYTCH_OAUTH_GITHUB_START_URL`
@@ -96,7 +97,20 @@ Copy `.env.example` to `.env` and fill values.
 ### Automation
 - `AI_KEY_HEALTH_CRON_SECRET`
 - `BILLING_AUTOMATION_CRON_SECRET`
+- `REMINDER_ENQUEUE_CRON_SECRET`
 - `REMINDER_STALE_MINUTES`
+
+### Web Push (PWA)
+- `VAPID_SUBJECT` (for example `mailto:alerts@yourdomain.com`)
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- Optional: `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (if omitted, server falls back to `VAPID_PUBLIC_KEY`)
+
+Generate VAPID keys:
+
+```bash
+npx web-push generate-vapid-keys
+```
 
 ### LocalStack / AWS-style local infra
 - `AWS_REGION=us-east-1`
@@ -138,10 +152,12 @@ pnpm run localstack:init
 
 ## API Highlights
 - Auth: `/api/auth/*`, `/api/auth/oauth/[provider]`, `/api/auth/oauth/callback`
+- SAML auth: `/api/auth/saml/start`, `/api/auth/saml/callback`
 - Incidents: `/api/incidents*`, `/api/incidents/export`, `/api/incidents/[id]/export`
 - Webhooks: `/api/webhooks/*`
 - Slack: `/api/slack/*`
 - Billing: `/api/billing/*`
+- Push notifications: `/api/notifications/push`, `/api/notifications/push/test`
 - Workspace/team/settings: `/api/workspace/*`, `/api/settings/*`
 
 ## Security Notes

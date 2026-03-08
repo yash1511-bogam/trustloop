@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
+import { THEME_COOKIE_NAME, normalizeTheme } from "@/lib/theme";
 import "./globals.css";
 
 const display = Inter({
@@ -79,14 +81,17 @@ export const metadata: Metadata = {
   category: "technology",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeStore = await cookies();
+  const theme = normalizeTheme(themeStore.get(THEME_COOKIE_NAME)?.value);
+
   return (
-    <html lang="en" className="bg-[#020203]">
-      <body className={`${display.variable} ${mono.variable} bg-[#020203] text-white antialiased selection:bg-cyan-500/30`}>
+    <html lang="en" data-theme={theme}>
+      <body className={`${display.variable} ${mono.variable} antialiased selection:bg-cyan-500/30`}>
         {children}
         <Script id="sw-register" strategy="afterInteractive">
           {`if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => null)); }`}
