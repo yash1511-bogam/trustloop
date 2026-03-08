@@ -1,196 +1,141 @@
 # TrustLoop
 
-TrustLoop is a SaaS platform for **AI software companies** to run incident operations end-to-end:
-- intake and triage
-- ownership and customer-safe updates
-- tenant-aware limits
-- executive analytics
+TrustLoop is a domain-specific SaaS for AI software companies to run customer-facing AI incident operations end-to-end.
 
-This repo includes local and production-ready paths:
-- Postgres (primary database)
-- Redis (cache/session/rate-limit acceleration)
-- LocalStack SQS (local queue emulation)
-- Stytch (auth)
-- Resend (email)
-- Next.js App Router UI/API
+## What It Includes
+- Incident queue with filters, cursor pagination, owner assignment, and event timeline
+- AI triage + customer-update drafting with BYOK provider routing (OpenAI, Gemini, Anthropic)
+- Workspace API keys (Bearer auth) and signed webhook intake (Datadog, PagerDuty, Sentry, Generic, Langfuse, Helicone)
+- Slack integration (OAuth connect, slash command intake, incident alerts, thread updates)
+- Public status page publishing by workspace slug
+- Team invites, role management, member removal
+- Reminder automation via SQS + worker (email + P1 SMS)
+- Billing via Stripe subscriptions + quota plan mapping
+- Executive analytics charts and compliance exports (CSV + incident PDF)
+- PWA manifest/service worker scaffold for installable app behavior
 
-## Quick Start (One Command)
+## Tech Stack
+- Next.js 16 (App Router), React 19
+- Prisma + PostgreSQL
+- Redis (cache/session/rate-limit)
+- AWS SQS (LocalStack in local dev)
+- Stytch (OTP + OAuth)
+- Resend (emails)
+- Stripe (billing)
+- Twilio (SMS)
 
-Run from inside `trustloop`:
+## Quick Start
+From `trustloop/`:
 
 ```bash
 ./start.sh
 ```
 
-This command will:
-1. Install all Node packages and libraries (`pnpm install`)
-2. Ensure `.env` exists (auto-copied from `.env.example` if missing)
-3. Start local infra with Docker Compose (Postgres + Redis + LocalStack)
-4. Wait for Postgres/Redis/LocalStack readiness
-5. Run Prisma automation commands (`validate`, `generate`, `migrate deploy`, `migrate status`, `db pull --print`)
-6. Seed demo data (idempotent)
-7. Initialize LocalStack SQS queue
-8. Run a worker smoke cycle (`worker:once`)
-9. Launch **web app + worker** together
-10. Print the local links you should use
+`start.sh` installs deps, ensures `.env`, starts local infra, runs Prisma flow, seeds data, initializes LocalStack queue, runs worker smoke cycle, then starts web + worker.
 
-If `pnpm` is missing, `start.sh` auto-activates it through `corepack`.
-
-## Expected Local Links
-
-By default (`NEXT_PUBLIC_APP_URL=http://localhost:3000`):
+## Local URLs
 - App: `http://localhost:3000`
 - Login: `http://localhost:3000/login`
-- Recover Access: `http://localhost:3000/forgot-access`
 - Register: `http://localhost:3000/register`
 - Dashboard: `http://localhost:3000/dashboard`
 - Executive: `http://localhost:3000/executive`
 - Settings: `http://localhost:3000/settings`
 
-## Prerequisites
-
-- Node.js 20+
-- pnpm 10+
-- Docker + Docker Compose
-
-Verify quickly:
-
-```bash
-node -v
-pnpm -v
-docker --version
-docker compose version
-```
-
 ## Environment Variables
+Copy `.env.example` to `.env` and fill values.
 
-Create `.env` from `.env.example` (automatic in `./start.sh` if missing), then set values.
-
-### Required for full functionality
+### Core
 - `NEXT_PUBLIC_APP_URL`
 - `DATABASE_URL`
 - `REDIS_URL`
+- `KEY_ENCRYPTION_SECRET`
+
+### Stytch auth
 - `STYTCH_PROJECT_ID`
 - `STYTCH_SECRET`
-- `KEY_ENCRYPTION_SECRET`
+- `STYTCH_PUBLIC_TOKEN` (required for Google/GitHub OAuth start)
+- `STYTCH_ENV`
+- `STYTCH_OTP_EXPIRATION_MINUTES`
+- `STYTCH_SESSION_DURATION_MINUTES`
+
+### AI + notifications
 - `RESEND_API_KEY`
 - `RESEND_FROM_EMAIL`
+- `TWILIO_ACCOUNT_SID`
+- `TWILIO_AUTH_TOKEN`
+- `TWILIO_FROM_NUMBER`
 
-### Local AWS emulation (LocalStack)
-- `AWS_REGION`
+### Slack
+- `SLACK_CLIENT_ID`
+- `SLACK_CLIENT_SECRET`
+- `SLACK_SIGNING_SECRET`
+
+### Billing
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ID_STARTER`
+- `STRIPE_PRICE_ID_PRO`
+- `STRIPE_PRICE_ID_ENTERPRISE`
+
+### Automation
+- `AI_KEY_HEALTH_CRON_SECRET`
+- `REMINDER_STALE_MINUTES`
+
+### LocalStack / AWS-style local infra
+- `AWS_REGION=us-east-1`
 - `AWS_ACCESS_KEY_ID=test`
 - `AWS_SECRET_ACCESS_KEY=test`
 - `AWS_ENDPOINT_URL=http://localhost:4566`
 - `AWS_ACCOUNT_ID=000000000000`
-- `REMINDER_QUEUE_NAME`
-- `REMINDER_QUEUE_URL`
+- `REMINDER_QUEUE_NAME=trustloop-incident-reminders`
+- `REMINDER_QUEUE_URL=http://localhost:4566/000000000000/trustloop-incident-reminders`
 
-## Startup Scripts
+## OAuth Setup (Stytch)
+1. Enable Google and GitHub OAuth providers in Stytch Dashboard.
+2. Add redirect URLs in Stytch Dashboard:
+   - `http://localhost:3000/api/auth/oauth/callback` (local)
+   - production callback URL equivalent
+3. Set `STYTCH_PUBLIC_TOKEN` in `.env`.
+4. Use login/register OAuth buttons.
 
-- `./start.sh`
-  - Main one-command launcher (recommended)
-- `pnpm run start:local`
-  - Runs the rich local launcher (`scripts/start-local.mjs`)
-- `pnpm run start:local:setup`
-  - Runs provisioning only (no long-running web/worker processes)
-- `pnpm run dev:full`
-  - Runs web + worker in parallel
-- `pnpm run dev`
-  - Web app only
-- `pnpm run worker`
-  - Worker only
-
-## Manual Local Flow (if you do not use start.sh)
+## LocalStack
+Bring infra up manually if needed:
 
 ```bash
-pnpm install
-cp .env.example .env
-
 docker compose -f docker-compose.localstack.yml up -d
-pnpm run prisma:validate
-pnpm run prisma:generate
-pnpm run prisma:deploy
-pnpm run prisma:status
-pnpm run prisma:pull:print > /tmp/trustloop-prisma-pull.prisma
-pnpm run db:seed
 pnpm run localstack:init
-pnpm run worker:once
-pnpm run dev:full
 ```
 
-## Automated Auth Emails
+## Scripts
+- `pnpm dev` - web only
+- `pnpm dev:full` - web + worker
+- `pnpm worker` - reminder worker
+- `pnpm worker:once` - one worker cycle
+- `pnpm lint`
+- `pnpm build`
+- `pnpm prisma:generate`
+- `pnpm prisma:deploy`
+- `pnpm db:seed`
+- `pnpm ai-keys:verify`
 
-TrustLoop now sends these auth/onboarding emails through Resend:
-- Welcome email right after workspace registration is verified
-- Getting-started instructions email after welcome
-- OTP security notice email whenever login OTP is requested
-- Account recovery instructions email from forgot-access flow
-- Existing incident reminder emails remain active
-
-Note: OTP delivery itself is still handled by Stytch (source of truth for verification codes).
-
-## Tech Stack
-
-- Next.js 16 (App Router)
-- React 19
-- Prisma + PostgreSQL
-- Redis (`ioredis`)
-- AWS SQS SDK
-- Stytch (email OTP + session)
-- Resend (transactional/operational emails)
-- UI animations: Framer Motion, Motion.dev, GSAP
+## API Highlights
+- Auth: `/api/auth/*`, `/api/auth/oauth/[provider]`, `/api/auth/oauth/callback`
+- Incidents: `/api/incidents*`, `/api/incidents/export`, `/api/incidents/[id]/export`
+- Webhooks: `/api/webhooks/*`
+- Slack: `/api/slack/*`
+- Billing: `/api/billing/*`
+- Workspace/team/settings: `/api/workspace/*`, `/api/settings/*`
 
 ## Security Notes
+- AI provider keys and webhook secrets are encrypted at rest (AES-256-GCM).
+- API keys are bcrypt-hashed and only shown once at creation.
+- Session and API-key auth are workspace-scoped.
+- Secrets are never returned in full after save and are never used client-side.
 
-AI provider keys entered in Settings are handled with server-side security controls:
-- encrypted at rest (AES-256-GCM)
-- never logged
-- never exposed to the browser after save
-- used server-side only
+## Verification
+Current baseline checks:
 
-## Production Deployment (AWS via GitHub Actions)
-
-Workflow: `.github/workflows/deploy-aws.yml`
-
-The pipeline now automatically runs required setup commands before deployment:
-- starts local Postgres + Redis + LocalStack for CI bootstrap checks
-- runs Prisma commands (`validate`, `generate`, `deploy`, `status`, `db pull --print`)
-- runs queue setup and a worker smoke cycle
-- runs lint + build
-- provisions and deploys AWS services (VPC/ECS/RDS/ElastiCache/SQS/ALB/ECR) with Terraform
-- runs production Prisma migrations as an ECS one-off task after deploy
-
-## Troubleshooting
-
-### `./start.sh` fails at Docker checks
-- Start Docker Desktop/daemon
-- Re-run `docker info`
-
-### Migration errors
-- Ensure Postgres container is running:
-  ```bash
-  docker compose -f docker-compose.localstack.yml ps
-  ```
-- Re-run:
-  ```bash
-  pnpm run prisma:deploy
-  ```
-
-### Worker does not consume queue
-- Ensure LocalStack queue exists:
-  ```bash
-  pnpm run localstack:init
-  ```
-- Verify `AWS_ENDPOINT_URL=http://localhost:4566`
-
-### Auth or email actions fail locally
-- Set valid `STYTCH_*` and `RESEND_*` values in `.env`
-
-## Project Layout
-
-- `src/app` - Next.js routes (UI + API)
-- `src/components` - UI components
-- `src/lib` - auth, queue, quotas, read models, encryption
-- `prisma` - schema and migrations
-- `scripts` - local automation helpers
-- `infra/terraform` - production infrastructure definitions
+```bash
+pnpm lint
+pnpm build
+```

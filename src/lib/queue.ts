@@ -68,6 +68,7 @@ export type ReminderMessagePayload = {
   workspaceId: string;
   incidentId: string;
   queuedAt: string;
+  dueAt?: string;
   delaySeconds?: number;
 };
 

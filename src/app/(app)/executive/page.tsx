@@ -1,12 +1,27 @@
 import Link from "next/link";
+import { ReminderStatus } from "@prisma/client";
 import { ExecutiveCharts } from "@/components/executive-charts";
 import { requireAuth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { getExecutiveDashboard } from "@/lib/read-models";
 
 export default async function ExecutivePage() {
   const auth = await requireAuth();
 
-  const dashboard = await getExecutiveDashboard(auth.user.workspaceId);
+  const now = new Date();
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setUTCDate(now.getUTCDate() - 7);
+
+  const [dashboard, failedReminders7d] = await Promise.all([
+    getExecutiveDashboard(auth.user.workspaceId),
+    prisma.reminderJobLog.count({
+      where: {
+        workspaceId: auth.user.workspaceId,
+        status: ReminderStatus.FAILED,
+        createdAt: { gte: sevenDaysAgo },
+      },
+    }),
+  ]);
 
   const snapshot = dashboard.snapshot;
 
@@ -39,6 +54,10 @@ export default async function ExecutivePage() {
           <p className="mt-2 text-3xl font-semibold text-emerald-700">
             {snapshot?.incidentsResolvedLast7d ?? 0}
           </p>
+        </article>
+        <article className="metric-card">
+          <p className="kicker">Failed reminders (7d)</p>
+          <p className="mt-2 text-3xl font-semibold text-amber-700">{failedReminders7d}</p>
         </article>
       </section>
 

@@ -4,11 +4,25 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
 import { getAuth } from "@/lib/auth";
 
-export default async function LoginPage() {
+const oauthErrorMessages: Record<string, string> = {
+  oauth_not_configured:
+    "OAuth is not configured yet. Ask your admin to set STYTCH_PUBLIC_TOKEN and redirect URLs.",
+  oauth_invalid_callback: "OAuth callback was invalid. Start sign-in again.",
+  oauth_failed: "OAuth sign-in failed. Try again or use email OTP.",
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const auth = await getAuth();
   if (auth) {
     redirect("/dashboard");
   }
+
+  const params = await searchParams;
+  const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
 
   return (
     <main className="container-shell fade-in py-10">
@@ -38,8 +52,14 @@ export default async function LoginPage() {
           <p className="kicker mb-2">Sign in</p>
           <h2 className="mb-1 text-3xl font-semibold">Access your workspace</h2>
           <p className="mb-6 text-sm text-slate-600">
-            Enter your work email and verify with a one-time code from Stytch.
+            Continue with Google, GitHub, or verify with a one-time code from Stytch.
           </p>
+
+          {errorMessage ? (
+            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          ) : null}
 
           <LoginForm />
 

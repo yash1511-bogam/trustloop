@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { OAuthButtons } from "@/components/oauth-buttons";
 
 type Props = {
   initialWorkspaceName?: string;
@@ -95,6 +96,19 @@ export function RegisterForm({
 
   return (
     <div className="space-y-4">
+      <OAuthButtons
+        mode="register"
+        workspaceName={workspaceName}
+        inviteToken={inviteToken}
+        disabled={submitting}
+      />
+
+      <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span>or use email OTP</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
       <form className="space-y-4" onSubmit={startRegistration}>
         <div>
           <label className="mb-1 block text-sm font-medium" htmlFor="workspace-name">

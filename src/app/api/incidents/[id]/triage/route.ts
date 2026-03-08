@@ -128,12 +128,17 @@ export async function POST(
       triage.severity === "P1"
         ? (quotaPolicy?.reminderIntervalHoursP1 ?? 4)
         : (quotaPolicy?.reminderIntervalHoursP2 ?? 24);
-    const delaySeconds = Math.min(Math.max(60, reminderHours * 3600), 900);
+    const dueAt = new Date(Date.now() + reminderHours * 3_600_000);
+    const delaySeconds = Math.min(
+      900,
+      Math.max(60, Math.ceil((dueAt.getTime() - Date.now()) / 1000)),
+    );
 
     const messageId = await enqueueReminder({
       workspaceId: auth.workspaceId,
       incidentId: incident.id,
       queuedAt: new Date().toISOString(),
+      dueAt: dueAt.toISOString(),
       delaySeconds,
     });
 

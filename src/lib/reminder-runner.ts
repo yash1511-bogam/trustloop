@@ -10,7 +10,37 @@ export type ReminderPayload = {
   workspaceId: string;
   incidentId: string;
   queuedAt: string;
+  dueAt?: string;
 };
+
+function safeDate(value: string | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
+function reminderIntervalHours(
+  severity: IncidentSeverity,
+  quotaPolicy: {
+    reminderIntervalHoursP1: number;
+    reminderIntervalHoursP2: number;
+  } | null,
+): number {
+  if (severity === IncidentSeverity.P1) {
+    return quotaPolicy?.reminderIntervalHoursP1 ?? 4;
+  }
+  return quotaPolicy?.reminderIntervalHoursP2 ?? 24;
+}
+
+function delaySecondsUntil(targetMs: number): number {
+  const remainingSeconds = Math.ceil((targetMs - Date.now()) / 1000);
+  return Math.min(900, Math.max(60, remainingSeconds));
+}
 
 export async function processReminderPayload(input: {
   payload: ReminderPayload;
@@ -53,6 +83,48 @@ export async function processReminderPayload(input: {
     }
 
     const isOpen = incident.status !== IncidentStatus.RESOLVED;
+    const intervalHours = reminderIntervalHours(incident.severity, quotaPolicy);
+    const intervalMs = intervalHours * 3_600_000;
+    const dueAt =
+      safeDate(payload.dueAt) ??
+      new Date((safeDate(payload.queuedAt) ?? new Date()).getTime() + intervalMs);
+
+    if (isOpen && Date.now() < dueAt.getTime()) {
+      const messageId = await enqueueReminder({
+        workspaceId: payload.workspaceId,
+        incidentId: incident.id,
+        queuedAt: payload.queuedAt,
+        dueAt: dueAt.toISOString(),
+        delaySeconds: delaySecondsUntil(dueAt.getTime()),
+      });
+
+      await prisma.$transaction(async (tx) => {
+        if (input.messageId) {
+          await tx.reminderJobLog.updateMany({
+            where: {
+              queueMessageId: input.messageId,
+              incidentId: incident.id,
+            },
+            data: {
+              status: ReminderStatus.PROCESSED,
+              processedAt: new Date(),
+              errorMessage: null,
+            },
+          });
+        }
+
+        await tx.reminderJobLog.create({
+          data: {
+            workspaceId: payload.workspaceId,
+            incidentId: incident.id,
+            queueMessageId: messageId,
+            status: ReminderStatus.QUEUED,
+          },
+        });
+      });
+
+      return;
+    }
 
     await prisma.$transaction(async (tx) => {
       if (isOpen) {
@@ -116,17 +188,14 @@ export async function processReminderPayload(input: {
     }
 
     if (isOpen) {
-      const reminderHours =
-        incident.severity === IncidentSeverity.P1
-          ? (quotaPolicy?.reminderIntervalHoursP1 ?? 4)
-          : (quotaPolicy?.reminderIntervalHoursP2 ?? 24);
-      const delaySeconds = Math.min(Math.max(reminderHours * 3600, 60), 900);
+      const nextDueAtMs = Date.now() + intervalMs;
 
       const messageId = await enqueueReminder({
         workspaceId: payload.workspaceId,
         incidentId: incident.id,
         queuedAt: new Date().toISOString(),
-        delaySeconds,
+        dueAt: new Date(nextDueAtMs).toISOString(),
+        delaySeconds: delaySecondsUntil(nextDueAtMs),
       });
 
       await prisma.reminderJobLog.create({
@@ -137,9 +206,9 @@ export async function processReminderPayload(input: {
           status: ReminderStatus.QUEUED,
         },
       });
+      await refreshWorkspaceReadModels(payload.workspaceId);
     }
 
-    await refreshWorkspaceReadModels(payload.workspaceId);
   } catch (error) {
     if (input.messageId) {
       await prisma.reminderJobLog.updateMany({

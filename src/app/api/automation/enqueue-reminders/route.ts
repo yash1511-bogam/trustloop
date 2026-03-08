@@ -49,6 +49,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       workspaceId: auth.workspaceId,
       incidentId: incident.id,
       queuedAt: new Date().toISOString(),
+      dueAt: new Date().toISOString(),
     });
 
     await prisma.reminderJobLog.create({

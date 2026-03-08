@@ -5,10 +5,22 @@ import { RegisterForm } from "@/components/register-form";
 import { getAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+const oauthErrorMessages: Record<string, string> = {
+  oauth_not_configured:
+    "OAuth is not configured yet. Ask your admin to set STYTCH_PUBLIC_TOKEN and redirect URLs.",
+  oauth_email_missing:
+    "Your OAuth account did not provide a verified email. Use OTP registration instead.",
+  oauth_no_workspace_account:
+    "No existing workspace account matched that OAuth identity. Continue creating a workspace below.",
+  invite_invalid: "Invite is invalid or expired.",
+  invite_email_mismatch: "Invite email does not match the OAuth account.",
+  oauth_failed: "OAuth registration failed. Try again or use email OTP.",
+};
+
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ invite?: string; email?: string }>;
+  searchParams: Promise<{ invite?: string; email?: string; error?: string }>;
 }) {
   const auth = await getAuth();
   if (auth) {
@@ -17,6 +29,7 @@ export default async function RegisterPage({
 
   const params = await searchParams;
   const inviteToken = params.invite;
+  const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
   const invite =
     inviteToken
       ? await prisma.workspaceInvite.findFirst({
@@ -67,12 +80,17 @@ export default async function RegisterPage({
           <p className="kicker mb-2">New workspace</p>
           <h2 className="mb-1 text-3xl font-semibold">Create TrustLoop account</h2>
           <p className="mb-6 text-sm text-slate-600">
-            Start with your work email and verify ownership with a one-time code.
+            Start with Google/GitHub OAuth or verify ownership with a one-time code.
           </p>
 
           {inviteToken && !invite ? (
             <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               Invite link is invalid or expired. Request a new invite from your workspace owner.
+            </p>
+          ) : null}
+          {errorMessage ? (
+            <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              {errorMessage}
             </p>
           ) : null}
 

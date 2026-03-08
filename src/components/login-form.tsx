@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { OAuthButtons } from "@/components/oauth-buttons";
 
 export function LoginForm() {
   const router = useRouter();
@@ -76,6 +77,14 @@ export function LoginForm() {
 
   return (
     <div className="space-y-4">
+      <OAuthButtons mode="login" disabled={submitting} />
+
+      <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span>or use email OTP</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
       <form className="space-y-4" onSubmit={startChallenge}>
         <div>
           <label className="mb-1 block text-sm font-medium" htmlFor="email">
