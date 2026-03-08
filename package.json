@@ -55,6 +55,7 @@
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "dodopayments": "^2.23.2",
+    "dodopayments-checkout": "^1.8.0",
     "framer-motion": "^12.35.1",
     "fumadocs-core": "^16.6.10",
     "fumadocs-mdx": "^14.2.9",
