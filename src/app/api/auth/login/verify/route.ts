@@ -46,14 +46,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
 
       if (existingByEmail) {
-        await prisma.user
-          .update({
+        try {
+          await prisma.user.update({
             where: { id: existingByEmail.id },
             data: {
               stytchUserId: authResult.stytchUserId,
             },
-          })
-          .catch(() => null);
+          });
+        } catch (error) {
+          log.auth.warn("Failed to backfill Stytch user ID during login verify", {
+            methodId: parsed.data.methodId,
+            userId: existingByEmail.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
         user = existingByEmail;
       }
     }

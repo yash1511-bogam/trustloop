@@ -6,6 +6,7 @@ import { badRequest, notFound, quotaExceeded } from "@/lib/http";
 import { AiProviderError, generateIncidentTriage } from "@/lib/ai/service";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { enqueueReminder } from "@/lib/queue";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { postIncidentAlert } from "@/lib/slack";
@@ -161,15 +162,25 @@ export async function POST(
 
   if (workspace?.slackBotToken && workspace.slackChannelId) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const alert = await postIncidentAlert({
-      botToken: decryptSecret(workspace.slackBotToken),
-      channelId: workspace.slackChannelId,
-      incidentTitle: incident.title,
-      incidentId: incident.id,
-      severity: triage.severity,
-      summary: triage.summary,
-      url: `${appUrl.replace(/\/$/, "")}/incidents/${incident.id}`,
-    }).catch(() => null);
+    let alert: Awaited<ReturnType<typeof postIncidentAlert>> | null = null;
+    try {
+      alert = await postIncidentAlert({
+        botToken: decryptSecret(workspace.slackBotToken),
+        channelId: workspace.slackChannelId,
+        incidentTitle: incident.title,
+        incidentId: incident.id,
+        severity: triage.severity,
+        summary: triage.summary,
+        url: `${appUrl.replace(/\/$/, "")}/incidents/${incident.id}`,
+      });
+    } catch (error) {
+      log.app.error("Failed to post Slack incident alert after triage", {
+        workspaceId: auth.workspaceId,
+        incidentId: incident.id,
+        channelId: workspace.slackChannelId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     if (alert?.ts) {
       await prisma.incidentEvent.create({

@@ -177,19 +177,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     await redisDelete(pendingRegisterKey(parsed.data.methodId));
 
-    await sendWelcomeEmail({
-      workspaceId: created.workspace.id,
-      toEmail: created.user.email,
-      workspaceName: created.workspace.name,
-      userName: created.user.name,
-    }).catch(() => null);
+    try {
+      await sendWelcomeEmail({
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        workspaceName: created.workspace.name,
+        userName: created.user.name,
+      });
+    } catch (error) {
+      log.auth.error("Failed to send post-registration welcome email", {
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
-    await sendGettingStartedGuideEmail({
-      workspaceId: created.workspace.id,
-      toEmail: created.user.email,
-      workspaceName: created.workspace.name,
-      userName: created.user.name,
-    }).catch(() => null);
+    try {
+      await sendGettingStartedGuideEmail({
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        workspaceName: created.workspace.name,
+        userName: created.user.name,
+      });
+    } catch (error) {
+      log.auth.error("Failed to send post-registration getting started email", {
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     const response = NextResponse.json({
       user: {

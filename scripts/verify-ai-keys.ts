@@ -3,6 +3,7 @@ import { Role } from "@prisma/client";
 import { testProviderKey } from "../src/lib/ai/service";
 import { decryptSecret } from "../src/lib/encryption";
 import { sendAiKeyHealthAlertEmail } from "../src/lib/email";
+import log from "../src/lib/logger";
 import { prisma } from "../src/lib/prisma";
 
 async function run(): Promise<void> {
@@ -38,12 +39,21 @@ async function run(): Promise<void> {
 
     if (!tested.success) {
       for (const owner of key.workspace.users) {
-        await sendAiKeyHealthAlertEmail({
-          workspaceId: key.workspaceId,
-          toEmail: owner.email,
-          provider: key.provider,
-          detail: tested.message,
-        }).catch(() => null);
+        try {
+          await sendAiKeyHealthAlertEmail({
+            workspaceId: key.workspaceId,
+            toEmail: owner.email,
+            provider: key.provider,
+            detail: tested.message,
+          });
+        } catch (error) {
+          log.app.error("Failed to send AI key health alert email from script", {
+            workspaceId: key.workspaceId,
+            provider: key.provider,
+            toEmail: owner.email,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
     }
   }

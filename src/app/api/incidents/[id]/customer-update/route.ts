@@ -5,6 +5,7 @@ import { decryptSecret } from "@/lib/encryption";
 import { badRequest, notFound, quotaExceeded } from "@/lib/http";
 import { AiProviderError, generateCustomerUpdateDraft } from "@/lib/ai/service";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { postSlackMessage } from "@/lib/slack";
@@ -159,12 +160,22 @@ export async function POST(
       threadTs = parsed.slackThreadTs;
     }
 
-    await postSlackMessage({
-      botToken: decryptSecret(workspace.slackBotToken),
-      channelId: workspace.slackChannelId,
-      threadTs,
-      text: `Customer update draft for *${incident.title}*:\n${draft}`,
-    }).catch(() => null);
+    try {
+      await postSlackMessage({
+        botToken: decryptSecret(workspace.slackBotToken),
+        channelId: workspace.slackChannelId,
+        threadTs,
+        text: `Customer update draft for *${incident.title}*:\n${draft}`,
+      });
+    } catch (error) {
+      log.app.error("Failed to post Slack customer update draft", {
+        workspaceId: auth.workspaceId,
+        incidentId: incident.id,
+        channelId: workspace.slackChannelId,
+        threadTs: threadTs ?? null,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   await consumeWorkspaceQuota(auth.workspaceId, "customer_updates", 1);

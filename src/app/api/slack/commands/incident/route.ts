@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptSecret } from "@/lib/encryption";
 import { unauthorized } from "@/lib/http";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { openSlackIncidentModal, verifySlackRequestSignature } from "@/lib/slack";
 
@@ -40,10 +41,22 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  await openSlackIncidentModal({
-    botToken: decryptSecret(workspace.slackBotToken),
-    triggerId,
-  }).catch(() => null);
+  try {
+    await openSlackIncidentModal({
+      botToken: decryptSecret(workspace.slackBotToken),
+      triggerId,
+    });
+  } catch (error) {
+    log.app.error("Failed to open Slack incident modal", {
+      teamId,
+      triggerId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json({
+      response_type: "ephemeral",
+      text: "Unable to open TrustLoop incident modal right now. Please try again.",
+    });
+  }
 
   return new NextResponse("", { status: 200 });
 }

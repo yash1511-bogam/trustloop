@@ -6,6 +6,7 @@ import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { sendWorkspaceInviteEmail } from "@/lib/email";
 import { badRequest, forbidden, notFound } from "@/lib/http";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 const createSchema = z.object({
@@ -110,14 +111,24 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const joinUrl = `${appUrl.replace(/\/$/, "")}/join?token=${encodeURIComponent(token)}`;
 
-  await sendWorkspaceInviteEmail({
-    workspaceId: auth.workspaceId,
-    toEmail: invite.email,
-    inviterName: auth.user.name,
-    workspaceName: auth.user.workspaceName,
-    role: invite.role,
-    joinUrl,
-  }).catch(() => null);
+  try {
+    await sendWorkspaceInviteEmail({
+      workspaceId: auth.workspaceId,
+      toEmail: invite.email,
+      inviterName: auth.user.name,
+      workspaceName: auth.user.workspaceName,
+      role: invite.role,
+      joinUrl,
+    });
+  } catch (error) {
+    log.app.error("Failed to send workspace invite email", {
+      workspaceId: auth.workspaceId,
+      inviteId: invite.id,
+      toEmail: invite.email,
+      role: invite.role,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   return NextResponse.json(
     {

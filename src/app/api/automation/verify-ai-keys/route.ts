@@ -6,6 +6,7 @@ import { testProviderKey } from "@/lib/ai/service";
 import { decryptSecret } from "@/lib/encryption";
 import { sendAiKeyHealthAlertEmail } from "@/lib/email";
 import { forbidden } from "@/lib/http";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -78,12 +79,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!tested.success) {
       const recipients = key.workspace.users.map((user) => user.email);
       for (const email of recipients) {
-        await sendAiKeyHealthAlertEmail({
-          workspaceId: key.workspaceId,
-          toEmail: email,
-          provider: key.provider,
-          detail: tested.message,
-        }).catch(() => null);
+        try {
+          await sendAiKeyHealthAlertEmail({
+            workspaceId: key.workspaceId,
+            toEmail: email,
+            provider: key.provider,
+            detail: tested.message,
+          });
+        } catch (error) {
+          log.app.error("Failed to send AI key health alert email", {
+            workspaceId: key.workspaceId,
+            provider: key.provider,
+            toEmail: email,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
     }
 

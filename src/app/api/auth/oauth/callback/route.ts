@@ -3,6 +3,7 @@ import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
 import { setSessionCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateOAuthToken } from "@/lib/stytch";
 
@@ -128,14 +129,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     if (existing) {
       if (existing.stytchUserId !== authResult.stytchUserId) {
-        await prisma.user
-          .update({
+        try {
+          await prisma.user.update({
             where: { id: existing.id },
             data: {
               stytchUserId: authResult.stytchUserId,
             },
-          })
-          .catch(() => null);
+          });
+        } catch (error) {
+          log.auth.warn("Failed to backfill Stytch user ID during OAuth callback", {
+            userId: existing.id,
+            intent,
+            email,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
 
       const response = buildRedirect(request, "/dashboard");
@@ -249,18 +257,36 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return { user, workspace };
     });
 
-    await sendWelcomeEmail({
-      workspaceId: created.workspace.id,
-      toEmail: created.user.email,
-      workspaceName: created.workspace.name,
-      userName: created.user.name,
-    }).catch(() => null);
-    await sendGettingStartedGuideEmail({
-      workspaceId: created.workspace.id,
-      toEmail: created.user.email,
-      workspaceName: created.workspace.name,
-      userName: created.user.name,
-    }).catch(() => null);
+    try {
+      await sendWelcomeEmail({
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        workspaceName: created.workspace.name,
+        userName: created.user.name,
+      });
+    } catch (error) {
+      log.auth.error("Failed to send OAuth welcome email", {
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        intent,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    try {
+      await sendGettingStartedGuideEmail({
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        workspaceName: created.workspace.name,
+        userName: created.user.name,
+      });
+    } catch (error) {
+      log.auth.error("Failed to send OAuth getting started email", {
+        workspaceId: created.workspace.id,
+        toEmail: created.user.email,
+        intent,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     const response = buildRedirect(request, "/dashboard");
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
@@ -268,6 +294,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "oauth_failed";
+    log.auth.error("OAuth callback failed", {
+      intent,
+      inviteToken: inviteToken ?? null,
+      error: message,
+    });
     const errorCode =
       message === "invite_invalid" ||
       message === "invite_email_mismatch" ||

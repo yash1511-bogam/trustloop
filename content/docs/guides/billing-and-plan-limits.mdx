@@ -1,0 +1,71 @@
+---
+title: Billing and Plan Limits
+description: Understand plan quotas, billing lifecycle states, and grace-period automation in TrustLoop.
+---
+
+<a id="top" />
+
+[Back to docs home](/docs)
+
+# Billing and Plan Limits
+
+TrustLoop billing uses Dodo Payments subscriptions with workspace quota enforcement.
+
+## Plan Quotas
+
+Daily default quotas by plan tier:
+
+| Plan | Incidents/day | Triage/day | Customer updates/day | Reminder emails/day |
+| --- | ---: | ---: | ---: | ---: |
+| Starter | 50 | 100 | 100 | 120 |
+| Pro | 200 | 300 | 300 | 500 |
+| Enterprise | 1,000,000 | 1,000,000 | 1,000,000 | 1,000,000 |
+
+Quota metrics are enforced server-side per workspace and reset daily (UTC).
+
+## Subscription Status Lifecycle
+
+Workspace billing status transitions include:
+
+- `NONE`
+- `PENDING`
+- `ACTIVE`
+- `PAST_DUE`
+- `CANCELED`
+
+Dodo webhook events drive these transitions and update workspace plan tiers.
+
+## Failure and Grace Automation
+
+When payment fails:
+
+1. Subscription status moves to `PAST_DUE`.
+2. Reminder emails are sent to owner/manager recipients.
+3. If not recovered within 48 hours, the plan downgrades to `starter` and status becomes `CANCELED`.
+
+Automation endpoint used by scheduler:
+
+- `POST /api/automation/process-billing-grace`
+
+## Checkout Flow
+
+Settings -> Billing starts checkout with:
+
+- `POST /api/billing/checkout`
+- Plan selection (`starter`, `pro`, `enterprise`)
+- Optional coupon code
+
+Billing webhooks are handled at:
+
+- `POST /api/billing/webhook`
+
+## Operational Visibility
+
+Billing processing, duplicate detection, reminder sends, and cancellation actions are structured-logged through the billing channel.
+
+## Related Guides
+
+- [Getting Started](/docs/guides/getting-started)
+- [Incident Workflow](/docs/guides/incident-workflow)
+
+[Back to top](#top)

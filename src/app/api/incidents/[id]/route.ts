@@ -10,6 +10,7 @@ import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { badRequest, forbidden, notFound } from "@/lib/http";
+import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { sendOwnerAssignedEmail } from "@/lib/email";
@@ -193,13 +194,23 @@ export async function PATCH(
       },
     });
     if (newOwner?.email) {
-      await sendOwnerAssignedEmail({
-        workspaceId: auth.workspaceId,
-        incidentId: existing.id,
-        toEmail: newOwner.email,
-        ownerName: newOwner.name,
-        incidentTitle: updated.title,
-      }).catch(() => null);
+      try {
+        await sendOwnerAssignedEmail({
+          workspaceId: auth.workspaceId,
+          incidentId: existing.id,
+          toEmail: newOwner.email,
+          ownerName: newOwner.name,
+          incidentTitle: updated.title,
+        });
+      } catch (error) {
+        log.app.error("Failed to send owner assignment email", {
+          workspaceId: auth.workspaceId,
+          incidentId: existing.id,
+          ownerUserId: parsed.data.ownerUserId,
+          toEmail: newOwner.email,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
 
