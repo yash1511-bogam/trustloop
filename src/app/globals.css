@@ -85,6 +85,141 @@ summary:focus-visible {
   gap: 24px;
 }
 
+.app-main-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px 24px 32px;
+}
+
+.menu-mobile-bar {
+  display: none;
+  position: sticky;
+  top: 8px;
+  z-index: 50;
+  margin-bottom: 16px;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(10, 10, 12, 0.96);
+  padding: 8px 10px;
+  backdrop-filter: blur(8px);
+}
+
+.menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  width: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.menu-bar-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  border: 0;
+  background: rgba(2, 2, 3, 0.65);
+  padding: 0;
+}
+
+.menu-drawer {
+  position: fixed;
+  left: 24px;
+  top: 24px;
+  bottom: 24px;
+  z-index: 40;
+  width: 260px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-drawer-desktop {
+  transform: translateX(0);
+}
+
+.menu-drawer-mobile {
+  top: 74px;
+  transform: translateX(calc(-100% - 24px));
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.menu-drawer-mobile.menu-drawer-open {
+  transform: translateX(0);
+}
+
+.menu-drawer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menu-drawer-top-compact {
+  justify-content: center;
+}
+
+.menu-drawer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.menu-drawer-meta {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--bg-elev);
+}
+
+.menu-drawer-compact {
+  width: 72px;
+  padding: 10px 8px;
+}
+
+.menu-drawer-footer {
+  display: grid;
+  gap: 12px;
+}
+
+.menu-content {
+  min-height: calc(100vh - 120px);
+  transition: margin-left 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.menu-content-open {
+  margin-left: 288px;
+}
+
+.menu-content-compact {
+  margin-left: 96px;
+}
+
 .app-shell {
   display: grid;
   gap: 32px;
@@ -102,6 +237,11 @@ summary:focus-visible {
 .app-nav-links {
   display: grid;
   gap: 8px; /* 8pt grid */
+}
+
+.app-nav-links-compact {
+  justify-items: center;
+  gap: 6px;
 }
 
 .app-nav-link {
@@ -125,6 +265,51 @@ summary:focus-visible {
 .app-nav-link-active {
   background: var(--bg-elev-strong);
   color: var(--ink);
+}
+
+.app-nav-link-icon {
+  justify-content: center;
+  width: 48px;
+  min-width: 48px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.app-nav-link-icon:hover {
+  transform: none;
+}
+
+.settings-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-subnav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: transparent;
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+}
+
+.settings-subnav-link:hover {
+  background: var(--bg-elev);
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+.settings-subnav-link-active {
+  background: var(--bg-elev-strong);
+  color: var(--ink);
+  border-color: var(--line-strong);
 }
 
 .surface {
@@ -472,6 +657,29 @@ details > summary::-webkit-details-marker {
 }
 
 @media (max-width: 1024px) {
+  .app-main-shell {
+    padding: 12px 16px 24px;
+  }
+
+  .menu-mobile-bar {
+    display: inline-flex;
+  }
+
+  .menu-drawer {
+    left: 16px;
+    top: 74px;
+    bottom: 16px;
+    width: min(82vw, 300px);
+    transform: translateX(calc(-100% - 24px));
+  }
+
+  .menu-content,
+  .menu-content-open,
+  .menu-content-compact {
+    margin-left: 0;
+    min-height: calc(100vh - 110px);
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }

@@ -1,37 +1,6 @@
-import Link from "next/link";
-import { Bot, Building2, CreditCard, Users } from "lucide-react";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { listWebhookIntegrations } from "@/lib/webhook-integration";
-
-const cards = [
-  {
-    href: "/settings/ai",
-    title: "AI & API Keys",
-    description:
-      "Configure OpenAI, Gemini, Anthropic, workflow routing, and workspace API tokens.",
-    icon: Bot,
-  },
-  {
-    href: "/settings/workspace",
-    title: "Workspace",
-    description:
-      "Control quotas, Slack/status settings, SSO metadata, and inbound webhook integrations.",
-    icon: Building2,
-  },
-  {
-    href: "/settings/team",
-    title: "Team",
-    description: "Manage invites, roles, and personal on-call profile information.",
-    icon: Users,
-  },
-  {
-    href: "/settings/billing",
-    title: "Billing",
-    description: "Manage Dodo subscription status, coupons, and usage against daily quotas.",
-    icon: CreditCard,
-  },
-] as const;
 
 export default async function SettingsOverviewPage() {
   const auth = await requireAuth();
@@ -114,27 +83,10 @@ export default async function SettingsOverviewPage() {
       </section>
 
       <section className="surface p-6">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-slate-100">Open a settings area</h2>
-          <p className="mt-1 text-sm text-neutral-500">Each section has its own page and save cycle.</p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          {cards.map((card) => (
-            <Link
-              className="panel-card group p-6 transition-transform duration-200 hover:-translate-y-1"
-              href={card.href}
-              key={card.href}
-            >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[rgba(8,145,178,0.2)] text-cyan-300">
-                <card.icon className="h-5 w-5" />
-              </span>
-              <h3 className="mt-4 text-lg font-semibold text-slate-100">{card.title}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-neutral-500">{card.description}</p>
-            </Link>
-          ))}
-        </div>
-
+        <h2 className="text-xl font-semibold text-slate-100">Navigation</h2>
+        <p className="mt-2 text-sm text-neutral-500">
+          Use the left menu bar to open AI & API Keys, Workspace, Team, and Billing pages.
+        </p>
         <p className="mt-6 text-sm text-neutral-500">
           Current plan tier: <span className="font-semibold text-slate-200">{workspace.planTier}</span>
         </p>

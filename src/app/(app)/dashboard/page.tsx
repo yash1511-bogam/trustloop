@@ -80,8 +80,7 @@ export default async function DashboardPage() {
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-semibold text-slate-100">Executive read-model snapshot</h3>
-            <p className="text-sm text-neutral-500">Cached analytics summary for leadership.
-            </p>
+            <p className="text-sm text-neutral-500">Cached analytics summary for leadership.</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs text-neutral-500">
             <Clock3 className="h-3.5 w-3.5" />
