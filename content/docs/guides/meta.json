@@ -1,0 +1,9 @@
+{
+  "title": "Guides",
+  "defaultOpen": true,
+  "pages": [
+    "getting-started",
+    "documentation-style-and-citations",
+    "navigation-and-backlinks"
+  ]
+}

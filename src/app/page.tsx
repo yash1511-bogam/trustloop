@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
 import { MarketingLanding } from "@/components/marketing-landing";
-import { getAuth } from "@/lib/auth";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
 
@@ -58,11 +56,6 @@ const faqSchema = {
 };
 
 export default async function LandingPage() {
-  const auth = await getAuth();
-  if (auth) {
-    redirect("/dashboard");
-  }
-
   return (
     <>
       <script

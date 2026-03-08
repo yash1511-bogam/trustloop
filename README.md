@@ -13,6 +13,7 @@ TrustLoop is a domain-specific SaaS for AI software companies to run customer-fa
 - Billing via Dodo Payments subscriptions + quota plan mapping
 - Executive analytics charts and compliance exports (CSV + incident PDF)
 - PWA manifest/service worker scaffold for installable app behavior
+- Public documentation site at `/docs` (Fumadocs with sidebar navigation, citations, and backlinks)
 
 ## Tech Stack
 - Next.js 16 (App Router), React 19
@@ -40,6 +41,7 @@ From `trustloop/`:
 - Dashboard: `http://localhost:3000/dashboard`
 - Executive: `http://localhost:3000/executive`
 - Settings: `http://localhost:3000/settings`
+- Docs: `http://localhost:3000/docs`
 
 ## Environment Variables
 Copy `.env.example` to `.env` and fill values.

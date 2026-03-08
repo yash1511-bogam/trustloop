@@ -256,6 +256,9 @@ export function MarketingLanding() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <Link className="btn btn-ghost hidden md:inline-flex" href="/docs">
+              Documentation
+            </Link>
             <Link className="btn btn-ghost hidden sm:inline-flex" href="/login">
               Sign in
             </Link>
@@ -303,6 +306,9 @@ export function MarketingLanding() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </motionDev.div>
+              <Link className="btn btn-ghost" href="/docs">
+                Read docs
+              </Link>
               <Link className="btn btn-ghost" href="#pricing">
                 See pricing
               </Link>
@@ -602,6 +608,9 @@ export function MarketingLanding() {
               </li>
               <li>
                 <a href="#pricing">Pricing</a>
+              </li>
+              <li>
+                <Link href="/docs">Documentation</Link>
               </li>
             </ul>
           </div>
