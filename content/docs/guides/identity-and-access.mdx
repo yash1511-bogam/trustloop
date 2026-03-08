@@ -1,0 +1,129 @@
+---
+title: Sign In and Access
+description: Use email codes, social login, SAML SSO, invites, and recovery paths to get into the right TrustLoop workspace.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+# Sign In and Access
+
+TrustLoop supports more than one way to get into a workspace. Use the method your team already set up.
+
+## Sign-in options
+
+### Email verification code
+
+Use this when you sign in with your work email and receive a one-time code.
+
+Best for:
+
+- First-time access
+- Simple passwordless sign-in
+- Recovery when you no longer trust an existing session
+
+### Google or GitHub
+
+Use this when you want to sign in with the same work identity you use elsewhere.
+
+Best for:
+
+- Fast sign-in
+- New workspace creation from the register page
+- Existing workspaces where your email already matches a user record
+
+### SAML SSO
+
+Use this when your company manages access through an identity provider.
+
+Best for:
+
+- Enterprise workspaces
+- Teams that already use centralized sign-in
+- Organizations that want access to follow company identity policies
+
+### Invite links
+
+Use this when a workspace owner or manager invited you by email.
+
+Invite links take you into the correct workspace and help TrustLoop match your email to the invite.
+
+## Common access tasks
+
+### I want to create a new workspace
+
+Open **Register** and choose one of these:
+
+- Google
+- GitHub
+- SAML SSO if your organization is already configured
+- Email verification code
+
+### I already have an account and want to sign in
+
+Open **Login** and choose the same identity method you used before whenever possible.
+
+### I received an invite
+
+Open the invite link first. From there, TrustLoop will send you to the correct registration flow.
+
+### I lost access
+
+Open **Forgot access** and request a recovery code with your work email.
+
+## What usually happens after sign-in
+
+- TrustLoop matches you to an existing workspace account by identity or email.
+- If your workspace is missing a slug, TrustLoop fills it in automatically during successful access flows.
+- After a successful sign-in or sign-up, you should land on the dashboard.
+
+## If you are stuck
+
+### I used Google or GitHub and came back to the sign-in page instead of the dashboard
+
+Try the sign-in again from the same page where you started. TrustLoop expects the social flow to return there and then completes the redirect into the dashboard.
+
+If it still fails, check whether your workspace account already exists or whether you should be using **Register** instead of **Login**.
+
+### I used social sign-in and got a message about no workspace account
+
+This usually means your email was valid, but TrustLoop could not match it to an existing workspace user.
+
+What to do next:
+
+- Use **Register** if you are creating a new workspace
+- Ask a workspace owner to invite you if you should be joining an existing workspace
+
+### I did not receive the email code
+
+Check:
+
+- Spam or junk folders
+- Whether you used the same work email that belongs to your workspace
+- Whether your team expects you to use SAML SSO instead of email code
+
+<Callout type="info" title="Auth emails come from the sign-in provider">
+  Verification codes for sign-in, registration, and recovery are sent by Stytch. If the code email is missing, focus on the inbox and identity flow rather than the workspace billing or reminder email settings.
+</Callout>
+
+### SAML says invite required
+
+Your identity was valid, but your workspace account has not been provisioned yet. Ask a workspace owner or manager to send you an invite.
+
+### My invite link says invalid or expired
+
+Ask the workspace owner or manager to revoke the old invite and send a new one.
+
+### I can sign in, but the wrong workspace opens
+
+Use the email or identity method that matches the workspace you were invited to. If your organization uses SAML, start from the workspace slug your admin gave you.
+
+## Tips for admins
+
+- Keep at least one additional owner in the workspace.
+- Use invites instead of shared inboxes.
+- For SAML workspaces, confirm the workspace slug and metadata setup before onboarding a larger group.
+
+## Related guides
+
+- [Getting Started](/docs/guides/getting-started)
+- [Configure Your Workspace](/docs/guides/workspace-administration)

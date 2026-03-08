@@ -1,59 +1,127 @@
 ---
 title: Getting Started
-description: Launch a TrustLoop workspace, configure integrations, and run your first incident workflow.
+description: Set up your workspace after sign-up, connect the essentials, and run a safe first incident test.
 ---
 
-<a id="top" />
-
-[Back to docs home](/docs)
+import { Callout } from "fumadocs-ui/components/callout";
 
 # Getting Started
 
-This guide gets an operations lead from zero to first incident run in one session.
+This guide is for new workspace owners and managers. Follow it after you create a TrustLoop account or accept an invite.
 
-## 1. Create and verify your workspace
+## What to do first
 
-1. Open [Create workspace](/register).
-2. Complete email verification.
-3. Set workspace name and public status slug in **Settings -> Workspace**.
+### 1. Sign in and land on the dashboard
 
-## 2. Configure incident operations defaults
+Use any sign-in method available to you:
 
-1. Open **Settings -> Workspace**.
-2. Enable status page if your team publishes customer-facing updates.
-3. Confirm severity vocabulary (P1/P2/P3) and owner expectations with your support team.
+- Email verification code
+- Google
+- GitHub
+- SAML SSO if your workspace uses it
+- Invite link if you were added by a teammate
 
-## 3. Add AI provider keys (optional but recommended)
+After a successful sign-in, you should land on the dashboard.
 
-1. Open **Settings -> AI**.
-2. Add at least one provider key (OpenAI, Gemini, or Anthropic).
-3. Use the built-in key test action before enabling automated triage.
+### 2. Open the settings area
 
-If no key is configured, TrustLoop still supports manual incident operation with workflow reminders.
+Use the main menu to review these pages:
 
-## 4. Connect external alert sources
+- **AI & API Keys**
+- **Workspace**
+- **Team**
+- **Billing**
 
-TrustLoop supports webhook-driven incident creation from tools like Sentry, Datadog, PagerDuty, and generic webhooks. Start with one source first, then scale.
+You do not need to change everything at once. Start with the items that affect daily incident work.
 
-See [Webhook Integrations](/docs/guides/webhook-integrations) for signed secret headers, example requests, and response behavior.
+## First-time workspace setup
 
-## 5. Run a first incident drill
+### Add at least one AI provider key
 
-1. Create one test incident from your dashboard.
-2. Assign an owner and publish one internal status update.
-3. Confirm reminders, timeline events, and dashboard trend refresh.
+Open **Settings -> AI & API Keys** and add one active provider key.
 
-## 6. Validate billing and lifecycle controls
+TrustLoop can work without AI assistance, but AI triage and AI-written customer updates will stay unavailable until a provider key is active.
 
-1. Open **Settings -> Billing**.
-2. Run checkout in test mode.
-3. Confirm webhook processing, receipt email behavior, and grace-period handling.
+### Confirm your workspace slug
 
-## Internal Backlinks
+Open **Settings -> Workspace** and check the public workspace slug.
 
-- [Webhook Integrations](/docs/guides/webhook-integrations)
-- [API Key Authentication](/docs/guides/api-key-authentication)
-- [Incident Workflow](/docs/guides/incident-workflow)
-- [Billing and Plan Limits](/docs/guides/billing-and-plan-limits)
+The slug matters because it is used for:
 
-[Back to top](#top)
+- Your public status page URL
+- Some workspace-specific sign-in flows such as SAML SSO
+- External references when your team shares the public incident stream
+
+### Decide whether to enable the public status page
+
+If you want customer-facing updates, turn on the public status page in **Settings -> Workspace**.
+
+### Invite the right people
+
+Open **Settings -> Team** and invite the people who need access.
+
+Recommended minimum setup:
+
+- At least one additional owner or manager
+- The incident responders who will own incidents day to day
+- Phone numbers for anyone who should receive urgent `P1` escalation messages
+
+### Review billing and usage limits
+
+Open **Settings -> Billing** to confirm your current plan and usage allowances.
+
+## Your first live test
+
+Run a short internal test before you rely on the workspace during a real incident.
+
+### Recommended test flow
+
+1. Create a sample incident from the dashboard.
+2. Assign an owner.
+3. Run AI triage.
+4. Draft a customer update.
+5. Publish one visible status update if your status page is enabled.
+6. Resolve the incident.
+7. Export the incident if your team needs an audit copy.
+
+## What success looks like
+
+You are ready to use TrustLoop when all of the following are true:
+
+- At least one AI key is active.
+- Your workspace slug is set.
+- Owners and responders have access.
+- At least one alert source or intake path is ready.
+- You have completed one practice incident end to end.
+
+## If you are stuck
+
+### I signed up but cannot get into the dashboard
+
+Read [Sign In and Access](/docs/guides/identity-and-access).
+
+### AI actions are missing or failing
+
+Go to **Settings -> AI & API Keys** and check that:
+
+- A provider key was saved
+- The key test passes
+- The key is still marked active
+
+### The status page is not available
+
+Go to **Settings -> Workspace** and confirm:
+
+- A workspace slug is present
+- Public status page is enabled
+- You have already published a visible update if you expect content to appear
+
+<Callout type="info" title="Start small">
+  The fastest successful rollout is usually one workspace, one AI provider key, one alert source, and one internal incident drill. You can expand after that without overwhelming the team.
+</Callout>
+
+## Related guides
+
+- [Sign In and Access](/docs/guides/identity-and-access)
+- [Connect Integrations](/docs/guides/integrations-and-ingestion)
+- [Run an Incident](/docs/guides/incident-operations)

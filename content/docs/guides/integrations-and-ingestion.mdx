@@ -1,0 +1,123 @@
+---
+title: Connect Integrations
+description: Send incidents into TrustLoop from monitoring tools, Slack, or automation clients, and understand the most common setup mistakes.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+import { CodeBlock, Pre } from "fumadocs-ui/components/codeblock";
+
+# Connect Integrations
+
+TrustLoop is most useful when incidents can enter the workspace without manual copy-paste. Start with one integration, confirm it works, and then add the rest.
+
+## Your main integration choices
+
+### Webhooks
+
+Best when your monitoring or product tools can send HTTP requests.
+
+Supported webhook endpoints:
+
+- Datadog
+- PagerDuty
+- Sentry
+- Langfuse
+- Helicone
+- Generic JSON
+
+### Workspace API keys
+
+Best when you want your own scripts, services, or automation to talk to TrustLoop directly.
+
+### Slack
+
+Best when responders already spend a lot of time in Slack and want incident creation plus alert visibility there.
+
+## Webhook setup checklist
+
+1. Open **Settings -> Workspace**.
+2. Go to the integrations area.
+3. Choose the source you want to connect.
+4. Save or rotate the secret.
+5. Copy the endpoint and required headers into your external tool.
+6. Send one test event.
+
+## Webhook example
+
+Use the generic route for a simple first test.
+
+<CodeBlock title="Send a signed generic webhook test event">
+  <Pre>
+    <code className="language-bash">{`curl -X POST https://your-trustloop-app.com/api/webhooks/generic \
+  -H 'Content-Type: application/json' \
+  -H 'x-trustloop-workspace: your-workspace-slug' \
+  -H 'x-trustloop-timestamp: 1762675200' \
+  -H 'x-trustloop-signature: sha256=<calculated-hmac>' \
+  -d '{
+    "title": "Spike in failed AI responses",
+    "description": "Customer-visible answer quality dropped below the expected threshold.",
+    "severity": "P1",
+    "sourceRef": "obs-incident-420"
+  }'`}</code>
+  </Pre>
+</CodeBlock>
+
+## API key usage
+
+Workspace API keys are generated in **Settings -> AI & API Keys**.
+
+Use them when:
+
+- You want to create incidents from your own systems
+- You want trusted internal automation to update incidents
+- You do not want to rely on a session cookie
+
+<CodeBlock title="Authorization header for API-key requests">
+  <Pre>
+    <code className="language-http">{`Authorization: Bearer sk-tl-xxxxxxxx.your-secret-value`}</code>
+  </Pre>
+</CodeBlock>
+
+## Slack setup checklist
+
+1. Open **Settings -> Workspace**.
+2. Connect the Slack app.
+3. Save the Slack incident channel ID.
+4. Run a test incident from Slack or from TrustLoop.
+
+Once Slack is connected:
+
+- Incident creation can start from Slack
+- Triage alerts can post into your configured channel
+- Customer-update drafts can continue in the same Slack thread when thread context is available
+
+## If you are stuck
+
+### My webhook call returns unauthorized
+
+Check:
+
+- The workspace slug or ID in the headers
+- The secret you saved in TrustLoop
+- The signature format and timestamp window
+
+### My webhook created a duplicate warning instead of a new incident
+
+This usually means your payload included the same external reference as an existing incident. TrustLoop uses that reference to prevent accidental duplicates.
+
+### My API key worked once and then stopped
+
+Go to **Settings -> AI & API Keys** and confirm the key is still active.
+
+### Slack connected, but no alerts are posting
+
+Check **Settings -> Workspace** and make sure the Slack incident channel ID is saved.
+
+<Callout type="info" title="Start with one source">
+  The best rollout pattern is one working alert source, one successful test incident, and one confirmed owner notification. After that, add the rest of your integrations.
+</Callout>
+
+## Related guides
+
+- [Run an Incident](/docs/guides/incident-operations)
+- [Configure Your Workspace](/docs/guides/workspace-administration)

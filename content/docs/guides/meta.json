@@ -3,9 +3,10 @@
   "defaultOpen": true,
   "pages": [
     "getting-started",
-    "webhook-integrations",
-    "api-key-authentication",
-    "incident-workflow",
-    "billing-and-plan-limits"
+    "identity-and-access",
+    "incident-operations",
+    "integrations-and-ingestion",
+    "workspace-administration",
+    "billing-and-automation"
   ]
 }

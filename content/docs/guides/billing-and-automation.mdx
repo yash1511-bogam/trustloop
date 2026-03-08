@@ -1,0 +1,102 @@
+---
+title: Plans, Billing, and Alerts
+description: Understand plan limits, payment recovery behavior, reminders, and how TrustLoop escalates urgent incidents.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+# Plans, Billing, and Alerts
+
+This guide helps you understand what happens when you hit plan limits, when payment fails, and when TrustLoop is trying to reach the right people during an active incident.
+
+## Plan limits
+
+TrustLoop tracks usage against your workspace plan.
+
+### Included daily allowances
+
+| Plan | Incidents | AI triage runs | Customer updates | Reminder emails |
+| --- | ---: | ---: | ---: | ---: |
+| Starter | 50 | 100 | 100 | 120 |
+| Pro | 200 | 300 | 300 | 500 |
+| Enterprise | 1,000,000 | 1,000,000 | 1,000,000 | 1,000,000 |
+
+If your team depends heavily on AI triage, customer-update drafting, or automated reminders, review this page before you hit those limits during a busy incident period.
+
+## What happens when payment fails
+
+TrustLoop does not immediately cut the workspace off.
+
+### Expected payment-failure flow
+
+1. Billing moves into a past-due state.
+2. Workspace owners and managers receive payment reminder emails.
+3. If payment is still not fixed after 48 hours, TrustLoop downgrades the workspace to Starter.
+
+This means you should treat a payment-failure email as an operational issue, not just an accounting note.
+
+## How reminder alerts work
+
+TrustLoop can continue nudging the team while an incident stays open.
+
+### Standard reminder behavior
+
+- Open incidents can trigger reminder emails to the owner.
+- The exact reminder timing depends on workspace settings.
+- Reminders stop once the incident is resolved.
+
+### `P1` escalation behavior
+
+For urgent incidents, TrustLoop can go beyond email.
+
+It may use:
+
+- The assigned owner
+- Managers or owners in the workspace
+- On-call rotation settings when enabled
+- Browser push notifications
+- SMS when phone numbers are available
+
+## What to check when alerts do not fire
+
+### No reminder email arrived
+
+Check:
+
+- The incident still has an owner
+- The incident is still open
+- The workspace has not exhausted reminder-email allowance
+
+### No SMS arrived for a `P1`
+
+Check:
+
+- The owner or on-call responders have phone numbers saved
+- The workspace is configured for urgent escalation
+
+### No push notification arrived
+
+Check:
+
+- Push notifications were enabled in the browser
+- Notification permission was granted
+- The browser is still subscribed for your account
+
+## Billing page checklist
+
+Open **Settings -> Billing** when you need to:
+
+- Upgrade or change plans
+- Apply a coupon code
+- Confirm the current billing status
+- Review whether a payment failure was detected
+
+<Callout type="info" title="Know your operational limits before you need them">
+  The safest time to review reminder behavior, plan allowances, and escalation coverage is before a real incident. A short internal drill makes billing and alert gaps visible while the stakes are low.
+</Callout>
+
+## Related guides
+
+- [Getting Started](/docs/guides/getting-started)
+- [Run an Incident](/docs/guides/incident-operations)
+- [Configure Your Workspace](/docs/guides/workspace-administration)

@@ -1,0 +1,135 @@
+---
+title: Run an Incident
+description: Create incidents, assign owners, use AI assistance, publish updates, and close incidents with a clean operational record.
+---
+
+import { Callout } from "fumadocs-ui/components/callout";
+
+# Run an Incident
+
+This guide explains the normal working flow inside TrustLoop once your workspace is ready.
+
+## The core workflow
+
+### 1. Create the incident
+
+You can create incidents from:
+
+- The dashboard form
+- Webhook integrations
+- Slack
+- API-based automation
+
+A good incident title explains what failed. A good description explains impact, urgency, and customer risk.
+
+### 2. Assign an owner
+
+Every incident should have one clear owner as early as possible.
+
+When you assign an owner:
+
+- The incident timeline records the change
+- The owner can receive follow-up reminder emails
+- `P1` escalation can use owner contact details for urgent alerts
+
+### 3. Set the right severity and status
+
+Use severity to show urgency:
+
+- `P1` for urgent, customer-critical failures
+- `P2` for serious but narrower impact
+- `P3` for lower-risk incidents that still need tracking
+
+Use status to show progress:
+
+- `NEW`
+- `INVESTIGATING`
+- `MITIGATED`
+- `RESOLVED`
+
+### 4. Run AI triage
+
+If an AI provider key is active, you can run triage to:
+
+- Classify severity and category
+- Generate a short summary
+- Capture suggested next steps
+
+For `P1` and `P2` incidents, reminder work is queued automatically after triage.
+
+### 5. Draft a customer update
+
+Use the customer-update action when you need clear external communication quickly.
+
+TrustLoop uses the incident summary, current status, and recent timeline to draft the message.
+
+### 6. Publish a visible status update
+
+If your workspace uses the public status page, publish a visible update when customers need to see progress.
+
+### 7. Resolve the incident
+
+Once the issue is closed, mark it resolved so:
+
+- The queue reflects reality
+- Reminder automation stops
+- Reporting and exports stay accurate
+
+## What the dashboard helps you do
+
+The dashboard queue is designed for day-to-day operations.
+
+You can:
+
+- Filter by status, severity, category, and owner
+- Search by title, description, or ticket reference
+- Open incident details quickly
+- Export incident history when needed
+- Refresh reporting snapshots for leadership views
+
+## What the executive view is for
+
+Use the executive page when you want a higher-level view of:
+
+- Open incident pressure
+- `P1` volume
+- Created versus resolved trends
+- Triage coverage
+- Customer-update coverage
+- Reminder failures over time
+
+## If you are stuck
+
+### I cannot run AI triage
+
+Go to **Settings -> AI & API Keys** and check:
+
+- A provider key exists
+- The key is active
+- The key test succeeds
+
+### Customer update drafting is unavailable
+
+Check the same AI key page. Customer updates use the configured workflow route and fall back to the triage route if needed.
+
+### I published an update but do not see it on the public status page
+
+Make sure:
+
+- Public status page is enabled in workspace settings
+- Your workspace slug is set
+- The update was published as visible
+
+### I cannot delete an incident
+
+Your workspace may have compliance mode enabled. In that mode, TrustLoop prevents incident deletion.
+
+<Callout type="info" title="Use a practice incident first">
+  If your team is new to TrustLoop, run one internal test incident from creation to resolution before the first real customer-facing event. It is the fastest way to confirm ownership, AI, notifications, and status publishing all work together.
+</Callout>
+
+## Related guides
+
+- [Connect Integrations](/docs/guides/integrations-and-ingestion)
+- [Configure Your Workspace](/docs/guides/workspace-administration)
+- [Plans, Billing, and Alerts](/docs/guides/billing-and-automation)
