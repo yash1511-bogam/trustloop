@@ -79,7 +79,18 @@ export default async function SettingsPage() {
         slackTeamId: true,
         samlEnabled: true,
         samlMetadataUrl: true,
-        stripeCustomerId: true,
+        billing: {
+          select: {
+            dodoCustomerId: true,
+            dodoSubscriptionId: true,
+            status: true,
+            discountCode: true,
+            lastPaymentAt: true,
+            lastPaymentAmount: true,
+            lastPaymentCurrency: true,
+            paymentFailedAt: true,
+          },
+        },
       },
     }),
     prisma.workspaceApiKey.findMany({
@@ -279,6 +290,20 @@ export default async function SettingsPage() {
               customerUpdatesPerDay: quota.customerUpdatesPerDay,
               reminderEmailsPerDay: quota.reminderEmailsPerDay,
             }}
+            billing={
+              workspace.billing
+                ? {
+                    status: workspace.billing.status,
+                    dodoCustomerId: workspace.billing.dodoCustomerId,
+                    dodoSubscriptionId: workspace.billing.dodoSubscriptionId,
+                    discountCode: workspace.billing.discountCode,
+                    lastPaymentAt: workspace.billing.lastPaymentAt?.toISOString() ?? null,
+                    lastPaymentAmount: workspace.billing.lastPaymentAmount,
+                    lastPaymentCurrency: workspace.billing.lastPaymentCurrency,
+                    paymentFailedAt: workspace.billing.paymentFailedAt?.toISOString() ?? null,
+                  }
+                : null
+            }
           />
         </div>
       </section>

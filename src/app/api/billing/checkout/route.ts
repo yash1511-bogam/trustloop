@@ -1,15 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Role } from "@prisma/client";
+import { BillingSubscriptionStatus, Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { badRequest, forbidden } from "@/lib/http";
+import { dodoClient, dodoProductIdForPlan } from "@/lib/dodo";
 import { prisma } from "@/lib/prisma";
-import { stripeClient, stripePriceIdForPlan } from "@/lib/stripe";
 
 const schema = z.object({
   plan: z.enum(["starter", "pro", "enterprise"]),
+  couponCode: z
+    .string()
+    .trim()
+    .min(2)
+    .max(64)
+    .optional()
+    .nullable(),
 });
+
+function appUrl(): string {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const access = await requireApiAuthAndRateLimit(request);
@@ -37,51 +48,80 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     select: {
       id: true,
       name: true,
-      stripeCustomerId: true,
+      billing: {
+        select: {
+          dodoCustomerId: true,
+        },
+      },
     },
   });
+
   if (!workspace) {
     return forbidden();
   }
 
-  const stripe = stripeClient();
+  const couponCode = parsed.data.couponCode?.trim() || null;
+  const plan = parsed.data.plan;
 
-  let customerId = workspace.stripeCustomerId;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      name: workspace.name,
-      email: auth.user.email,
+  try {
+    const session = await dodoClient().checkoutSessions.create({
+      product_cart: [
+        {
+          product_id: dodoProductIdForPlan(plan),
+          quantity: 1,
+        },
+      ],
+      customer: workspace.billing?.dodoCustomerId
+        ? {
+            customer_id: workspace.billing.dodoCustomerId,
+          }
+        : {
+            email: auth.user.email,
+            name: auth.user.name,
+          },
+      return_url: `${appUrl()}/settings?billing=success`,
+      discount_code: couponCode ?? undefined,
+      feature_flags: {
+        allow_discount_code: true,
+      },
       metadata: {
         workspaceId: workspace.id,
+        plan,
+        actorUserId: auth.user.id,
       },
     });
-    customerId = customer.id;
 
-    await prisma.workspace.update({
-      where: { id: workspace.id },
-      data: {
-        stripeCustomerId: customerId,
+    await prisma.workspaceBilling.upsert({
+      where: { workspaceId: workspace.id },
+      create: {
+        workspaceId: workspace.id,
+        dodoCustomerId: workspace.billing?.dodoCustomerId ?? undefined,
+        dodoCheckoutSessionId: session.session_id,
+        dodoProductId: dodoProductIdForPlan(plan),
+        discountCode: couponCode,
+        status: BillingSubscriptionStatus.PENDING,
+      },
+      update: {
+        dodoCheckoutSessionId: session.session_id,
+        dodoProductId: dodoProductIdForPlan(plan),
+        discountCode: couponCode,
+        status: BillingSubscriptionStatus.PENDING,
       },
     });
-  }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [
+    return NextResponse.json({
+      checkoutUrl: session.checkout_url,
+      sessionId: session.session_id,
+    });
+  } catch (error) {
+    return NextResponse.json(
       {
-        price: stripePriceIdForPlan(parsed.data.plan),
-        quantity: 1,
+        error:
+          error instanceof Error
+            ? `Dodo checkout session failed: ${error.message}`
+            : "Dodo checkout session failed.",
       },
-    ],
-    success_url: `${appUrl.replace(/\/$/, "")}/settings?billing=success`,
-    cancel_url: `${appUrl.replace(/\/$/, "")}/settings?billing=cancel`,
-    metadata: {
-      workspaceId: workspace.id,
-      plan: parsed.data.plan,
-    },
-  });
-
-  return NextResponse.json({ checkoutUrl: session.url });
+      { status: 400 },
+    );
+  }
 }

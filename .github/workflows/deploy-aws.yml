@@ -96,6 +96,13 @@ jobs:
           KEY_ENCRYPTION_SECRET: ${{ secrets.TF_VAR_key_encryption_secret || 'placeholder-key-encryption-secret-123456789' }}
           RESEND_API_KEY: ${{ secrets.TF_VAR_resend_api_key || 're_placeholder' }}
           RESEND_FROM_EMAIL: ${{ secrets.TF_VAR_resend_from_email || 'TrustLoop <onboarding@resend.dev>' }}
+          DODO_PAYMENTS_API_KEY: ${{ secrets.TF_VAR_dodo_payments_api_key || 'dodo_test_placeholder' }}
+          DODO_PAYMENTS_WEBHOOK_KEY: ${{ secrets.TF_VAR_dodo_payments_webhook_key || 'dodo_whsec_placeholder' }}
+          DODO_PAYMENTS_ENV: ${{ secrets.TF_VAR_dodo_payments_env || 'test_mode' }}
+          DODO_PRODUCT_ID_STARTER: ${{ secrets.TF_VAR_dodo_product_id_starter || 'prod_test_starter' }}
+          DODO_PRODUCT_ID_PRO: ${{ secrets.TF_VAR_dodo_product_id_pro || 'prod_test_pro' }}
+          DODO_PRODUCT_ID_ENTERPRISE: ${{ secrets.TF_VAR_dodo_product_id_enterprise || 'prod_test_enterprise' }}
+          BILLING_AUTOMATION_CRON_SECRET: ${{ secrets.TF_VAR_billing_automation_cron_secret || 'billing-cron-test-secret' }}
           AWS_REGION: us-east-1
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
@@ -112,6 +119,7 @@ jobs:
           pnpm run db:seed
           pnpm run localstack:init
           pnpm run worker:once
+          pnpm run billing:grace:once
 
       - name: Lint
         working-directory: trustloop
@@ -128,6 +136,13 @@ jobs:
           KEY_ENCRYPTION_SECRET: ${{ secrets.TF_VAR_key_encryption_secret || 'placeholder-key-encryption-secret-123456789' }}
           RESEND_API_KEY: ${{ secrets.TF_VAR_resend_api_key || 're_placeholder' }}
           RESEND_FROM_EMAIL: ${{ secrets.TF_VAR_resend_from_email || 'TrustLoop <onboarding@resend.dev>' }}
+          DODO_PAYMENTS_API_KEY: ${{ secrets.TF_VAR_dodo_payments_api_key || 'dodo_test_placeholder' }}
+          DODO_PAYMENTS_WEBHOOK_KEY: ${{ secrets.TF_VAR_dodo_payments_webhook_key || 'dodo_whsec_placeholder' }}
+          DODO_PAYMENTS_ENV: ${{ secrets.TF_VAR_dodo_payments_env || 'test_mode' }}
+          DODO_PRODUCT_ID_STARTER: ${{ secrets.TF_VAR_dodo_product_id_starter || 'prod_test_starter' }}
+          DODO_PRODUCT_ID_PRO: ${{ secrets.TF_VAR_dodo_product_id_pro || 'prod_test_pro' }}
+          DODO_PRODUCT_ID_ENTERPRISE: ${{ secrets.TF_VAR_dodo_product_id_enterprise || 'prod_test_enterprise' }}
+          BILLING_AUTOMATION_CRON_SECRET: ${{ secrets.TF_VAR_billing_automation_cron_secret || 'billing-cron-test-secret' }}
           AWS_REGION: us-east-1
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
@@ -172,6 +187,13 @@ jobs:
           TF_VAR_key_encryption_secret: ${{ secrets.TF_VAR_key_encryption_secret }}
           TF_VAR_resend_api_key: ${{ secrets.TF_VAR_resend_api_key }}
           TF_VAR_resend_from_email: ${{ secrets.TF_VAR_resend_from_email }}
+          TF_VAR_dodo_payments_api_key: ${{ secrets.TF_VAR_dodo_payments_api_key }}
+          TF_VAR_dodo_payments_webhook_key: ${{ secrets.TF_VAR_dodo_payments_webhook_key }}
+          TF_VAR_dodo_payments_env: ${{ secrets.TF_VAR_dodo_payments_env || 'live_mode' }}
+          TF_VAR_dodo_product_id_starter: ${{ secrets.TF_VAR_dodo_product_id_starter }}
+          TF_VAR_dodo_product_id_pro: ${{ secrets.TF_VAR_dodo_product_id_pro }}
+          TF_VAR_dodo_product_id_enterprise: ${{ secrets.TF_VAR_dodo_product_id_enterprise }}
+          TF_VAR_billing_automation_cron_secret: ${{ secrets.TF_VAR_billing_automation_cron_secret }}
           TF_VAR_image_tag: bootstrap
         run: terraform apply -target=aws_ecr_repository.app -auto-approve
 
@@ -201,6 +223,13 @@ jobs:
           TF_VAR_key_encryption_secret: ${{ secrets.TF_VAR_key_encryption_secret }}
           TF_VAR_resend_api_key: ${{ secrets.TF_VAR_resend_api_key }}
           TF_VAR_resend_from_email: ${{ secrets.TF_VAR_resend_from_email }}
+          TF_VAR_dodo_payments_api_key: ${{ secrets.TF_VAR_dodo_payments_api_key }}
+          TF_VAR_dodo_payments_webhook_key: ${{ secrets.TF_VAR_dodo_payments_webhook_key }}
+          TF_VAR_dodo_payments_env: ${{ secrets.TF_VAR_dodo_payments_env || 'live_mode' }}
+          TF_VAR_dodo_product_id_starter: ${{ secrets.TF_VAR_dodo_product_id_starter }}
+          TF_VAR_dodo_product_id_pro: ${{ secrets.TF_VAR_dodo_product_id_pro }}
+          TF_VAR_dodo_product_id_enterprise: ${{ secrets.TF_VAR_dodo_product_id_enterprise }}
+          TF_VAR_billing_automation_cron_secret: ${{ secrets.TF_VAR_billing_automation_cron_secret }}
         run: terraform apply -auto-approve -var="image_tag=${GITHUB_SHA}"
 
       - name: Run Prisma Migrations

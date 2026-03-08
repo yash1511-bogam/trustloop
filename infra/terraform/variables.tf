@@ -126,6 +126,38 @@ variable "resend_from_email" {
   default = "TrustLoop <alerts@example.com>"
 }
 
+variable "dodo_payments_api_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "dodo_payments_webhook_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "dodo_payments_env" {
+  type    = string
+  default = "live_mode"
+}
+
+variable "dodo_product_id_starter" {
+  type = string
+}
+
+variable "dodo_product_id_pro" {
+  type = string
+}
+
+variable "dodo_product_id_enterprise" {
+  type = string
+}
+
+variable "billing_automation_cron_secret" {
+  type      = string
+  sensitive = true
+}
+
 variable "reminder_stale_minutes" {
   type    = number
   default = 240

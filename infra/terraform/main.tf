@@ -45,6 +45,34 @@ locals {
       value = var.resend_from_email
     },
     {
+      name  = "DODO_PAYMENTS_API_KEY"
+      value = var.dodo_payments_api_key
+    },
+    {
+      name  = "DODO_PAYMENTS_WEBHOOK_KEY"
+      value = var.dodo_payments_webhook_key
+    },
+    {
+      name  = "DODO_PAYMENTS_ENV"
+      value = var.dodo_payments_env
+    },
+    {
+      name  = "DODO_PRODUCT_ID_STARTER"
+      value = var.dodo_product_id_starter
+    },
+    {
+      name  = "DODO_PRODUCT_ID_PRO"
+      value = var.dodo_product_id_pro
+    },
+    {
+      name  = "DODO_PRODUCT_ID_ENTERPRISE"
+      value = var.dodo_product_id_enterprise
+    },
+    {
+      name  = "BILLING_AUTOMATION_CRON_SECRET"
+      value = var.billing_automation_cron_secret
+    },
+    {
       name  = "AWS_REGION"
       value = var.aws_region
     },

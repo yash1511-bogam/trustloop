@@ -12,7 +12,11 @@ type WorkspaceSettings = {
   slackTeamId: string | null;
   samlEnabled: boolean;
   samlMetadataUrl: string | null;
-  stripeCustomerId: string | null;
+  billing: {
+    dodoCustomerId: string | null;
+    dodoSubscriptionId: string | null;
+    status: string;
+  } | null;
 };
 
 type Props = {
@@ -169,7 +173,13 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           Slack team connected: <strong>{workspace.slackTeamId ?? "No"}</strong>
         </p>
         <p>
-          Stripe customer: <strong>{workspace.stripeCustomerId ?? "Not linked"}</strong>
+          Dodo customer: <strong>{workspace.billing?.dodoCustomerId ?? "Not linked"}</strong>
+        </p>
+        <p>
+          Dodo subscription: <strong>{workspace.billing?.dodoSubscriptionId ?? "Not linked"}</strong>
+        </p>
+        <p>
+          Billing status: <strong>{workspace.billing?.status ?? "NONE"}</strong>
         </p>
       </div>
 

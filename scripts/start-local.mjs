@@ -21,6 +21,11 @@ const warnOnlyEnv = [
   "KEY_ENCRYPTION_SECRET",
   "RESEND_API_KEY",
   "RESEND_FROM_EMAIL",
+  "DODO_PAYMENTS_API_KEY",
+  "DODO_PAYMENTS_WEBHOOK_KEY",
+  "DODO_PRODUCT_ID_STARTER",
+  "DODO_PRODUCT_ID_PRO",
+  "DODO_PRODUCT_ID_ENTERPRISE",
   "AWS_ENDPOINT_URL",
 ];
 
@@ -241,6 +246,7 @@ async function main() {
   await runStep("Seeding demo data (idempotent)", "pnpm", ["run", "db:seed"]);
   await runStep("Initializing LocalStack reminder queue", "pnpm", ["run", "localstack:init"]);
   await runStep("Running one worker polling cycle", "pnpm", ["run", "worker:once"]);
+  await runStep("Running billing grace automation cycle", "pnpm", ["run", "billing:grace:once"]);
 
   printLinks(envMap);
 

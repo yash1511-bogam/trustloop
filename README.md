@@ -10,7 +10,7 @@ TrustLoop is a domain-specific SaaS for AI software companies to run customer-fa
 - Public status page publishing by workspace slug
 - Team invites, role management, member removal
 - Reminder automation via SQS + worker (email + P1 SMS)
-- Billing via Stripe subscriptions + quota plan mapping
+- Billing via Dodo Payments subscriptions + quota plan mapping
 - Executive analytics charts and compliance exports (CSV + incident PDF)
 - PWA manifest/service worker scaffold for installable app behavior
 
@@ -21,7 +21,7 @@ TrustLoop is a domain-specific SaaS for AI software companies to run customer-fa
 - AWS SQS (LocalStack in local dev)
 - Stytch (OTP + OAuth)
 - Resend (emails)
-- Stripe (billing)
+- Dodo Payments (billing)
 - Twilio (SMS)
 
 ## Quick Start
@@ -71,14 +71,16 @@ Copy `.env.example` to `.env` and fill values.
 - `SLACK_SIGNING_SECRET`
 
 ### Billing
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_ID_STARTER`
-- `STRIPE_PRICE_ID_PRO`
-- `STRIPE_PRICE_ID_ENTERPRISE`
+- `DODO_PAYMENTS_API_KEY`
+- `DODO_PAYMENTS_WEBHOOK_KEY`
+- `DODO_PAYMENTS_ENV` (`test_mode` or `live_mode`)
+- `DODO_PRODUCT_ID_STARTER`
+- `DODO_PRODUCT_ID_PRO`
+- `DODO_PRODUCT_ID_ENTERPRISE`
 
 ### Automation
 - `AI_KEY_HEALTH_CRON_SECRET`
+- `BILLING_AUTOMATION_CRON_SECRET`
 - `REMINDER_STALE_MINUTES`
 
 ### LocalStack / AWS-style local infra
@@ -111,6 +113,7 @@ pnpm run localstack:init
 - `pnpm dev:full` - web + worker
 - `pnpm worker` - reminder worker
 - `pnpm worker:once` - one worker cycle
+- `pnpm billing:grace:once` - process failed-payment reminders and auto-cancel logic
 - `pnpm lint`
 - `pnpm build`
 - `pnpm prisma:generate`

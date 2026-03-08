@@ -1,132 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-import { prisma } from "@/lib/prisma";
-import { verifyStripeWebhookEvent } from "@/lib/stripe";
+import { processDodoWebhookEvent } from "@/lib/billing";
+import { dodoClient } from "@/lib/dodo";
 
-function quotasForPlan(planTier: string): {
-  incidentsPerDay: number;
-  triageRunsPerDay: number;
-  customerUpdatesPerDay: number;
-  reminderEmailsPerDay: number;
-} {
-  if (planTier === "starter") {
-    return {
-      incidentsPerDay: 50,
-      triageRunsPerDay: 100,
-      customerUpdatesPerDay: 100,
-      reminderEmailsPerDay: 120,
-    };
+function requiredHeader(request: NextRequest, name: string): string {
+  const value = request.headers.get(name);
+  if (!value?.trim()) {
+    throw new Error(`Missing ${name} header.`);
   }
-
-  if (planTier === "enterprise") {
-    return {
-      incidentsPerDay: 1_000_000,
-      triageRunsPerDay: 1_000_000,
-      customerUpdatesPerDay: 1_000_000,
-      reminderEmailsPerDay: 1_000_000,
-    };
-  }
-
-  return {
-    incidentsPerDay: 200,
-    triageRunsPerDay: 300,
-    customerUpdatesPerDay: 300,
-    reminderEmailsPerDay: 500,
-  };
-}
-
-function planFromPriceId(priceId: string | undefined): string {
-  if (!priceId) {
-    return "pro";
-  }
-  if (priceId === process.env.STRIPE_PRICE_ID_STARTER) {
-    return "starter";
-  }
-  if (
-    process.env.STRIPE_PRICE_ID_ENTERPRISE &&
-    priceId === process.env.STRIPE_PRICE_ID_ENTERPRISE
-  ) {
-    return "enterprise";
-  }
-  return "pro";
-}
-
-async function updateWorkspacePlan(input: {
-  customerId: string;
-  planTier: string;
-}): Promise<void> {
-  const workspace = await prisma.workspace.findFirst({
-    where: {
-      stripeCustomerId: input.customerId,
-    },
-    select: {
-      id: true,
-    },
-  });
-  if (!workspace) {
-    return;
-  }
-
-  const quota = quotasForPlan(input.planTier);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.workspace.update({
-      where: { id: workspace.id },
-      data: {
-        planTier: input.planTier,
-      },
-    });
-
-    await tx.workspaceQuota.upsert({
-      where: { workspaceId: workspace.id },
-      create: {
-        workspaceId: workspace.id,
-        ...quota,
-      },
-      update: {
-        ...quota,
-      },
-    });
-  });
+  return value.trim();
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const rawBody = await request.text();
-  let event: Stripe.Event;
+  let eventId: string;
+  let event: Parameters<typeof processDodoWebhookEvent>[0]["event"];
 
   try {
-    event = verifyStripeWebhookEvent({
-      rawBody,
-      signature: request.headers.get("stripe-signature"),
+    const webhookId = requiredHeader(request, "webhook-id");
+    const webhookSignature = requiredHeader(request, "webhook-signature");
+    const webhookTimestamp = requiredHeader(request, "webhook-timestamp");
+
+    eventId = webhookId;
+    event = dodoClient().webhooks.unwrap(rawBody, {
+      headers: {
+        "webhook-id": webhookId,
+        "webhook-signature": webhookSignature,
+        "webhook-timestamp": webhookTimestamp,
+      },
+      key: process.env.DODO_PAYMENTS_WEBHOOK_KEY?.trim() || undefined,
     });
   } catch (error) {
     return NextResponse.json(
       {
-        error: error instanceof Error ? error.message : "Webhook signature verification failed.",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Webhook signature verification failed.",
       },
       { status: 400 },
     );
   }
 
-  if (
-    event.type === "customer.subscription.created" ||
-    event.type === "customer.subscription.updated"
-  ) {
-    const subscription = event.data.object as Stripe.Subscription;
-    const priceId = subscription.items.data[0]?.price?.id;
-    await updateWorkspacePlan({
-      customerId: String(subscription.customer),
-      planTier: planFromPriceId(priceId),
+  try {
+    const processed = await processDodoWebhookEvent({
+      event,
+      eventId,
     });
-  }
 
-  if (event.type === "customer.subscription.deleted") {
-    const subscription = event.data.object as Stripe.Subscription;
-    await updateWorkspacePlan({
-      customerId: String(subscription.customer),
-      planTier: "starter",
+    return NextResponse.json({
+      received: true,
+      status: processed.status,
+      workspaceId: processed.workspaceId,
+      reason: processed.reason,
+      eventType: event.type,
     });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error ? error.message : "Webhook processing failed.",
+      },
+      { status: 500 },
+    );
   }
-
-  return NextResponse.json({ received: true });
 }

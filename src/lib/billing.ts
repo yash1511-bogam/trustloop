@@ -1,6 +1,6 @@
 import { BillingEventProcessStatus, BillingSubscriptionStatus, Prisma, Role } from "@prisma/client";
 import DodoPayments from "dodopayments";
-import { applyWorkspacePlan, normalizePlanTier, type PlanTier } from "@/lib/billing-plan";
+import { applyWorkspacePlan, normalizePlanTier } from "@/lib/billing-plan";
 import { dodoClient, planForDodoProductId } from "@/lib/dodo";
 import {
   sendPaymentConfirmationEmail,
@@ -29,7 +29,7 @@ function getString(value: unknown): string | null {
     return null;
   }
   const trimmed = value.trim();
-  return trimmed ? trimmed : null;
+  return trimmed || null;
 }
 
 function parseIsoDate(value: unknown): Date | null {
@@ -37,10 +37,12 @@ function parseIsoDate(value: unknown): Date | null {
   if (!iso) {
     return null;
   }
+
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) {
     return null;
   }
+
   return parsed;
 }
 
@@ -58,8 +60,31 @@ function hoursBetween(start: Date, end: Date): number {
   return Math.floor((end.getTime() - start.getTime()) / 3_600_000);
 }
 
+function mergeRecipientEmails(recipients: Recipient[], extraEmail?: string | null): string[] {
+  const byEmail = new Map<string, string>();
+
+  for (const recipient of recipients) {
+    const normalized = recipient.email.trim().toLowerCase();
+    if (!normalized) {
+      continue;
+    }
+    if (!byEmail.has(normalized)) {
+      byEmail.set(normalized, recipient.email.trim());
+    }
+  }
+
+  if (extraEmail?.trim()) {
+    const normalized = extraEmail.trim().toLowerCase();
+    if (!byEmail.has(normalized)) {
+      byEmail.set(normalized, extraEmail.trim());
+    }
+  }
+
+  return [...byEmail.values()];
+}
+
 async function workspaceRecipients(workspaceId: string): Promise<Recipient[]> {
-  const rows = await prisma.user.findMany({
+  return prisma.user.findMany({
     where: {
       workspaceId,
       role: {
@@ -72,15 +97,13 @@ async function workspaceRecipients(workspaceId: string): Promise<Recipient[]> {
     },
     orderBy: [{ role: "asc" }, { createdAt: "asc" }],
   });
-
-  return rows;
 }
 
 async function resolveWorkspaceId(event: DodoWebhookEvent): Promise<string | null> {
   const data = asRecord(event.data);
   const metadata = asRecord(data.metadata);
 
-  const metadataWorkspaceId = getString(metadata.workspaceId);
+  const metadataWorkspaceId = getString(metadata.workspaceId) ?? getString(metadata.workspace_id);
   if (metadataWorkspaceId) {
     const workspace = await prisma.workspace.findUnique({
       where: { id: metadataWorkspaceId },
@@ -147,28 +170,24 @@ export async function processDodoWebhookEvent(input: {
 
   const customerId = getString(customer.customer_id);
   const customerEmail = getString(customer.email);
-  const subscriptionId = getString(data.subscription_id) ?? getString(data.subscription?.toString());
+  const subscriptionId = getString(data.subscription_id);
   const paymentId = getString(data.payment_id);
   const amount = typeof data.total_amount === "number" ? data.total_amount : null;
   const currency = getString(data.currency);
   const invoiceUrl = getString(data.invoice_url);
   const checkoutSessionId = getString(data.checkout_session_id);
-  const productId =
-    getString(data.product_id) ??
-    getString(data.product?.toString()) ??
-    getString(data.new_product_id);
+  const productId = getString(data.product_id) ?? getString(data.new_product_id);
   const subscriptionStatus = getString(data.status);
   const nextBillingDate = parseIsoDate(data.next_billing_date);
   const previousBillingDate = parseIsoDate(data.previous_billing_date);
   const eventCreatedAt = parseIsoDate(input.event.timestamp);
-  const planHint =
-    ((): PlanTier | null => {
-      const metadataPlan = getString(metadata.plan);
-      if (metadataPlan) {
-        return normalizePlanTier(metadataPlan);
-      }
-      return planForDodoProductId(productId);
-    })();
+  const planHint = (() => {
+    const metadataPlan = getString(metadata.plan);
+    if (metadataPlan) {
+      return normalizePlanTier(metadataPlan);
+    }
+    return planForDodoProductId(productId);
+  })();
 
   if (input.eventId) {
     const existing = await prisma.billingEventLog.findUnique({
@@ -193,9 +212,10 @@ export async function processDodoWebhookEvent(input: {
   }
 
   const recipients = await workspaceRecipients(workspaceId);
+  const primaryRecipientEmails = mergeRecipientEmails(recipients, customerEmail);
   const currentPlanTier = normalizePlanTier(workspace.planTier);
 
-  const billing = await prisma.workspaceBilling.upsert({
+  const billingBefore = await prisma.workspaceBilling.upsert({
     where: { workspaceId },
     create: { workspaceId },
     update: {},
@@ -205,7 +225,7 @@ export async function processDodoWebhookEvent(input: {
     await prisma.billingEventLog.create({
       data: {
         workspaceId,
-        workspaceBillingId: billing.id,
+        workspaceBillingId: billingBefore.id,
         eventId: input.eventId,
         eventType: input.event.type,
         providerEventCreatedAt: eventCreatedAt,
@@ -228,14 +248,14 @@ export async function processDodoWebhookEvent(input: {
     throw error;
   }
 
-  let shouldSendPaymentSuccessEmail = false;
-  let shouldSendReceiptEmail = false;
+  let shouldSendPaymentConfirmation = false;
+  let shouldSendPaymentReceipt = false;
   let shouldSendFailureReminder = false;
-  let shouldSendPlanCanceledEmail = false;
+  let shouldSendPlanCanceled = false;
 
   if (input.event.type === "payment.succeeded") {
-    shouldSendPaymentSuccessEmail = Boolean(customerEmail);
-    shouldSendReceiptEmail = Boolean(customerEmail && invoiceUrl);
+    shouldSendPaymentConfirmation = primaryRecipientEmails.length > 0;
+    shouldSendPaymentReceipt = primaryRecipientEmails.length > 0;
 
     await prisma.workspaceBilling.update({
       where: { workspaceId },
@@ -244,7 +264,9 @@ export async function processDodoWebhookEvent(input: {
         dodoSubscriptionId: subscriptionId ?? undefined,
         dodoProductId: productId ?? undefined,
         dodoCheckoutSessionId: checkoutSessionId ?? undefined,
-        status: subscriptionId ? BillingSubscriptionStatus.ACTIVE : undefined,
+        status: BillingSubscriptionStatus.ACTIVE,
+        currentPeriodStart: previousBillingDate ?? undefined,
+        currentPeriodEnd: nextBillingDate ?? undefined,
         lastPaymentId: paymentId ?? undefined,
         lastPaymentAt: eventCreatedAt ?? new Date(),
         lastPaymentAmount: amount ?? undefined,
@@ -253,7 +275,9 @@ export async function processDodoWebhookEvent(input: {
         paymentFailedAt: null,
         failureReminderCount: 0,
         lastFailureReminderAt: null,
-        discountCode: getString(data.discount_code) ?? undefined,
+        canceledAt: null,
+        cancelReason: null,
+        discountCode: getString(data.discount_code) ?? billingBefore.discountCode ?? undefined,
       },
     });
 
@@ -266,12 +290,12 @@ export async function processDodoWebhookEvent(input: {
     }
   }
 
-  if (input.event.type === "payment.failed") {
+  if (input.event.type === "payment.failed" || input.event.type === "payment.cancelled") {
     const now = new Date();
-    const failedAt = billing.paymentFailedAt ?? eventCreatedAt ?? now;
+    const failedAt = billingBefore.paymentFailedAt ?? eventCreatedAt ?? now;
     const shouldNotify =
-      !billing.lastFailureReminderAt ||
-      hoursBetween(billing.lastFailureReminderAt, now) >= 12;
+      !billingBefore.lastFailureReminderAt ||
+      hoursBetween(billingBefore.lastFailureReminderAt, now) >= 12;
 
     await prisma.workspaceBilling.update({
       where: { workspaceId },
@@ -282,9 +306,11 @@ export async function processDodoWebhookEvent(input: {
         dodoCheckoutSessionId: checkoutSessionId ?? undefined,
         status: BillingSubscriptionStatus.PAST_DUE,
         paymentFailedAt: failedAt,
-        failureReminderCount: shouldNotify ? Math.max(1, billing.failureReminderCount + 1) : billing.failureReminderCount,
-        lastFailureReminderAt: shouldNotify ? now : billing.lastFailureReminderAt,
-        lastPaymentId: paymentId ?? billing.lastPaymentId ?? undefined,
+        failureReminderCount: shouldNotify
+          ? Math.max(1, billingBefore.failureReminderCount + 1)
+          : billingBefore.failureReminderCount,
+        lastFailureReminderAt: shouldNotify ? now : billingBefore.lastFailureReminderAt,
+        lastPaymentId: paymentId ?? billingBefore.lastPaymentId ?? undefined,
       },
     });
 
@@ -334,7 +360,7 @@ export async function processDodoWebhookEvent(input: {
         dodoSubscriptionId: subscriptionId ?? undefined,
         dodoProductId: productId ?? undefined,
         status: BillingSubscriptionStatus.PAST_DUE,
-        paymentFailedAt: billing.paymentFailedAt ?? eventCreatedAt ?? new Date(),
+        paymentFailedAt: billingBefore.paymentFailedAt ?? eventCreatedAt ?? new Date(),
       },
     });
   }
@@ -362,35 +388,39 @@ export async function processDodoWebhookEvent(input: {
         workspaceId,
         planTier: "starter",
       });
-      shouldSendPlanCanceledEmail = true;
+      shouldSendPlanCanceled = true;
     }
   }
 
-  if (shouldSendPaymentSuccessEmail && customerEmail) {
-    await sendPaymentConfirmationEmail({
-      workspaceId,
-      toEmail: customerEmail,
-      workspaceName: workspace.name,
-      planTier: planHint ?? currentPlanTier,
-      amountCents: amount,
-      currency,
-    }).catch(() => null);
+  if (shouldSendPaymentConfirmation) {
+    for (const email of primaryRecipientEmails) {
+      await sendPaymentConfirmationEmail({
+        workspaceId,
+        toEmail: email,
+        workspaceName: workspace.name,
+        planTier: planHint ?? currentPlanTier,
+        amountCents: amount,
+        currency,
+      }).catch(() => null);
+    }
   }
 
-  if (shouldSendReceiptEmail && customerEmail) {
-    await sendPaymentReceiptEmail({
-      workspaceId,
-      toEmail: customerEmail,
-      workspaceName: workspace.name,
-      invoiceUrl,
-    }).catch(() => null);
+  if (shouldSendPaymentReceipt) {
+    for (const email of primaryRecipientEmails) {
+      await sendPaymentReceiptEmail({
+        workspaceId,
+        toEmail: email,
+        workspaceName: workspace.name,
+        invoiceUrl,
+      }).catch(() => null);
+    }
   }
 
-  if (shouldSendFailureReminder && recipients.length > 0) {
-    for (const recipient of recipients) {
+  if (shouldSendFailureReminder) {
+    for (const email of primaryRecipientEmails) {
       await sendPaymentFailureReminderEmail({
         workspaceId,
-        toEmail: recipient.email,
+        toEmail: email,
         workspaceName: workspace.name,
         planTier: currentPlanTier,
         hoursSinceFailure: 0,
@@ -399,11 +429,11 @@ export async function processDodoWebhookEvent(input: {
     }
   }
 
-  if (shouldSendPlanCanceledEmail && recipients.length > 0) {
-    for (const recipient of recipients) {
+  if (shouldSendPlanCanceled) {
+    for (const email of primaryRecipientEmails) {
       await sendPlanCanceledEmail({
         workspaceId,
-        toEmail: recipient.email,
+        toEmail: email,
         workspaceName: workspace.name,
         previousPlanTier: currentPlanTier,
         reason: "Subscription canceled by payment provider.",
@@ -440,6 +470,7 @@ export async function processPastDueBillingAutomation(input?: {
             },
             select: {
               email: true,
+              name: true,
             },
           },
         },
@@ -457,14 +488,19 @@ export async function processPastDueBillingAutomation(input?: {
     }
 
     const elapsedHours = hoursBetween(failedAt, now);
-    const recipients = row.workspace.users.map((user) => user.email);
+    const recipients = row.workspace.users;
+    const recipientEmails = mergeRecipientEmails(
+      recipients.map((entry) => ({ email: entry.email, name: entry.name })),
+      null,
+    );
     const currentPlanTier = normalizePlanTier(row.workspace.planTier);
 
     if (elapsedHours >= 48) {
       if (row.dodoSubscriptionId) {
         await dodoClient()
           .subscriptions.update(row.dodoSubscriptionId, {
-            cancel_at_next_billing_date: true,
+            status: "cancelled",
+            cancel_at_next_billing_date: false,
           })
           .catch(() => null);
       }
@@ -484,7 +520,7 @@ export async function processPastDueBillingAutomation(input?: {
         },
       });
 
-      for (const email of recipients) {
+      for (const email of recipientEmails) {
         await sendPlanCanceledEmail({
           workspaceId: row.workspaceId,
           toEmail: email,
@@ -503,7 +539,7 @@ export async function processPastDueBillingAutomation(input?: {
       row.failureReminderCount < 2 &&
       (!row.lastFailureReminderAt || hoursBetween(row.lastFailureReminderAt, now) >= 20)
     ) {
-      for (const email of recipients) {
+      for (const email of recipientEmails) {
         await sendPaymentFailureReminderEmail({
           workspaceId: row.workspaceId,
           toEmail: email,
@@ -522,7 +558,7 @@ export async function processPastDueBillingAutomation(input?: {
         },
       });
 
-      remindersSent += recipients.length;
+      remindersSent += recipientEmails.length;
     }
   }
 

@@ -42,7 +42,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       slackTeamId: true,
       samlEnabled: true,
       samlMetadataUrl: true,
-      stripeCustomerId: true,
+      billing: {
+        select: {
+          dodoCustomerId: true,
+          dodoSubscriptionId: true,
+          status: true,
+        },
+      },
     },
   });
 
@@ -94,7 +100,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         slackTeamId: true,
         samlEnabled: true,
         samlMetadataUrl: true,
-        stripeCustomerId: true,
+        billing: {
+          select: {
+            dodoCustomerId: true,
+            dodoSubscriptionId: true,
+            status: true,
+          },
+        },
       },
     });
   } catch (error) {
