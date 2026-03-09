@@ -86,8 +86,8 @@ export function AppShellFrame({
       ) : null}
 
       <aside className={drawerClass}>
-        <div className={compactDesktopMenu ? "menu-drawer-top menu-drawer-top-compact" : "menu-drawer-top"}>
-          <div className="inline-flex items-center gap-2">
+        <div className={compactDesktopMenu ? "menu-drawer-top flex-col items-center" : "menu-drawer-top"}>
+          <div className={compactDesktopMenu ? "flex justify-center" : "inline-flex items-center gap-2"}>
             <button
               aria-label={menuOpen ? "Collapse menu" : "Expand menu"}
               className="menu-toggle"
@@ -96,23 +96,23 @@ export function AppShellFrame({
             >
               {menuOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
             </button>
-            {compactDesktopMenu ? null : (
+            {!compactDesktopMenu && (
               <div className="menu-drawer-brand">
-                <Siren className="h-4 w-4" />
-                <span>TrustLoop</span>
+                <Siren className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">TrustLoop</span>
               </div>
             )}
           </div>
-          <ThemeToggle />
+          <div className={compactDesktopMenu ? "flex justify-center mt-2" : ""}>
+            <ThemeToggle />
+          </div>
         </div>
 
-        {compactDesktopMenu ? null : (
+        {!compactDesktopMenu && (
           <div className="menu-drawer-meta">
-            <p className="kicker">{workspaceName}</p>
-            <h1 className="text-lg font-semibold text-slate-100">Operations</h1>
-            <p className="text-sm text-neutral-500">{userName}</p>
+            <h1 className="text-sm font-medium text-slate-200 truncate whitespace-nowrap">{workspaceName}</h1>
             {complianceMode ? (
-              <span className="inline-flex rounded-full border border-neutral-800 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300">
+              <span className="inline-flex rounded-full border border-neutral-800 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-300 w-fit mt-1">
                 Compliance mode
               </span>
             ) : null}
@@ -126,10 +126,14 @@ export function AppShellFrame({
           }}
         />
 
-        {compactDesktopMenu ? null : (
+        {compactDesktopMenu ? (
+          <div className="menu-drawer-footer items-center">
+            <LogoutButton compact />
+          </div>
+        ) : (
           <div className="menu-drawer-footer">
-            <div className="panel-card p-4 text-xs text-neutral-500">
-              <div className="mb-1 inline-flex items-center gap-1 font-semibold text-slate-400">
+            <div className="py-4 text-xs text-neutral-500">
+              <div className="mb-1 inline-flex items-center gap-1 font-medium text-slate-400">
                 <CalendarClock className="h-3.5 w-3.5" />
                 Daily Workflow
               </div>

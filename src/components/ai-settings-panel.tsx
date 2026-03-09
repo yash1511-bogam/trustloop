@@ -2,6 +2,7 @@
 
 import { AiProvider, WorkflowType } from "@prisma/client";
 import { useState } from "react";
+import { Loader2, CheckCircle2, AlertCircle, KeyRound, Workflow } from "lucide-react";
 
 type KeyRecord = {
   provider: AiProvider;
@@ -50,6 +51,11 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
     return keys.find((item) => item.provider === provider);
   }
 
+  function showMessage(msg: string) {
+    setStatus(msg);
+    setTimeout(() => setStatus(null), 3000);
+  }
+
   async function testKey(provider: AiProvider) {
     const apiKey = (keyInputs[provider] ?? "").trim();
     if (!apiKey) {
@@ -78,7 +84,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
       return;
     }
 
-    setStatus(payload?.message ?? `${provider} key is valid.`);
+    showMessage(payload?.message ?? `${provider} key is valid.`);
   }
 
   async function saveKey(provider: AiProvider) {
@@ -108,7 +114,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
       return;
     }
 
-    setStatus(`${provider} key saved securely.`);
+    showMessage(`${provider} key saved securely.`);
     setKeyInputs((prev) => ({ ...prev, [provider]: "" }));
   }
 
@@ -135,73 +141,96 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
       return;
     }
 
-    setStatus(`${workflowType} settings saved.`);
+    showMessage(`${workflowType} routing saved.`);
   }
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <p className="kicker">Provider keys</p>
+    <div className="space-y-12">
+      {(status || error) && (
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+          {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+          <span>{error || status}</span>
+        </div>
+      )}
+
+      <section className="space-y-8">
+        <div className="flex items-center gap-2 text-slate-100">
+          <KeyRound className="w-5 h-5 text-sky-400" />
+          <h2 className="text-lg font-medium">Provider keys</h2>
+        </div>
         <p className="text-sm text-neutral-400">
           Keys are encrypted at rest, never shown in full after save, and only used
           server-side for AI workflows.
         </p>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3">
           {providers.map((provider) => {
             const record = keyRecord(provider);
+            const isHealthy = record?.healthStatus === "OK";
 
             return (
-              <div className="surface p-4" key={provider}>
-                <h3 className="text-lg font-semibold">{provider}</h3>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {record
-                    ? `Saved key ending in ${record.keyLast4} • updated ${new Date(
-                        record.updatedAt,
-                      ).toLocaleString()}`
-                    : "No key saved yet."}
-                </p>
-                {record ? (
-                  <p className="mt-1 text-xs text-neutral-400">
-                    Health: {record.healthStatus}
-                    {record.lastVerifiedAt
-                      ? ` • last checked ${new Date(record.lastVerifiedAt).toLocaleString()}`
-                      : ""}
-                  </p>
-                ) : null}
-                {record?.lastVerificationError ? (
-                  <p className="mt-1 text-xs text-red-700">{record.lastVerificationError}</p>
-                ) : null}
+              <div className="group relative p-5 rounded-2xl border border-white/5 bg-white/5 transition-colors hover:border-white/10" key={provider}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-medium text-slate-100">{provider}</h3>
+                  {record && (
+                    <span className={`text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border ${isHealthy ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-400"}`}>
+                      {isHealthy ? "Healthy" : record.healthStatus}
+                    </span>
+                  )}
+                </div>
 
-                <input
-                  className="input mt-4"
-                  placeholder={`Enter ${provider} API key`}
-                  value={keyInputs[provider] ?? ""}
-                  onChange={(event) =>
-                    setKeyInputs((prev) => ({
-                      ...prev,
-                      [provider]: event.target.value,
-                    }))
-                  }
-                />
+                <div className="space-y-1 mb-6">
+                  {record ? (
+                    <>
+                      <p className="text-xs text-neutral-400">
+                        Ends in <span className="font-mono text-slate-300">{record.keyLast4}</span>
+                      </p>
+                      {record.lastVerifiedAt && (
+                        <p className="text-[10px] text-neutral-500">
+                          Verified {new Date(record.lastVerifiedAt).toLocaleString("en-US")}
+                        </p>
+                      )}
+                      {record?.lastVerificationError && (
+                        <p className="text-xs text-red-400 mt-2">{record.lastVerificationError}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs text-neutral-500">No key configured</p>
+                  )}
+                </div>
 
-                <div className="mt-4 flex gap-2">
-                  <button
-                    className="btn btn-ghost"
-                    disabled={loading}
-                    onClick={() => testKey(provider)}
-                    type="button"
-                  >
-                    Test
-                  </button>
-                  <button
-                    className="btn btn-primary"
-                    disabled={loading}
-                    onClick={() => saveKey(provider)}
-                    type="button"
-                  >
-                    Save
-                  </button>
+                <div className="space-y-3">
+                  <input
+                    className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600 text-sm"
+                    placeholder={`Enter ${provider} API key`}
+                    type="password"
+                    value={keyInputs[provider] ?? ""}
+                    onChange={(event) =>
+                      setKeyInputs((prev) => ({
+                        ...prev,
+                        [provider]: event.target.value,
+                      }))
+                    }
+                  />
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      className="btn btn-primary flex-1 !min-h-[32px] text-xs"
+                      disabled={loading || !keyInputs[provider]}
+                      onClick={() => saveKey(provider)}
+                      type="button"
+                    >
+                      Save Key
+                    </button>
+                    <button
+                      className="btn btn-ghost flex-1 !min-h-[32px] text-xs"
+                      disabled={loading || !keyInputs[provider]}
+                      onClick={() => testKey(provider)}
+                      type="button"
+                    >
+                      Test
+                    </button>
+                  </div>
                 </div>
               </div>
             );
@@ -209,8 +238,12 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <p className="kicker">Workflow routing</p>
+      <section className="space-y-8 pt-8 border-t border-white/5">
+        <div className="flex items-center gap-2 text-slate-100">
+          <Workflow className="w-5 h-5 text-sky-400" />
+          <h2 className="text-lg font-medium">Workflow routing</h2>
+        </div>
+        
         <div className="space-y-4">
           {(Object.values(WorkflowType) as WorkflowType[]).map((workflowType) => {
             const workflow = workflowState[workflowType] ?? {
@@ -219,65 +252,68 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
               model: "gpt-4o-mini",
             };
 
+            const isChanged = workflows.find(w => w.workflowType === workflowType)?.model !== workflow.model || 
+                              workflows.find(w => w.workflowType === workflowType)?.provider !== workflow.provider;
+
             return (
-              <div className="surface grid gap-4 p-4 md:grid-cols-[1fr_1fr_1fr_auto]" key={workflowType}>
-                <div>
-                  <p className="font-semibold">{workflowType}</p>
-                  <p className="text-xs text-neutral-400">
-                    Select provider + model used for this workflow.
+              <div className="group flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-transparent hover:bg-white/5 hover:border-white/5 transition-colors" key={workflowType}>
+                <div className="flex-1">
+                  <p className="font-medium text-slate-200">{workflowType}</p>
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Route this specific task to a dedicated provider and model.
                   </p>
                 </div>
 
-                <select
-                  className="select"
-                  value={workflow.provider}
-                  onChange={(event) =>
-                    setWorkflowState((prev) => ({
-                      ...prev,
-                      [workflowType]: {
-                        ...workflow,
-                        provider: event.target.value as AiProvider,
-                      },
-                    }))
-                  }
-                >
-                  {providers.map((provider) => (
-                    <option key={provider} value={provider}>
-                      {provider}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex flex-wrap items-center gap-3">
+                  <select
+                    className="bg-transparent text-sm text-slate-300 focus:outline-none focus:text-sky-400 transition-colors cursor-pointer appearance-none border-b border-white/20 hover:border-white/40 pb-1 w-32"
+                    value={workflow.provider}
+                    onChange={(event) =>
+                      setWorkflowState((prev) => ({
+                        ...prev,
+                        [workflowType]: {
+                          ...workflow,
+                          provider: event.target.value as AiProvider,
+                        },
+                      }))
+                    }
+                  >
+                    {providers.map((provider) => (
+                      <option className="bg-slate-900" key={provider} value={provider}>
+                        {provider}
+                      </option>
+                    ))}
+                  </select>
 
-                <input
-                  className="input"
-                  value={workflow.model}
-                  onChange={(event) =>
-                    setWorkflowState((prev) => ({
-                      ...prev,
-                      [workflowType]: {
-                        ...workflow,
-                        model: event.target.value,
-                      },
-                    }))
-                  }
-                />
+                  <input
+                    className="bg-transparent border-b border-white/20 pb-1 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600 text-sm w-40"
+                    value={workflow.model}
+                    placeholder="Model ID"
+                    onChange={(event) =>
+                      setWorkflowState((prev) => ({
+                        ...prev,
+                        [workflowType]: {
+                          ...workflow,
+                          model: event.target.value,
+                        },
+                      }))
+                    }
+                  />
 
-                <button
-                  className="btn btn-primary"
-                  disabled={loading}
-                  onClick={() => saveWorkflow(workflowType)}
-                  type="button"
-                >
-                  Save
-                </button>
+                  <button
+                    className="btn btn-primary !min-h-[32px] text-xs px-4"
+                    disabled={loading || !isChanged}
+                    onClick={() => saveWorkflow(workflowType)}
+                    type="button"
+                  >
+                    {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
+                  </button>
+                </div>
               </div>
             );
           })}
         </div>
       </section>
-
-      {status ? <p className="text-sm text-emerald-700">{status}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
     </div>
   );
 }

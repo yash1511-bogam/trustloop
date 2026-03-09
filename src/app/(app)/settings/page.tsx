@@ -46,8 +46,8 @@ export default async function SettingsOverviewPage() {
   const activeIntegrations = integrations.filter((item) => item.isActive).length;
 
   return (
-    <>
-      <section className="surface p-6">
+    <div className="space-y-16 pt-8">
+      <section>
         <p className="kicker">Settings workspace</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Configuration overview</h1>
         <p className="mt-2 max-w-3xl text-sm text-neutral-500">
@@ -55,42 +55,43 @@ export default async function SettingsOverviewPage() {
         </p>
       </section>
 
-      <section className="grid-cards">
-        <article className="metric-card">
-          <p className="kicker">AI keys</p>
-          <p className="mt-2 text-3xl font-semibold">{keyCount}</p>
-        </article>
-        <article className="metric-card">
-          <p className="kicker">Workflow routes</p>
-          <p className="mt-2 text-3xl font-semibold">{workflowCount}</p>
-        </article>
-        <article className="metric-card">
-          <p className="kicker">Team members</p>
-          <p className="mt-2 text-3xl font-semibold">{memberCount}</p>
-        </article>
-        <article className="metric-card">
-          <p className="kicker">Open invites</p>
-          <p className="mt-2 text-3xl font-semibold">{inviteCount}</p>
-        </article>
-        <article className="metric-card">
-          <p className="kicker">Active webhooks</p>
-          <p className="mt-2 text-3xl font-semibold">{activeIntegrations}</p>
-        </article>
-        <article className="metric-card">
-          <p className="kicker">Billing state</p>
-          <p className="mt-2 text-3xl font-semibold">{workspace.billing?.status ?? "NONE"}</p>
-        </article>
+      <section className="pb-10 border-b border-white/5">
+        <h2 className="text-xl font-medium text-slate-100 mb-8">Workspace snapshot</h2>
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">AI keys</p>
+            <p className="text-2xl font-light text-slate-100">{keyCount}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Routes</p>
+            <p className="text-2xl font-light text-slate-100">{workflowCount}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Members</p>
+            <p className="text-2xl font-light text-slate-100">{memberCount}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Invites</p>
+            <p className="text-2xl font-light text-slate-100">{inviteCount}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Webhooks</p>
+            <p className="text-2xl font-light text-slate-100">{activeIntegrations}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Billing</p>
+            <p className="text-sm font-medium text-slate-200 mt-2">{workspace.billing?.status ?? "NONE"}</p>
+          </div>
+        </div>
       </section>
 
-      <section className="surface p-6">
-        <h2 className="text-xl font-semibold text-slate-100">Navigation</h2>
-        <p className="mt-2 text-sm text-neutral-500">
-          Use the left menu bar to open AI & API Keys, Workspace, Team, and Billing pages.
-        </p>
-        <p className="mt-6 text-sm text-neutral-500">
-          Current plan tier: <span className="font-semibold text-slate-200">{workspace.planTier}</span>
+      <section className="pb-10">
+        <h2 className="text-xl font-medium text-slate-100">Navigation</h2>
+        <p className="mt-2 text-sm text-neutral-500 max-w-2xl">
+          Use the left menu bar to open AI & API Keys, Workspace, Team, and Billing pages. 
+          Your current active plan tier is <strong className="text-slate-200 font-medium">{workspace.planTier}</strong>.
         </p>
       </section>
-    </>
+    </div>
   );
 }

@@ -44,8 +44,8 @@ export default async function SettingsAiPage() {
   ]);
 
   return (
-    <>
-      <section className="surface p-6">
+    <div className="space-y-16 pt-8">
+      <section>
         <p className="kicker">AI & access</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Provider and API key controls</h1>
         <p className="mt-2 max-w-3xl text-sm text-neutral-500">
@@ -53,7 +53,7 @@ export default async function SettingsAiPage() {
         </p>
       </section>
 
-      <section className="surface p-6">
+      <section className="pb-10 border-b border-white/5">
         <AiSettingsPanel
           keys={keys.map((key) => ({
             ...key,
@@ -64,12 +64,12 @@ export default async function SettingsAiPage() {
         />
       </section>
 
-      <section className="surface p-6">
-        <h2 className="text-2xl font-semibold text-slate-100">Workspace API keys</h2>
+      <section className="pb-10">
+        <h2 className="text-xl font-medium text-slate-100">Workspace API keys</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Generate and revoke Bearer keys used by monitoring agents and automation clients.
         </p>
-        <div className="mt-4">
+        <div className="mt-8">
           <ApiKeySettingsPanel
             initialKeys={apiKeys.map((key) => ({
               ...key,
@@ -79,6 +79,6 @@ export default async function SettingsAiPage() {
           />
         </div>
       </section>
-    </>
+    </div>
   );
 }

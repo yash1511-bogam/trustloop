@@ -2,6 +2,7 @@
 
 import { Role } from "@prisma/client";
 import { useState } from "react";
+import { Copy, Loader2, Send, ShieldAlert, UserMinus, X } from "lucide-react";
 
 type Member = {
   id: string;
@@ -159,144 +160,186 @@ export function TeamManagementPanel({
     await refresh();
   }
 
+  function getRoleTooltip(role: Role) {
+    switch (role) {
+      case "OWNER":
+        return "Full access, including billing and workspace deletion.";
+      case "MANAGER":
+        return "Can manage team, API keys, and all incidents.";
+      case "AGENT":
+      default:
+        return "Standard access. Can view and update incidents.";
+    }
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-[1fr_220px_auto]">
-        <input
-          className="input"
-          placeholder="teammate@company.com"
-          type="email"
-          value={inviteEmail}
-          onChange={(event) => setInviteEmail(event.target.value)}
-        />
-        <select
-          className="select"
-          value={inviteRole}
-          onChange={(event) => setInviteRole(event.target.value as Role)}
-        >
-          {Object.values(Role).map((role) => (
-            <option key={role} value={role}>
-              {role}
-            </option>
-          ))}
-        </select>
-        <button className="btn btn-primary" disabled={loading} onClick={createInvite} type="button">
-          Send invite
-        </button>
-      </div>
+    <div className="space-y-12">
+      {/* Notifications */}
+      {(message || error) && (
+        <div className={`p-4 text-sm rounded-xl border ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+          {error || message}
+        </div>
+      )}
 
-      <div>
-        <p className="kicker mb-2">Members</p>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="bg-neutral-900 text-neutral-400">
-              <tr>
-                <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Email</th>
-                <th className="px-4 py-2">Phone</th>
-                <th className="px-4 py-2">Role</th>
-                <th className="px-4 py-2">Created</th>
-                <th className="px-4 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member) => (
-                <tr className="border-t border-neutral-800" key={member.id}>
-                  <td className="px-4 py-2">{member.name}</td>
-                  <td className="px-4 py-2">{member.email}</td>
-                  <td className="px-4 py-2">{member.phone ?? "-"}</td>
-                  <td className="px-4 py-2">
-                    {canManageRoles ? (
-                      <select
-                        className="select"
-                        disabled={member.id === currentUserId}
-                        value={member.role}
-                        onChange={(event) =>
-                          updateRole(member.id, event.target.value as Role)
-                        }
-                      >
-                        {Object.values(Role).map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      member.role
-                    )}
-                  </td>
-                  <td className="px-4 py-2">{new Date(member.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-2">
-                    {canManageRoles && member.id !== currentUserId ? (
-                      <button
-                        className="btn btn-ghost"
-                        disabled={loading}
-                        onClick={() => removeMember(member.id)}
-                        type="button"
-                      >
-                        Remove
-                      </button>
-                    ) : null}
-                  </td>
-                </tr>
+      {/* Invite Member Minimalist Form */}
+      {canManageRoles && (
+        <div className="pt-2">
+          <p className="text-sm font-medium text-slate-100 mb-4">Add new member</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <input
+              className="bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors flex-1 min-w-[200px] placeholder:text-neutral-600"
+              placeholder="teammate@company.com"
+              type="email"
+              value={inviteEmail}
+              onChange={(event) => setInviteEmail(event.target.value)}
+              disabled={loading}
+            />
+            <select
+              className="bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors pr-8 cursor-pointer disabled:opacity-50 appearance-none"
+              value={inviteRole}
+              onChange={(event) => setInviteRole(event.target.value as Role)}
+              disabled={loading}
+              title={getRoleTooltip(inviteRole)}
+            >
+              {Object.values(Role).map((role) => (
+                <option className="bg-slate-900 text-slate-100" key={role} value={role}>
+                  {role}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+            <button 
+              className="btn btn-primary" 
+              disabled={loading || !inviteEmail.includes('@')} 
+              onClick={createInvite} 
+              type="button"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send invite
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-neutral-500">
+            {getRoleTooltip(inviteRole)}
+          </p>
         </div>
-      </div>
+      )}
 
+      {/* Active Members Minimal List */}
       <div>
-        <p className="kicker mb-2">Pending invites</p>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left text-sm">
-            <thead className="bg-neutral-900 text-neutral-400">
-              <tr>
-                <th className="px-4 py-2">Email</th>
-                <th className="px-4 py-2">Role</th>
-                <th className="px-4 py-2">Expires</th>
-                <th className="px-4 py-2">Join link</th>
-                <th className="px-4 py-2">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invites.map((invite) => {
-                const appUrl = typeof window !== "undefined" ? window.location.origin : "";
-                const link = `${appUrl}/join?token=${encodeURIComponent(invite.token)}`;
-                return (
-                  <tr className="border-t border-neutral-800" key={invite.id}>
-                    <td className="px-4 py-2">{invite.email}</td>
-                    <td className="px-4 py-2">{invite.role}</td>
-                    <td className="px-4 py-2">{new Date(invite.expiresAt).toLocaleString()}</td>
-                    <td className="px-4 py-2">
-                      <code className="text-xs">{link}</code>
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        className="btn btn-ghost"
-                        disabled={loading}
-                        onClick={() => revokeInvite(invite.id)}
-                        type="button"
-                      >
-                        Revoke
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {invites.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-4 text-neutral-500" colSpan={5}>
-                    No pending invites.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        <p className="text-sm tracking-wide text-neutral-500 mb-4 uppercase">Active Members ({members.length})</p>
+        <div className="flex flex-col gap-2">
+          {members.map((member) => (
+            <div 
+              className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all" 
+              key={member.id}
+            >
+              <div className="flex items-center gap-4">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 text-slate-300 font-medium">
+                  {member.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-slate-200">{member.name}</p>
+                    {member.id === currentUserId && <span className="text-[10px] uppercase tracking-wider text-sky-400 font-medium">You</span>}
+                  </div>
+                  <p className="text-sm text-neutral-500">{member.email}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 sm:mt-0 flex items-center gap-6">
+                <div className="text-sm text-neutral-400">
+                  Joined {new Date(member.createdAt).toLocaleDateString("en-US", { month: 'short', year: 'numeric' })}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {canManageRoles ? (
+                    <select
+                      className="bg-transparent text-sm text-slate-300 focus:outline-none focus:text-sky-400 transition-colors cursor-pointer appearance-none border-b border-transparent hover:border-white/20 pb-0.5"
+                      disabled={member.id === currentUserId || loading}
+                      value={member.role}
+                      onChange={(event) => updateRole(member.id, event.target.value as Role)}
+                      title={getRoleTooltip(member.role)}
+                    >
+                      {Object.values(Role).map((role) => (
+                        <option className="bg-slate-900 text-slate-100" key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-sm text-slate-300" title={getRoleTooltip(member.role)}>{member.role}</span>
+                  )}
+                  
+                  {canManageRoles && member.id !== currentUserId ? (
+                    <button
+                      className="text-neutral-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      disabled={loading}
+                      onClick={() => removeMember(member.id)}
+                      type="button"
+                      title="Remove member"
+                    >
+                      <UserMinus className="h-4 w-4" />
+                    </button>
+                  ) : <div className="w-8"></div>}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {/* Pending Invites Minimal List */}
+      {invites.length > 0 && (
+        <div className="pt-4 border-t border-white/5">
+          <p className="text-sm tracking-wide text-neutral-500 mb-4 uppercase">Pending Invites ({invites.length})</p>
+          <div className="flex flex-col gap-2">
+            {invites.map((invite) => {
+              const appUrl = typeof window !== "undefined" ? window.location.origin : "";
+              const link = `${appUrl}/join?token=${encodeURIComponent(invite.token)}`;
+              const isExpired = new Date(invite.expiresAt) < new Date();
+
+              return (
+                <div 
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all opacity-70 hover:opacity-100" 
+                  key={invite.id}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-full border border-dashed border-white/20 flex items-center justify-center text-neutral-500">
+                      ?
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-300">{invite.email}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-neutral-500">Invited as {invite.role}</span>
+                        {isExpired && <span className="text-[10px] uppercase text-red-400 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Expired</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 sm:mt-0 flex items-center gap-6">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(link)}
+                      className="text-xs text-neutral-400 hover:text-sky-400 transition-colors flex items-center gap-1.5"
+                      title="Copy join link"
+                    >
+                      <Copy className="h-3 w-3" /> Copy link
+                    </button>
+                    
+                    <button
+                      className="text-neutral-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      disabled={loading}
+                      onClick={() => revokeInvite(invite.id)}
+                      type="button"
+                      title="Revoke invite"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

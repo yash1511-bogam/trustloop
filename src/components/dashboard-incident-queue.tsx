@@ -8,6 +8,7 @@ import {
   Role,
 } from "@prisma/client";
 import { useEffect, useMemo, useState } from "react";
+import { Loader2, ArrowRight, RefreshCcw, Download } from "lucide-react";
 
 type Member = {
   id: string;
@@ -33,9 +34,9 @@ type ApiPayload = {
 };
 
 function severityBadgeClass(severity: IncidentSeverity): string {
-  if (severity === IncidentSeverity.P1) return "badge badge-p1";
-  if (severity === IncidentSeverity.P2) return "badge badge-p2";
-  return "badge badge-p3";
+  if (severity === IncidentSeverity.P1) return "text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border border-red-500/20 bg-red-500/10 text-red-400";
+  if (severity === IncidentSeverity.P2) return "text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400";
+  return "text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-400";
 }
 
 export function DashboardIncidentQueue() {
@@ -132,137 +133,148 @@ export function DashboardIncidentQueue() {
   }
 
   return (
-    <section className="surface overflow-hidden">
-      <div className="border-b border-neutral-800 p-6">
-        <h2 className="text-xl font-semibold text-slate-100">Incident queue</h2>
-      </div>
-
-      <div className="grid gap-4 border-b border-neutral-800 bg-neutral-900/80 p-6 md:grid-cols-6">
-        <select className="select" value={status} onChange={(event) => setStatus(event.target.value)}>
-          <option value="">All status</option>
-          {Object.values(IncidentStatus).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          value={severity}
-          onChange={(event) => setSeverity(event.target.value)}
-        >
-          <option value="">All severity</option>
-          {Object.values(IncidentSeverity).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select"
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-        >
-          <option value="">All categories</option>
-          {Object.values(AIIncidentCategory).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        <select className="select" value={owner} onChange={(event) => setOwner(event.target.value)}>
-          <option value="">All owners</option>
-          {members.map((member) => (
-            <option key={member.id} value={member.id}>
-              {member.name}
-            </option>
-          ))}
-        </select>
-        <input
-          className="input md:col-span-2"
-          placeholder="Search title, description, ticket ref"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <div className="mt-1 flex flex-wrap gap-2 md:col-span-6">
-          <button className="btn btn-primary" onClick={applyFilters} type="button">
-            Apply filters
+    <section className="pt-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-xl font-medium text-slate-100">Incident queue</h2>
+        <div className="flex gap-2">
+          <button className="btn btn-ghost text-xs !min-h-[32px] px-3" onClick={() => void refreshReadModels()} type="button">
+            <RefreshCcw className="w-3 h-3" /> Sync models
           </button>
-          <button className="btn btn-ghost" onClick={resetFilters} type="button">
-            Reset
-          </button>
-          <Link className="btn btn-ghost" href="/api/incidents/export?format=csv">
-            Export CSV
+          <Link className="btn btn-ghost text-xs !min-h-[32px] px-3" href="/api/incidents/export?format=csv">
+            <Download className="w-3 h-3" /> CSV
           </Link>
-          <button className="btn btn-ghost" onClick={() => void refreshReadModels()} type="button">
-            Refresh read models
-          </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[860px] text-left text-sm">
-          <thead className="bg-neutral-900 text-neutral-400">
-            <tr>
-              <th className="px-4 py-4">Severity</th>
-              <th className="px-4 py-4">Title</th>
-              <th className="px-4 py-4">Status</th>
-              <th className="px-4 py-4">Owner</th>
-              <th className="px-4 py-4">Events</th>
-              <th className="px-4 py-4">Updated</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((incident) => (
-              <tr className="border-t border-neutral-800" key={incident.id}>
-                <td className="px-4 py-4">
-                  <span className={severityBadgeClass(incident.severity)}>{incident.severity}</span>
-                </td>
-                <td className="px-4 py-4">
-                  <Link className="font-medium text-teal-800 hover:underline" href={`/incidents/${incident.id}`}>
-                    {incident.title}
-                  </Link>
-                  <p className="mt-1 text-xs text-neutral-500">{incident.category ?? "Uncategorized"}</p>
-                </td>
-                <td className="px-4 py-4">{incident.status}</td>
-                <td className="px-4 py-4">{incident.owner?.name ?? "Unassigned"}</td>
-                <td className="px-4 py-4">{incident._count.events}</td>
-                <td className="px-4 py-4">{new Date(incident.updatedAt).toLocaleString()}</td>
-              </tr>
+      <div className="grid gap-4 lg:grid-cols-[auto_auto_auto_auto_1fr_auto] mb-8 items-end p-4 rounded-2xl bg-white/5 border border-white/5">
+        <label className="block space-y-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Status</span>
+          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={status} onChange={(event) => setStatus(event.target.value)}>
+            <option className="bg-slate-900" value="">All</option>
+            {Object.values(IncidentStatus).map((option) => (
+              <option className="bg-slate-900" key={option} value={option}>{option}</option>
             ))}
+          </select>
+        </label>
+        
+        <label className="block space-y-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Severity</span>
+          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={severity} onChange={(event) => setSeverity(event.target.value)}>
+            <option className="bg-slate-900" value="">All</option>
+            {Object.values(IncidentSeverity).map((option) => (
+              <option className="bg-slate-900" key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </label>
 
-            {items.length === 0 && !loading ? (
-              <tr>
-                <td className="px-4 py-8 text-neutral-500" colSpan={6}>
-                  No incidents found.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+        <label className="block space-y-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Category</span>
+          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={category} onChange={(event) => setCategory(event.target.value)}>
+            <option className="bg-slate-900" value="">All</option>
+            {Object.values(AIIncidentCategory).map((option) => (
+              <option className="bg-slate-900" key={option} value={option}>{option}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block space-y-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Owner</span>
+          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={owner} onChange={(event) => setOwner(event.target.value)}>
+            <option className="bg-slate-900" value="">All</option>
+            {members.map((member) => (
+              <option className="bg-slate-900" key={member.id} value={member.id}>{member.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block space-y-1.5">
+          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Search</span>
+          <input
+            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            placeholder="Search keywords or tickets..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
+          />
+        </label>
+
+        <div className="flex gap-2">
+          <button className="btn btn-primary !min-h-[32px] text-xs px-4" onClick={applyFilters} type="button">
+            Apply
+          </button>
+          {(status || severity || category || owner || search || appliedSearch) && (
+            <button className="btn btn-ghost !min-h-[32px] text-xs px-3" onClick={resetFilters} type="button">
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between border-t border-neutral-800 p-6">
+      <div className="flex flex-col gap-2">
+        {items.map((incident) => (
+          <div className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all" key={incident.id}>
+            <div className="flex-1 min-w-0 pr-4">
+              <div className="flex items-center gap-3 mb-1">
+                <span className={severityBadgeClass(incident.severity)}>{incident.severity}</span>
+                <span className="text-xs font-medium text-slate-300">{incident.status}</span>
+                <span className="text-xs text-neutral-500">• {incident.category ?? "Uncategorized"}</span>
+              </div>
+              <Link className="text-base font-medium text-slate-100 hover:text-sky-400 transition-colors truncate block" href={`/incidents/${incident.id}`}>
+                {incident.title}
+              </Link>
+            </div>
+
+            <div className="mt-3 md:mt-0 flex items-center gap-8 text-sm">
+              <div className="flex flex-col items-start md:items-end">
+                <span className="text-neutral-400">{incident.owner?.name ?? "Unassigned"}</span>
+                <span className="text-[10px] text-neutral-500">Owner</span>
+              </div>
+              
+              <div className="flex flex-col items-start md:items-end w-16">
+                <span className="text-neutral-300">{incident._count.events}</span>
+                <span className="text-[10px] text-neutral-500">Events</span>
+              </div>
+
+              <div className="flex flex-col items-start md:items-end w-28">
+                <span className="text-neutral-400">{new Date(incident.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                <span className="text-[10px] text-neutral-500">Updated</span>
+              </div>
+              
+              <Link className="opacity-0 group-hover:opacity-100 transition-opacity text-sky-400 hover:text-sky-300 p-2" href={`/incidents/${incident.id}`}>
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+        ))}
+
+        {items.length === 0 && !loading ? (
+          <div className="p-8 text-center text-sm text-neutral-500 border border-dashed border-white/10 rounded-2xl">
+            No incidents match your criteria.
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-6 flex items-center justify-between pt-6 border-t border-white/5">
         <button
-          className="btn btn-ghost"
+          className="text-sm font-medium text-sky-400 hover:text-sky-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           disabled={loading || cursorStack.length === 0}
           onClick={goPrevious}
           type="button"
         >
-          Previous
+          &larr; Previous Page
         </button>
+        {loading && <Loader2 className="w-4 h-4 animate-spin text-sky-400" />}
         <button
-          className="btn btn-primary"
+          className="text-sm font-medium text-sky-400 hover:text-sky-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           disabled={loading || !nextCursor}
           onClick={goNext}
           type="button"
         >
-          Next
+          Next Page &rarr;
         </button>
       </div>
 
-      {loading ? <p className="px-6 pb-6 text-sm text-neutral-500">Loading incidents...</p> : null}
-      {error ? <p className="px-6 pb-6 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
     </section>
   );
 }

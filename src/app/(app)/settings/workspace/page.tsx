@@ -54,8 +54,8 @@ export default async function SettingsWorkspacePage() {
   } as const;
 
   return (
-    <>
-      <section className="surface p-6">
+    <div className="space-y-16 pt-8">
+      <section>
         <p className="kicker">Workspace controls</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Quotas, integrations, and workspace policy</h1>
         <p className="mt-2 max-w-3xl text-sm text-neutral-500">
@@ -63,10 +63,10 @@ export default async function SettingsWorkspacePage() {
         </p>
       </section>
 
-      <section className="surface p-6">
-        <h2 className="text-2xl font-semibold text-slate-100">Workspace quotas</h2>
+      <section className="pb-10 border-b border-white/5">
+        <h2 className="text-xl font-medium text-slate-100">Workspace quotas</h2>
         <p className="mt-1 text-sm text-neutral-500">Tenant-aware rate-limit and daily quota controls for this workspace.</p>
-        <div className="mt-4">
+        <div className="mt-8">
           <QuotaSettingsPanel
             initialQuota={{
               apiRequestsPerMinute: quota.apiRequestsPerMinute,
@@ -84,10 +84,10 @@ export default async function SettingsWorkspacePage() {
         </div>
       </section>
 
-      <section className="surface p-6">
-        <h2 className="text-2xl font-semibold text-slate-100">Workspace settings</h2>
+      <section className="pb-10 border-b border-white/5">
+        <h2 className="text-xl font-medium text-slate-100">Workspace settings</h2>
         <p className="mt-1 text-sm text-neutral-500">Control public status page, Slack connect/channel, and enterprise SSO metadata.</p>
-        <div className="mt-4">
+        <div className="mt-8">
           <WorkspaceSettingsPanel
             workspace={workspace}
             slackInstallUrl={slackInstallUrl(auth.user.workspaceId)}
@@ -95,12 +95,12 @@ export default async function SettingsWorkspacePage() {
         </div>
       </section>
 
-      <section className="surface p-6">
-        <h2 className="text-2xl font-semibold text-slate-100">Webhook integrations</h2>
+      <section className="pb-10 border-b border-white/5">
+        <h2 className="text-xl font-medium text-slate-100">Webhook integrations</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Configure signed inbound webhook secrets for Datadog, PagerDuty, Sentry, and AI observability tools.
         </p>
-        <div className="mt-4">
+        <div className="mt-8">
           <IntegrationsPanel
             endpoints={endpoints}
             initialIntegrations={integrations}
@@ -108,15 +108,15 @@ export default async function SettingsWorkspacePage() {
         </div>
       </section>
 
-      <section className="surface p-6">
-        <h2 className="text-2xl font-semibold text-slate-100">Browser push notifications</h2>
+      <section className="pb-10">
+        <h2 className="text-xl font-medium text-slate-100">Browser push notifications</h2>
         <p className="mt-1 text-sm text-neutral-500">
           Enable browser push for reminder and escalation alerts for your account.
         </p>
-        <div className="mt-4">
+        <div className="mt-8">
           <PushNotificationPanel />
         </div>
       </section>
-    </>
+    </div>
   );
 }

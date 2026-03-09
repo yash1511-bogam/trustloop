@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldCheck, Slack } from "lucide-react";
 
 type WorkspaceSettings = {
   id: string;
@@ -40,6 +41,14 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const hasChanges = 
+    form.slug !== (workspace.slug ?? "") ||
+    form.statusPageEnabled !== workspace.statusPageEnabled ||
+    form.slackChannelId !== (workspace.slackChannelId ?? "") ||
+    form.samlEnabled !== workspace.samlEnabled ||
+    form.samlMetadataUrl !== (workspace.samlMetadataUrl ?? "") ||
+    form.complianceMode !== workspace.complianceMode;
+
   const statusPageUrl = useMemo(() => {
     if (!form.slug) {
       return null;
@@ -74,15 +83,30 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
     }
 
     setMessage("Workspace settings saved.");
+    setTimeout(() => setMessage(null), 3000);
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-1 text-sm">
-          <span className="font-medium">Public status slug</span>
+    <div className="space-y-12 max-w-4xl">
+      {(message || error) && (
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+          {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+          <span>{error || message}</span>
+        </div>
+      )}
+
+      <div className="grid gap-8 md:grid-cols-2">
+        <label className="block space-y-3">
+          <span className="text-sm font-medium text-slate-300 flex items-center justify-between">
+            Public status slug
+            {statusPageUrl && (
+              <a href={statusPageUrl} target="_blank" className="text-[10px] uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1">
+                View page <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            )}
+          </span>
           <input
-            className="input"
+            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             value={form.slug}
             onChange={(event) =>
               setForm((prev) => ({
@@ -91,13 +115,14 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
               }))
             }
             placeholder="acme-ai"
+            disabled={loading}
           />
         </label>
 
-        <label className="space-y-1 text-sm">
-          <span className="font-medium">Slack incident channel ID</span>
+        <label className="block space-y-3">
+          <span className="text-sm font-medium text-slate-300">Slack incident channel ID</span>
           <input
-            className="input"
+            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             value={form.slackChannelId}
             onChange={(event) =>
               setForm((prev) => ({
@@ -106,13 +131,14 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
               }))
             }
             placeholder="C0123456789"
+            disabled={loading}
           />
         </label>
 
-        <label className="space-y-1 text-sm md:col-span-2">
-          <span className="font-medium">SAML metadata URL (enterprise)</span>
+        <label className="block space-y-3 md:col-span-2">
+          <span className="text-sm font-medium text-slate-300">SAML metadata URL (enterprise)</span>
           <input
-            className="input"
+            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             value={form.samlMetadataUrl}
             onChange={(event) =>
               setForm((prev) => ({
@@ -121,13 +147,15 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
               }))
             }
             placeholder="https://idp.example.com/metadata"
+            disabled={loading}
           />
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <label className="flex items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-8 py-4 border-y border-white/5">
+        <label className="flex items-center gap-3 cursor-pointer group">
           <input
+            className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
             checked={form.statusPageEnabled}
             onChange={(event) =>
               setForm((prev) => ({
@@ -137,11 +165,12 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
             }
             type="checkbox"
           />
-          Enable public status page
+          <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable status page</span>
         </label>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-3 cursor-pointer group">
           <input
+            className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
             checked={form.samlEnabled}
             onChange={(event) =>
               setForm((prev) => ({
@@ -151,11 +180,12 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
             }
             type="checkbox"
           />
-          Enable SAML SSO (enterprise)
+          <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable SAML SSO</span>
         </label>
 
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex items-center gap-3 cursor-pointer group">
           <input
+            className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0 disabled:opacity-50"
             checked={form.complianceMode}
             disabled={workspace.complianceMode}
             onChange={(event) =>
@@ -166,64 +196,61 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
             }
             type="checkbox"
           />
-          Enable compliance mode (cannot be disabled)
+          <div className="flex flex-col">
+            <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Compliance mode</span>
+            {form.complianceMode && (
+              <span className="text-[10px] text-amber-500 font-medium uppercase tracking-tight">Locked</span>
+            )}
+          </div>
         </label>
       </div>
 
-      {form.complianceMode ? (
-        <p className="text-xs text-amber-500">
-          Compliance mode prevents incident deletion and keeps historical records immutable.
-        </p>
-      ) : null}
+      {form.complianceMode && !workspace.complianceMode && (
+        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-xs text-amber-200/70 flex items-start gap-3">
+          <ShieldCheck className="w-4 h-4 shrink-0 text-amber-500" />
+          <p>
+            Enabling compliance mode prevents incident deletion and keeps historical records immutable. 
+            Once saved, this setting <strong>cannot be disabled</strong>.
+          </p>
+        </div>
+      )}
 
-      <div className="flex flex-wrap gap-2">
-        <button className="btn btn-primary" disabled={loading} onClick={save} type="button">
-          {loading ? "Saving..." : "Save workspace settings"}
-        </button>
-        <a className="btn btn-ghost" href={slackInstallUrl}>
-          {workspace.slackTeamId ? "Reconnect Slack app" : "Connect Slack app"}
-        </a>
-        {statusPageUrl ? (
-          <a className="btn btn-ghost" href={statusPageUrl} target="_blank">
-            Open status page
+      <div className="flex flex-wrap items-center justify-between gap-6 pt-4">
+        <div className="flex flex-wrap gap-3">
+          <button className="btn btn-primary" disabled={loading || !hasChanges} onClick={save} type="button">
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save workspace"}
+          </button>
+          <a className="btn btn-ghost" href={slackInstallUrl}>
+            <Slack className="w-4 h-4" />
+            {workspace.slackTeamId ? "Reconnect Slack" : "Connect Slack"}
           </a>
-        ) : null}
-      </div>
-
-      <div className="panel-card p-4 text-sm text-neutral-400">
-        <p>
-          Current plan: <strong>{workspace.planTier}</strong>
-        </p>
-        <p>
-          Slack team connected: <strong>{workspace.slackTeamId ?? "No"}</strong>
-        </p>
-        <p>
-          SAML organization: <strong>{workspace.samlOrganizationId ?? "Not linked"}</strong>
-        </p>
-        <p>
-          SAML connection: <strong>{workspace.samlConnectionId ?? "Not linked"}</strong>
-        </p>
-        <p>
-          SAML ready:{" "}
-          <strong>
-            {workspace.samlEnabled && workspace.samlMetadataUrl && workspace.samlConnectionId
-              ? "Yes"
-              : "No"}
-          </strong>
-        </p>
-        <p>
-          Dodo customer: <strong>{workspace.billing?.dodoCustomerId ?? "Not linked"}</strong>
-        </p>
-        <p>
-          Dodo subscription: <strong>{workspace.billing?.dodoSubscriptionId ?? "Not linked"}</strong>
-        </p>
-        <p>
-          Billing status: <strong>{workspace.billing?.status ?? "NONE"}</strong>
+        </div>
+        
+        <p className="text-xs text-neutral-500 italic">
+          Workspace ID: <span className="font-mono">{workspace.id}</span>
         </p>
       </div>
 
-      {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 pt-12 border-t border-white/5">
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Current plan</p>
+          <p className="text-sm text-slate-200">{workspace.planTier}</p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Slack status</p>
+          <p className="text-sm text-slate-200">{workspace.slackTeamId ? "Connected" : "Disconnected"}</p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">SAML ready</p>
+          <p className="text-sm text-slate-200">
+            {workspace.samlEnabled && workspace.samlMetadataUrl && workspace.samlConnectionId ? "Active" : "Not configured"}
+          </p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Billing status</p>
+          <p className="text-sm text-slate-200 font-medium">{workspace.billing?.status ?? "NONE"}</p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2, KeyRound, X, CheckCircle2, AlertCircle } from "lucide-react";
 
 type ApiKeyRow = {
   id: string;
@@ -32,6 +33,11 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
     setKeys(payload.keys);
   }
 
+  function showMessage(msg: string) {
+    setMessage(msg);
+    setTimeout(() => setMessage(null), 4000);
+  }
+
   async function createKey() {
     setLoading(true);
     setError(null);
@@ -55,8 +61,9 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
       return;
     }
 
-    setMessage(payload?.message ?? "API key created.");
+    showMessage(payload?.message ?? "API key created.");
     setRevealedKey(payload?.apiKey ?? null);
+    setName("");
     await refresh();
   }
 
@@ -81,84 +88,113 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
       return;
     }
 
-    setMessage("API key revoked.");
+    showMessage("API key revoked.");
     await refresh();
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-neutral-400">
-        Create API keys for external incident intake (monitoring alerts, bot automations, and webhook pipelines).
-      </p>
+    <div className="space-y-8">
+      {(message || error) && (
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+          {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+          <span>{error || message}</span>
+        </div>
+      )}
 
-      <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-        <input
-          className="input"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Key name"
-        />
-        <button className="btn btn-primary" disabled={loading} onClick={createKey} type="button">
-          {loading ? "Creating..." : "Create API key"}
-        </button>
+      <div className="pt-2">
+        <p className="text-sm font-medium text-slate-100 mb-4">Create new key</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <input
+            className="bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors flex-1 min-w-[200px] max-w-md placeholder:text-neutral-600"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="e.g. CI/CD Pipeline"
+            disabled={loading}
+          />
+          <button 
+            className="btn btn-primary" 
+            disabled={loading || !name.trim()} 
+            onClick={createKey} 
+            type="button"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+            Generate key
+          </button>
+        </div>
       </div>
 
       {revealedKey ? (
-        <div className="panel-card p-4">
-          <p className="kicker mb-1">One-time key reveal</p>
-          <code className="block overflow-x-auto rounded bg-white p-2 text-xs">{revealedKey}</code>
+        <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 animate-in fade-in slide-in-from-top-4">
+          <p className="text-sm font-medium text-amber-400 mb-2">One-time key reveal</p>
+          <p className="text-xs text-amber-200/70 mb-4">Copy this key now. It will not be shown again.</p>
+          <div className="flex items-center gap-4">
+            <code className="flex-1 block overflow-x-auto rounded-xl border border-amber-500/30 bg-black/40 p-4 text-sm text-slate-100 font-mono">
+              {revealedKey}
+            </code>
+            <button
+              onClick={() => navigator.clipboard.writeText(revealedKey)}
+              className="btn btn-ghost shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+            >
+              Copy
+            </button>
+          </div>
         </div>
       ) : null}
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[740px] text-left text-sm">
-          <thead className="bg-neutral-900 text-neutral-400">
-            <tr>
-              <th className="px-4 py-2">Name</th>
-              <th className="px-4 py-2">Prefix</th>
-              <th className="px-4 py-2">Created</th>
-              <th className="px-4 py-2">Last used</th>
-              <th className="px-4 py-2">Status</th>
-              <th className="px-4 py-2">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map((key) => (
-              <tr className="border-t border-neutral-800" key={key.id}>
-                <td className="px-4 py-2">{key.name}</td>
-                <td className="px-4 py-2 font-mono text-xs">{key.keyPrefix}</td>
-                <td className="px-4 py-2">{new Date(key.createdAt).toLocaleString()}</td>
-                <td className="px-4 py-2">
-                  {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : "Never"}
-                </td>
-                <td className="px-4 py-2">{key.isActive ? "Active" : "Revoked"}</td>
-                <td className="px-4 py-2">
-                  {key.isActive ? (
+      <div className="pt-4">
+        <p className="text-sm tracking-wide text-neutral-500 mb-4 uppercase">Active & Revoked Keys ({keys.length})</p>
+        <div className="flex flex-col gap-2">
+          {keys.map((key) => (
+            <div 
+              className={`group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all ${key.isActive ? "border-transparent hover:border-white/5 hover:bg-white/5" : "border-transparent opacity-50"}`}
+              key={key.id}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center border ${key.isActive ? "bg-white/5 border-white/10 text-slate-300" : "border-dashed border-white/20 text-neutral-600"}`}>
+                  <KeyRound className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className={`font-medium ${key.isActive ? "text-slate-200" : "text-neutral-500 line-through"}`}>{key.name}</p>
+                    {!key.isActive && <span className="text-[10px] uppercase tracking-wider text-red-400 border border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded-full">Revoked</span>}
+                  </div>
+                  <p className="text-sm text-neutral-500 font-mono mt-0.5">{key.keyPrefix}••••••••••••</p>
+                </div>
+              </div>
+
+              <div className="mt-4 sm:mt-0 flex items-center gap-8">
+                <div className="flex flex-col items-end">
+                  <span className="text-xs text-neutral-400">
+                    Created {new Date(key.createdAt).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <span className="text-[10px] text-neutral-500 mt-1">
+                    Last used: {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleDateString("en-US") : "Never"}
+                  </span>
+                </div>
+
+                <div className="w-10 flex justify-end">
+                  {key.isActive && (
                     <button
-                      className="btn btn-ghost"
+                      className="text-neutral-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
                       disabled={loading}
                       onClick={() => revokeKey(key.id)}
                       type="button"
+                      title="Revoke key"
                     >
-                      Revoke
+                      <X className="h-4 w-4" />
                     </button>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-            {keys.length === 0 ? (
-              <tr>
-                <td className="px-4 py-4 text-neutral-500" colSpan={6}>
-                  No API keys created yet.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+          {keys.length === 0 && (
+            <div className="p-8 text-center text-sm text-neutral-500 border border-dashed border-white/10 rounded-2xl">
+              No API keys created yet.
+            </div>
+          )}
+        </div>
       </div>
-
-      {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
     </div>
   );
 }
