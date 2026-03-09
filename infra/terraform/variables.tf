@@ -172,3 +172,9 @@ variable "reminder_stale_minutes" {
   type    = number
   default = 240
 }
+
+variable "acm_certificate_arn" {
+  type        = string
+  default     = ""
+  description = "ACM certificate ARN for HTTPS. Leave empty to use HTTP only."
+}

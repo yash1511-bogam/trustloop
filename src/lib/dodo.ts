@@ -45,7 +45,13 @@ export function dodoProductIdForPlan(plan: PlanTier): string {
     return requiredValue("DODO_PRODUCT_ID_STARTER");
   }
   if (plan === "enterprise") {
-    return requiredValue("DODO_PRODUCT_ID_ENTERPRISE");
+    const id = requiredValue("DODO_PRODUCT_ID_ENTERPRISE");
+    if (id === "custom") {
+      throw new Error(
+        "Enterprise plan requires a custom agreement. Set DODO_PRODUCT_ID_ENTERPRISE to a valid product ID.",
+      );
+    }
+    return id;
   }
   return requiredValue("DODO_PRODUCT_ID_PRO");
 }

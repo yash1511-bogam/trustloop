@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: trustloop/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -36,15 +36,12 @@ jobs:
           version: 10.30.3
 
       - name: Install dependencies
-        working-directory: trustloop
         run: pnpm install --frozen-lockfile
 
       - name: Start local dependencies (Postgres, Redis, LocalStack)
-        working-directory: trustloop
         run: docker compose -f docker-compose.localstack.yml up -d
 
       - name: Wait for local dependencies
-        working-directory: trustloop
         run: |
           pg_ready=false
           for i in {1..60}; do
@@ -86,7 +83,6 @@ jobs:
           fi
 
       - name: Bootstrap Prisma, database, Redis and queue commands
-        working-directory: trustloop
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trustloop?schema=public
           REDIS_URL: redis://localhost:6379
@@ -103,6 +99,9 @@ jobs:
           DODO_PRODUCT_ID_PRO: ${{ secrets.TF_VAR_dodo_product_id_pro || 'prod_test_pro' }}
           DODO_PRODUCT_ID_ENTERPRISE: ${{ secrets.TF_VAR_dodo_product_id_enterprise || 'prod_test_enterprise' }}
           BILLING_AUTOMATION_CRON_SECRET: ${{ secrets.TF_VAR_billing_automation_cron_secret || 'billing-cron-test-secret' }}
+          REMINDER_ENQUEUE_CRON_SECRET: ${{ secrets.TF_VAR_reminder_enqueue_cron_secret || 'reminder-enqueue-test-secret' }}
+          AI_KEY_HEALTH_CRON_SECRET: ${{ secrets.TF_VAR_ai_key_health_cron_secret || 'ai-key-health-test-secret' }}
+          REMINDER_STALE_MINUTES: "240"
           AWS_REGION: us-east-1
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
@@ -122,11 +121,9 @@ jobs:
           pnpm run billing:grace:once
 
       - name: Lint
-        working-directory: trustloop
         run: pnpm run lint
 
       - name: Build
-        working-directory: trustloop
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trustloop?schema=public
           REDIS_URL: redis://localhost:6379
@@ -143,6 +140,9 @@ jobs:
           DODO_PRODUCT_ID_PRO: ${{ secrets.TF_VAR_dodo_product_id_pro || 'prod_test_pro' }}
           DODO_PRODUCT_ID_ENTERPRISE: ${{ secrets.TF_VAR_dodo_product_id_enterprise || 'prod_test_enterprise' }}
           BILLING_AUTOMATION_CRON_SECRET: ${{ secrets.TF_VAR_billing_automation_cron_secret || 'billing-cron-test-secret' }}
+          REMINDER_ENQUEUE_CRON_SECRET: ${{ secrets.TF_VAR_reminder_enqueue_cron_secret || 'reminder-enqueue-test-secret' }}
+          AI_KEY_HEALTH_CRON_SECRET: ${{ secrets.TF_VAR_ai_key_health_cron_secret || 'ai-key-health-test-secret' }}
+          REMINDER_STALE_MINUTES: "240"
           AWS_REGION: us-east-1
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
@@ -171,11 +171,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        working-directory: trustloop/infra/terraform
+        working-directory: infra/terraform
         run: terraform init
 
       - name: Terraform Apply (ECR bootstrap)
-        working-directory: trustloop/infra/terraform
+        working-directory: infra/terraform
         env:
           TF_VAR_project_name: ${{ env.PROJECT_NAME }}
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
@@ -194,6 +194,8 @@ jobs:
           TF_VAR_dodo_product_id_pro: ${{ secrets.TF_VAR_dodo_product_id_pro }}
           TF_VAR_dodo_product_id_enterprise: ${{ secrets.TF_VAR_dodo_product_id_enterprise }}
           TF_VAR_billing_automation_cron_secret: ${{ secrets.TF_VAR_billing_automation_cron_secret }}
+          TF_VAR_reminder_enqueue_cron_secret: ${{ secrets.TF_VAR_reminder_enqueue_cron_secret }}
+          TF_VAR_ai_key_health_cron_secret: ${{ secrets.TF_VAR_ai_key_health_cron_secret }}
           TF_VAR_image_tag: bootstrap
         run: terraform apply -target=aws_ecr_repository.app -auto-approve
 
@@ -201,7 +203,6 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and Push Docker Image
-        working-directory: trustloop
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
@@ -211,7 +212,7 @@ jobs:
           docker push "$ECR_REPO:$IMAGE_TAG"
 
       - name: Terraform Apply (Full deploy)
-        working-directory: trustloop/infra/terraform
+        working-directory: infra/terraform
         env:
           TF_VAR_project_name: ${{ env.PROJECT_NAME }}
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
@@ -230,10 +231,12 @@ jobs:
           TF_VAR_dodo_product_id_pro: ${{ secrets.TF_VAR_dodo_product_id_pro }}
           TF_VAR_dodo_product_id_enterprise: ${{ secrets.TF_VAR_dodo_product_id_enterprise }}
           TF_VAR_billing_automation_cron_secret: ${{ secrets.TF_VAR_billing_automation_cron_secret }}
+          TF_VAR_reminder_enqueue_cron_secret: ${{ secrets.TF_VAR_reminder_enqueue_cron_secret }}
+          TF_VAR_ai_key_health_cron_secret: ${{ secrets.TF_VAR_ai_key_health_cron_secret }}
         run: terraform apply -auto-approve -var="image_tag=${GITHUB_SHA}"
 
       - name: Run Prisma Migrations
-        working-directory: trustloop/infra/terraform
+        working-directory: infra/terraform
         run: |
           ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)
           WEB_TASK_DEFINITION=$(terraform output -raw web_task_definition_arn)
@@ -275,6 +278,6 @@ jobs:
           fi
 
       - name: Show deployment endpoint
-        working-directory: trustloop/infra/terraform
+        working-directory: infra/terraform
         run: |
           echo "Application URL: $(terraform output -raw app_url)"
