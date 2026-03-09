@@ -1,135 +1,132 @@
 ---
-title: Run an Incident
-description: Create incidents, assign owners, use AI assistance, publish updates, and close incidents with a clean operational record.
+title: Incident Operations
+description: Create, triage, assign, communicate, and resolve incidents using the TrustLoop operational workflow.
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-# Run an Incident
+# Incident Operations
 
-This guide explains the normal working flow inside TrustLoop once your workspace is ready.
+This guide covers the end-to-end incident lifecycle within TrustLoop, from creation through resolution.
 
-## The core workflow
+## Incident Lifecycle
 
-### 1. Create the incident
+### 1. Create an Incident
 
-You can create incidents from:
+Incidents can be created from:
 
 - The dashboard form
-- Webhook integrations
+- Webhook integrations (Datadog, PagerDuty, Sentry, Langfuse, Helicone, Generic)
 - Slack
 - API-based automation
 
-A good incident title explains what failed. A good description explains impact, urgency, and customer risk.
+Provide a clear title describing the failure and a description covering impact, urgency, and customer risk.
 
-### 2. Assign an owner
+### 2. Assign an Owner
 
-Every incident should have one clear owner as early as possible.
+Every incident should have a single, accountable owner assigned as early as possible. When an owner is assigned:
 
-When you assign an owner:
+- The assignment is recorded in the incident timeline.
+- The owner becomes eligible for follow-up reminder emails.
+- P1 escalation can use the owner's contact details for urgent alerts.
 
-- The incident timeline records the change
-- The owner can receive follow-up reminder emails
-- `P1` escalation can use owner contact details for urgent alerts
+### 3. Set Severity and Status
 
-### 3. Set the right severity and status
+**Severity** indicates urgency:
 
-Use severity to show urgency:
+| Level | Usage |
+| --- | --- |
+| `P1` | Urgent, customer-critical failures |
+| `P2` | Significant impact with narrower scope |
+| `P3` | Lower-risk incidents requiring tracking |
 
-- `P1` for urgent, customer-critical failures
-- `P2` for serious but narrower impact
-- `P3` for lower-risk incidents that still need tracking
+**Status** indicates progress:
 
-Use status to show progress:
+| Status | Description |
+| --- | --- |
+| `NEW` | Incident created, not yet investigated |
+| `INVESTIGATING` | Active investigation in progress |
+| `MITIGATED` | Impact reduced, root cause may still be open |
+| `RESOLVED` | Incident closed |
 
-- `NEW`
-- `INVESTIGATING`
-- `MITIGATED`
-- `RESOLVED`
+### 4. Run AI Triage
 
-### 4. Run AI triage
+When an AI provider key is active, triage performs the following:
 
-If an AI provider key is active, you can run triage to:
+- Classifies severity and category
+- Generates a concise summary
+- Suggests next steps
 
-- Classify severity and category
-- Generate a short summary
-- Capture suggested next steps
+For P1 and P2 incidents, reminder automation is queued automatically after triage.
 
-For `P1` and `P2` incidents, reminder work is queued automatically after triage.
+### 5. Draft a Customer Update
 
-### 5. Draft a customer update
+Use the customer update action to generate external communication. TrustLoop uses the incident summary, current status, and recent timeline to draft the message.
 
-Use the customer-update action when you need clear external communication quickly.
+### 6. Publish a Status Update
 
-TrustLoop uses the incident summary, current status, and recent timeline to draft the message.
+If the public status page is enabled, publish a visible update when customers need to see progress on the incident.
 
-### 6. Publish a visible status update
+### 7. Resolve the Incident
 
-If your workspace uses the public status page, publish a visible update when customers need to see progress.
+Mark the incident as resolved to:
 
-### 7. Resolve the incident
+- Update the active incident queue
+- Stop reminder automation
+- Ensure accurate reporting and export data
 
-Once the issue is closed, mark it resolved so:
+## Dashboard Capabilities
 
-- The queue reflects reality
-- Reminder automation stops
-- Reporting and exports stay accurate
-
-## What the dashboard helps you do
-
-The dashboard queue is designed for day-to-day operations.
-
-You can:
+The dashboard is designed for day-to-day incident operations:
 
 - Filter by status, severity, category, and owner
 - Search by title, description, or ticket reference
-- Open incident details quickly
-- Export incident history when needed
+- Access incident details directly
+- Export incident history
 - Refresh reporting snapshots for leadership views
 
-## What the executive view is for
+## Executive View
 
-Use the executive page when you want a higher-level view of:
+The executive page provides a high-level operational overview:
 
-- Open incident pressure
-- `P1` volume
-- Created versus resolved trends
-- Triage coverage
-- Customer-update coverage
-- Reminder failures over time
+- Open incident volume and pressure
+- P1 incident trends
+- Created vs. resolved incident ratios
+- Triage and customer update coverage
+- Reminder delivery metrics
 
-## If you are stuck
+## Troubleshooting
 
-### I cannot run AI triage
+### AI triage is unavailable
 
-Go to **Settings -> AI & API Keys** and check:
+Navigate to **Settings → AI & API Keys** and verify:
 
-- A provider key exists
-- The key is active
-- The key test succeeds
+- A provider key exists for the configured workflow
+- The key is marked as active
+- The key verification test passes
 
 ### Customer update drafting is unavailable
 
-Check the same AI key page. Customer updates use the configured workflow route and fall back to the triage route if needed.
+Verify AI key configuration on the same page. Customer updates use the configured workflow route and fall back to the triage route if no dedicated route is set.
 
-### I published an update but do not see it on the public status page
+### Published update not visible on the status page
 
-Make sure:
+Verify the following:
 
-- Public status page is enabled in workspace settings
-- Your workspace slug is set
-- The update was published as visible
+- The public status page is enabled in **Settings → Workspace**
+- The workspace slug is configured
+- The update was published with visibility enabled
 
-### I cannot delete an incident
+### Cannot delete an incident
 
-Your workspace may have compliance mode enabled. In that mode, TrustLoop prevents incident deletion.
+Compliance mode may be enabled for the workspace. When active, TrustLoop prevents incident deletion to maintain audit integrity.
 
-<Callout type="info" title="Use a practice incident first">
-  If your team is new to TrustLoop, run one internal test incident from creation to resolution before the first real customer-facing event. It is the fastest way to confirm ownership, AI, notifications, and status publishing all work together.
+<Callout type="info" title="Run a practice incident">
+  Before your first production incident, complete a full test cycle — from creation through resolution — to validate ownership, AI triage, notifications, and status page publishing.
 </Callout>
 
-## Related guides
+## Related Guides
 
-- [Connect Integrations](/docs/guides/integrations-and-ingestion)
-- [Configure Your Workspace](/docs/guides/workspace-administration)
+- [Integrations](/docs/guides/integrations-and-ingestion)
+- [Workspace Administration](/docs/guides/workspace-administration)
 - [Plans, Billing, and Alerts](/docs/guides/billing-and-automation)

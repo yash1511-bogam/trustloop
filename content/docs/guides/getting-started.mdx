@@ -1,127 +1,127 @@
 ---
 title: Getting Started
-description: Set up your workspace after sign-up, connect the essentials, and run a safe first incident test.
+description: Complete initial workspace setup, configure AI providers, invite your team, and validate your environment with a test incident.
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
 # Getting Started
 
-This guide is for new workspace owners and managers. Follow it after you create a TrustLoop account or accept an invite.
+This guide walks new workspace owners and administrators through the initial setup process after creating a TrustLoop account or accepting a team invite.
 
-## What to do first
+## Prerequisites
 
-### 1. Sign in and land on the dashboard
+- A TrustLoop account (via registration or team invite)
+- Access to at least one AI provider API key (OpenAI, Gemini, or Anthropic)
 
-Use any sign-in method available to you:
+## Step 1: Sign In
+
+Authenticate using any supported method:
 
 - Email verification code
-- Google
-- GitHub
-- SAML SSO if your workspace uses it
-- Invite link if you were added by a teammate
+- Google OAuth
+- GitHub OAuth
+- SAML SSO (if configured by your organization)
+- Team invite link
 
-After a successful sign-in, you should land on the dashboard.
+After successful authentication, you will be directed to the dashboard.
 
-### 2. Open the settings area
+## Step 2: Review Workspace Settings
 
-Use the main menu to review these pages:
+Navigate to the settings area and review the following pages:
 
-- **AI & API Keys**
-- **Workspace**
-- **Team**
-- **Billing**
+- **AI & API Keys** — Provider key configuration and workflow routing
+- **Workspace** — Slug, status page, integrations, and SAML configuration
+- **Team** — Member management, roles, and contact information
+- **Billing** — Plan tier, usage, and payment status
 
-You do not need to change everything at once. Start with the items that affect daily incident work.
+## Initial Configuration
 
-## First-time workspace setup
+### Configure an AI Provider Key
 
-### Add at least one AI provider key
+Navigate to **Settings → AI & API Keys** and add at least one active provider key.
 
-Open **Settings -> AI & API Keys** and add one active provider key.
+TrustLoop operates without AI assistance, but the following features require an active provider key:
 
-TrustLoop can work without AI assistance, but AI triage and AI-written customer updates will stay unavailable until a provider key is active.
+- AI-powered incident triage
+- Customer update draft generation
 
-### Confirm your workspace slug
+### Set the Workspace Slug
 
-Open **Settings -> Workspace** and check the public workspace slug.
+Navigate to **Settings → Workspace** and confirm the public workspace slug. The slug is used for:
 
-The slug matters because it is used for:
+- Public status page URLs
+- SAML SSO authentication flows
+- External workspace references
 
-- Your public status page URL
-- Some workspace-specific sign-in flows such as SAML SSO
-- External references when your team shares the public incident stream
+### Enable the Public Status Page
 
-### Decide whether to enable the public status page
+If your team publishes customer-facing incident updates, enable the public status page in **Settings → Workspace**.
 
-If you want customer-facing updates, turn on the public status page in **Settings -> Workspace**.
+### Invite Team Members
 
-### Invite the right people
+Navigate to **Settings → Team** and add the appropriate users:
 
-Open **Settings -> Team** and invite the people who need access.
+- At least one additional owner or manager for redundancy
+- Incident responders who will own and manage incidents
+- Phone numbers for users who should receive P1 SMS escalations
 
-Recommended minimum setup:
+### Review Billing and Quotas
 
-- At least one additional owner or manager
-- The incident responders who will own incidents day to day
-- Phone numbers for anyone who should receive urgent `P1` escalation messages
+Navigate to **Settings → Billing** to confirm your current plan tier and usage allowances.
 
-### Review billing and usage limits
+## Validate Your Environment
 
-Open **Settings -> Billing** to confirm your current plan and usage allowances.
+Run a complete test cycle before relying on the workspace for production incidents.
 
-## Your first live test
-
-Run a short internal test before you rely on the workspace during a real incident.
-
-### Recommended test flow
+### Test Procedure
 
 1. Create a sample incident from the dashboard.
 2. Assign an owner.
 3. Run AI triage.
-4. Draft a customer update.
-5. Publish one visible status update if your status page is enabled.
+4. Generate a customer update draft.
+5. Publish a visible status update (if the status page is enabled).
 6. Resolve the incident.
-7. Export the incident if your team needs an audit copy.
+7. Export the incident record (if your team requires audit copies).
 
-## What success looks like
+## Readiness Checklist
 
-You are ready to use TrustLoop when all of the following are true:
+Your workspace is production-ready when:
 
-- At least one AI key is active.
-- Your workspace slug is set.
-- Owners and responders have access.
-- At least one alert source or intake path is ready.
-- You have completed one practice incident end to end.
+- At least one AI provider key is active and verified.
+- The workspace slug is configured.
+- Owners and responders have been granted access.
+- At least one alert source or integration is connected.
+- A test incident has been completed end to end.
 
-## If you are stuck
+## Troubleshooting
 
-### I signed up but cannot get into the dashboard
+### Cannot access the dashboard after sign-up
 
-Read [Sign In and Access](/docs/guides/identity-and-access).
+See [Sign In and Access](/docs/guides/identity-and-access) for authentication troubleshooting.
 
-### AI actions are missing or failing
+### AI actions are unavailable or failing
 
-Go to **Settings -> AI & API Keys** and check that:
+Navigate to **Settings → AI & API Keys** and verify:
 
-- A provider key was saved
-- The key test passes
-- The key is still marked active
+- A provider key has been saved.
+- The key verification test passes.
+- The key is marked as active.
 
-### The status page is not available
+### Status page is not accessible
 
-Go to **Settings -> Workspace** and confirm:
+Navigate to **Settings → Workspace** and confirm:
 
-- A workspace slug is present
-- Public status page is enabled
-- You have already published a visible update if you expect content to appear
+- A workspace slug is configured.
+- The public status page is enabled.
+- At least one visible status update has been published.
 
-<Callout type="info" title="Start small">
-  The fastest successful rollout is usually one workspace, one AI provider key, one alert source, and one internal incident drill. You can expand after that without overwhelming the team.
+<Callout type="info" title="Recommended approach">
+  Start with a single workspace, one AI provider key, one alert source, and one internal test incident. Expand your configuration incrementally after validating the core workflow.
 </Callout>
 
-## Related guides
+## Related Guides
 
 - [Sign In and Access](/docs/guides/identity-and-access)
-- [Connect Integrations](/docs/guides/integrations-and-ingestion)
-- [Run an Incident](/docs/guides/incident-operations)
+- [Integrations](/docs/guides/integrations-and-ingestion)
+- [Incident Operations](/docs/guides/incident-operations)

@@ -1,102 +1,100 @@
 ---
 title: Plans, Billing, and Alerts
-description: Understand plan limits, payment recovery behavior, reminders, and how TrustLoop escalates urgent incidents.
+description: Understand plan quotas, payment lifecycle, reminder automation, and incident escalation behavior.
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
 # Plans, Billing, and Alerts
 
-This guide helps you understand what happens when you hit plan limits, when payment fails, and when TrustLoop is trying to reach the right people during an active incident.
+This guide covers plan quotas, payment recovery behavior, reminder automation, and escalation policies.
 
-## Plan limits
+## Plan Quotas
 
-TrustLoop tracks usage against your workspace plan.
+TrustLoop enforces daily usage limits based on your workspace plan tier.
 
-### Included daily allowances
+### Daily Allowances by Plan
 
-| Plan | Incidents | AI triage runs | Customer updates | Reminder emails |
+| Plan | Incidents | AI Triage Runs | Customer Updates | Reminder Emails |
 | --- | ---: | ---: | ---: | ---: |
 | Starter | 50 | 100 | 100 | 120 |
 | Pro | 200 | 300 | 300 | 500 |
 | Enterprise | 1,000,000 | 1,000,000 | 1,000,000 | 1,000,000 |
 
-If your team depends heavily on AI triage, customer-update drafting, or automated reminders, review this page before you hit those limits during a busy incident period.
+Review your plan allowances before high-volume incident periods to avoid hitting limits during active operations.
 
-## What happens when payment fails
+## Payment Lifecycle
 
-TrustLoop does not immediately cut the workspace off.
+TrustLoop does not immediately suspend workspace access when a payment fails.
 
-### Expected payment-failure flow
+### Payment Failure Sequence
 
-1. Billing moves into a past-due state.
-2. Workspace owners and managers receive payment reminder emails.
-3. If payment is still not fixed after 48 hours, TrustLoop downgrades the workspace to Starter.
+1. Billing status transitions to past due.
+2. Workspace owners and managers receive payment failure notification emails.
+3. If payment is not resolved within 48 hours, the workspace is automatically downgraded to the Starter plan.
 
-This means you should treat a payment-failure email as an operational issue, not just an accounting note.
+Treat payment failure notifications as operational issues requiring prompt attention.
 
-## How reminder alerts work
+## Reminder Automation
 
-TrustLoop can continue nudging the team while an incident stays open.
+TrustLoop automatically sends reminders while incidents remain open.
 
-### Standard reminder behavior
+### Standard Reminder Behavior
 
-- Open incidents can trigger reminder emails to the owner.
-- The exact reminder timing depends on workspace settings.
-- Reminders stop once the incident is resolved.
+- Open incidents trigger reminder emails to the assigned owner.
+- Reminder frequency is determined by workspace quota settings and incident severity.
+- Reminders stop automatically when the incident is resolved.
 
-### `P1` escalation behavior
+### P1 Escalation
 
-For urgent incidents, TrustLoop can go beyond email.
+For P1 incidents, TrustLoop escalates beyond email using the following channels:
 
-It may use:
-
-- The assigned owner
-- Managers or owners in the workspace
-- On-call rotation settings when enabled
+- Assigned incident owner
+- Workspace managers and owners
+- On-call rotation (when enabled)
 - Browser push notifications
-- SMS when phone numbers are available
+- SMS (when phone numbers are configured)
 
-## What to check when alerts do not fire
+## Troubleshooting
 
-### No reminder email arrived
+### Reminder emails are not arriving
 
-Check:
+Verify the following:
 
-- The incident still has an owner
-- The incident is still open
-- The workspace has not exhausted reminder-email allowance
+- The incident has an assigned owner
+- The incident status is not resolved
+- The workspace has not exhausted its daily reminder email allowance
 
-### No SMS arrived for a `P1`
+### P1 SMS alerts are not arriving
 
-Check:
+Verify the following:
 
-- The owner or on-call responders have phone numbers saved
+- The owner or on-call responders have phone numbers saved in their profiles
 - The workspace is configured for urgent escalation
 
-### No push notification arrived
+### Push notifications are not arriving
 
-Check:
+Verify the following:
 
-- Push notifications were enabled in the browser
-- Notification permission was granted
-- The browser is still subscribed for your account
+- Push notifications are enabled in the browser
+- Notification permission has been granted
+- The browser session has an active push subscription
 
-## Billing page checklist
+## Billing Management
 
-Open **Settings -> Billing** when you need to:
+Navigate to **Settings → Billing** to:
 
-- Upgrade or change plans
-- Apply a coupon code
-- Confirm the current billing status
-- Review whether a payment failure was detected
+- Upgrade or change plan tiers
+- Apply coupon codes
+- Review current billing status
+- Check for payment failure notifications
 
-<Callout type="info" title="Know your operational limits before you need them">
-  The safest time to review reminder behavior, plan allowances, and escalation coverage is before a real incident. A short internal drill makes billing and alert gaps visible while the stakes are low.
+<Callout type="info" title="Review escalation coverage proactively">
+  The best time to verify reminder behavior, plan allowances, and escalation coverage is before a production incident. An internal drill surfaces configuration gaps while the operational impact is low.
 </Callout>
 
-## Related guides
+## Related Guides
 
 - [Getting Started](/docs/guides/getting-started)
-- [Run an Incident](/docs/guides/incident-operations)
-- [Configure Your Workspace](/docs/guides/workspace-administration)
+- [Incident Operations](/docs/guides/incident-operations)
+- [Workspace Administration](/docs/guides/workspace-administration)

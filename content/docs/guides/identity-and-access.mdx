@@ -1,129 +1,116 @@
 ---
 title: Sign In and Access
-description: Use email codes, social login, SAML SSO, invites, and recovery paths to get into the right TrustLoop workspace.
+description: Authenticate using email verification, OAuth providers, SAML SSO, or team invites, and resolve common access issues.
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
 # Sign In and Access
 
-TrustLoop supports more than one way to get into a workspace. Use the method your team already set up.
+TrustLoop supports multiple authentication methods. Use the method configured by your organization or workspace administrator.
 
-## Sign-in options
+## Authentication Methods
 
-### Email verification code
+### Email Verification Code
 
-Use this when you sign in with your work email and receive a one-time code.
+A one-time verification code is sent to your registered email address. Recommended for:
 
-Best for:
+- Initial account access
+- Passwordless authentication
+- Session recovery
 
-- First-time access
-- Simple passwordless sign-in
-- Recovery when you no longer trust an existing session
+### Google or GitHub OAuth
 
-### Google or GitHub
+Authenticate using your existing Google or GitHub identity. Recommended for:
 
-Use this when you want to sign in with the same work identity you use elsewhere.
-
-Best for:
-
-- Fast sign-in
-- New workspace creation from the register page
-- Existing workspaces where your email already matches a user record
+- Streamlined sign-in
+- New workspace creation
+- Workspaces where your email matches an existing user record
 
 ### SAML SSO
 
-Use this when your company manages access through an identity provider.
+Authenticate through your organization's identity provider. Recommended for:
 
-Best for:
+- Enterprise workspaces with centralized identity management
+- Organizations enforcing access policies through an IdP
 
-- Enterprise workspaces
-- Teams that already use centralized sign-in
-- Organizations that want access to follow company identity policies
+### Team Invite Links
 
-### Invite links
+Workspace owners and managers can send invite links via email. Invite links route you to the correct workspace and associate your identity with the pending invitation.
 
-Use this when a workspace owner or manager invited you by email.
+## Common Workflows
 
-Invite links take you into the correct workspace and help TrustLoop match your email to the invite.
+### Creating a New Workspace
 
-## Common access tasks
+Navigate to **Register** and authenticate using one of the following:
 
-### I want to create a new workspace
-
-Open **Register** and choose one of these:
-
-- Google
-- GitHub
-- SAML SSO if your organization is already configured
+- Google OAuth
+- GitHub OAuth
+- SAML SSO (if pre-configured)
 - Email verification code
 
-### I already have an account and want to sign in
+### Signing In to an Existing Workspace
 
-Open **Login** and choose the same identity method you used before whenever possible.
+Navigate to **Login** and authenticate using the same method used during registration.
 
-### I received an invite
+### Accepting a Team Invite
 
-Open the invite link first. From there, TrustLoop will send you to the correct registration flow.
+Open the invite link first. TrustLoop will route you to the appropriate registration or sign-in flow for the target workspace.
 
-### I lost access
+### Recovering Access
 
-Open **Forgot access** and request a recovery code with your work email.
+Navigate to **Forgot Access** and request a recovery code using your registered email address.
 
-## What usually happens after sign-in
+## Post-Authentication Behavior
 
-- TrustLoop matches you to an existing workspace account by identity or email.
-- If your workspace is missing a slug, TrustLoop fills it in automatically during successful access flows.
-- After a successful sign-in or sign-up, you should land on the dashboard.
+- TrustLoop matches your identity to an existing workspace account by email or identity provider.
+- If the workspace slug is missing, it is populated automatically during the authentication flow.
+- After successful authentication, you are redirected to the dashboard.
 
-## If you are stuck
+## Troubleshooting
 
-### I used Google or GitHub and came back to the sign-in page instead of the dashboard
+### OAuth redirects back to the sign-in page
 
-Try the sign-in again from the same page where you started. TrustLoop expects the social flow to return there and then completes the redirect into the dashboard.
+Retry the sign-in from the same page where you initiated the flow. TrustLoop expects the OAuth callback to return to the originating page before completing the redirect.
 
-If it still fails, check whether your workspace account already exists or whether you should be using **Register** instead of **Login**.
+If the issue persists, verify whether your account exists. You may need to use **Register** instead of **Login**.
 
-### I used social sign-in and got a message about no workspace account
+### "No workspace account" error after OAuth
 
-This usually means your email was valid, but TrustLoop could not match it to an existing workspace user.
+Your email was authenticated, but no matching workspace user was found.
 
-What to do next:
+- Use **Register** to create a new workspace.
+- Contact a workspace owner to receive an invite if you are joining an existing workspace.
 
-- Use **Register** if you are creating a new workspace
-- Ask a workspace owner to invite you if you should be joining an existing workspace
+### Email verification code not received
 
-### I did not receive the email code
+- Check spam and junk folders.
+- Confirm you are using the email address associated with your workspace.
+- Verify whether your organization requires SAML SSO instead of email-based authentication.
 
-Check:
-
-- Spam or junk folders
-- Whether you used the same work email that belongs to your workspace
-- Whether your team expects you to use SAML SSO instead of email code
-
-<Callout type="info" title="Auth emails come from the sign-in service">
-  Verification codes for sign-in, registration, and recovery are sent by the authentication service behind TrustLoop sign-in. If the code email is missing, focus on the inbox and identity flow rather than workspace billing or reminder settings.
+<Callout type="info" title="Authentication email delivery">
+  Verification codes for sign-in, registration, and recovery are sent by the authentication service. If codes are not arriving, investigate email delivery and identity configuration rather than workspace or billing settings.
 </Callout>
 
-### SAML says invite required
+### SAML returns "invite required"
 
-Your identity was valid, but your workspace account has not been provisioned yet. Ask a workspace owner or manager to send you an invite.
+Your identity was validated, but your workspace account has not been provisioned. Request an invite from a workspace owner or manager.
 
-### My invite link says invalid or expired
+### Invite link is invalid or expired
 
-Ask the workspace owner or manager to revoke the old invite and send a new one.
+Contact the workspace owner or manager to revoke the expired invite and issue a new one.
 
-### I can sign in, but the wrong workspace opens
+### Incorrect workspace opens after sign-in
 
-Use the email or identity method that matches the workspace you were invited to. If your organization uses SAML, start from the workspace slug your admin gave you.
+Authenticate using the email or identity method associated with the target workspace. For SAML-enabled workspaces, initiate sign-in from the workspace slug provided by your administrator.
 
-## Tips for admins
+## Administrator Recommendations
 
-- Keep at least one additional owner in the workspace.
-- Use invites instead of shared inboxes.
-- For SAML workspaces, confirm the workspace slug and metadata setup before onboarding a larger group.
+- Maintain at least two owners per workspace for continuity.
+- Use individual invites rather than shared email accounts.
+- For SAML workspaces, verify the workspace slug and IdP metadata configuration before onboarding users at scale.
 
-## Related guides
+## Related Guides
 
 - [Getting Started](/docs/guides/getting-started)
-- [Configure Your Workspace](/docs/guides/workspace-administration)
+- [Workspace Administration](/docs/guides/workspace-administration)

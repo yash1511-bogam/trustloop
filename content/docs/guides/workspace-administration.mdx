@@ -1,129 +1,123 @@
 ---
-title: Configure Your Workspace
-description: Manage workspace settings, AI keys, status pages, team access, notifications, and the controls that affect everyday incident response.
+title: Workspace Administration
+description: Manage workspace settings, AI provider keys, team access, notifications, the public status page, and SAML SSO configuration.
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-# Configure Your Workspace
+# Workspace Administration
 
-TrustLoop groups the most important controls into a few focused settings pages so you can manage the workspace without hunting through unrelated sections.
+TrustLoop organizes workspace controls into focused settings pages. This guide covers each configuration area and the settings most teams should prioritize.
 
-## What each settings page is for
+## Settings Overview
 
 ### AI & API Keys
 
-Use this page to:
-
-- Add or replace AI provider keys
-- Test whether a key is working
-- Control which provider powers each AI workflow
-- Create workspace API keys for trusted automation
+- Add, replace, or remove AI provider keys
+- Test key connectivity and health
+- Configure provider routing per AI workflow
+- Generate workspace API keys for automation
 
 ### Workspace
 
-Use this page to:
-
-- Set or review the public workspace slug
-- Turn the public status page on or off
+- Set or update the public workspace slug
+- Enable or disable the public status page
 - Connect Slack
-- Configure SAML SSO for the workspace
-- Manage integration secrets
-- Review and adjust quotas
-- Enable push notifications for your browser
+- Configure SAML SSO
+- Manage webhook integration secrets
+- Adjust workspace quotas
+- Enable browser push notifications
 
 ### Team
 
-Use this page to:
-
-- Invite teammates
-- Change roles
-- Remove members when needed
-- Add phone numbers for urgent escalations
-- Keep user profiles up to date
+- Invite team members
+- Assign and modify roles (Owner, Manager, Agent)
+- Remove members
+- Add phone numbers for P1 SMS escalation
+- Maintain user profile information
 
 ### Billing
 
-Use this page to:
-
-- Review plan tier
-- Check current usage
+- Review current plan tier and usage
 - Apply coupon codes
-- Open checkout
-- See payment status if billing is active
+- Initiate or manage checkout
+- Monitor payment status
 
-## The settings most teams should review first
+## Priority Configuration
 
-### Workspace slug
+### Workspace Slug
 
-Your workspace slug matters for:
+The workspace slug is required for:
 
-- Public status page links
-- Some sign-in paths, especially SAML-based access
-- Sharing the right workspace URL externally
+- Public status page URLs
+- SAML SSO authentication flows
+- External workspace references
 
-### AI keys
+### AI Provider Keys
 
-Without an active AI key:
+Without an active AI provider key:
 
-- AI triage will not run
-- Customer-update drafting will not run
+- AI triage is unavailable
+- Customer update draft generation is unavailable
 
-### Team roles
+### Team Roles
 
-Recommended minimum:
+Recommended minimum configuration:
 
-- More than one owner or manager
-- Clear responders who can own incidents
-- Accurate phone numbers for anyone who should get urgent alerts
+- At least two owners or managers for operational continuity
+- Designated responders with incident ownership responsibilities
+- Phone numbers for all users eligible for P1 SMS escalation
 
-### Public status page
+### Public Status Page
 
-Turn it on only if you plan to publish customer-facing updates. A blank status page is usually a signal that the workspace is enabled but no visible updates have been published yet.
+Enable the status page only when your team actively publishes customer-facing updates. An enabled status page with no published updates may appear incomplete to external visitors.
 
-## Notifications and escalations
+## Notification Channels
 
-TrustLoop can alert people in more than one way.
+TrustLoop supports multiple notification methods for incident alerting and escalation.
 
-### Email reminders
+### Email Reminders
 
-Incident owners can receive reminder emails for open incidents.
+Incident owners receive reminder emails for open incidents based on workspace configuration and severity-based intervals.
 
-### Browser push notifications
+### Browser Push Notifications
 
-Use this if you want reminders or test alerts directly in the browser.
+Enable push notifications for real-time alerts and test notifications directly in the browser.
 
-### SMS for urgent incidents
+### SMS Escalation
 
-`P1` incidents can escalate by SMS when phone numbers are present and the workspace is configured for urgent response.
+P1 incidents can trigger SMS alerts when:
 
-## If you are stuck
+- The assigned owner or on-call responders have phone numbers configured
+- The workspace is configured for urgent escalation
 
-### The slug will not save
+## Troubleshooting
 
-Check that it is short, lowercase, and not already in use by another workspace.
+### Workspace slug will not save
 
-### I cannot remove or demote an owner
+Verify the slug is lowercase, contains no special characters, and is not already in use by another workspace.
 
-TrustLoop prevents leaving the workspace without an owner.
+### Cannot remove or demote an owner
 
-### Push notifications do not arrive
+TrustLoop requires at least one owner per workspace. Promote another user to owner before removing or demoting the current one.
 
-Check:
+### Push notifications are not arriving
 
-- Browser notification permission
-- Whether you already enabled push for this browser
-- Whether your workspace has push configured and you sent a test notification
+Verify the following:
 
-### SAML setup does not complete
+- Browser notification permissions are granted
+- Push notifications are enabled for the current browser session
+- A test notification was sent successfully from workspace settings
 
-Check the workspace slug and metadata configuration first. If the identity provider is correct but users still cannot enter, ask them whether they were invited into the workspace.
+### SAML configuration is not completing
 
-<Callout type="warn" title="Compliance mode is one-way">
-  If compliance mode is enabled for the workspace, TrustLoop does not allow it to be turned off later and it blocks incident deletion.
+Verify the workspace slug and IdP metadata configuration. If the identity provider is configured correctly but users cannot access the workspace, confirm they have been invited.
+
+<Callout type="warn" title="Compliance mode is irreversible">
+  Once compliance mode is enabled, it cannot be disabled. Compliance mode prevents incident deletion to maintain audit integrity.
 </Callout>
 
-## Related guides
+## Related Guides
 
 - [Getting Started](/docs/guides/getting-started)
 - [Sign In and Access](/docs/guides/identity-and-access)
