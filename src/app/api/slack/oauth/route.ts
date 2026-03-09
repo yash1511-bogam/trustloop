@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { encryptSecret } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
@@ -5,6 +6,41 @@ import { exchangeSlackOAuthCode } from "@/lib/slack";
 
 function appBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+}
+
+function stateSigningKey(): string {
+  return process.env.KEY_ENCRYPTION_SECRET ?? "fallback-dev-key";
+}
+
+function signState(workspaceId: string): string {
+  const sig = createHmac("sha256", stateSigningKey())
+    .update(workspaceId)
+    .digest("hex")
+    .slice(0, 16);
+  return `${workspaceId}.${sig}`;
+}
+
+function verifyAndParseState(state: string): string | null {
+  const dotIndex = state.lastIndexOf(".");
+  if (dotIndex === -1) {
+    return null;
+  }
+
+  const workspaceId = state.slice(0, dotIndex);
+  const providedSig = state.slice(dotIndex + 1);
+
+  const expectedSig = createHmac("sha256", stateSigningKey())
+    .update(workspaceId)
+    .digest("hex")
+    .slice(0, 16);
+
+  const a = Buffer.from(providedSig, "utf8");
+  const b = Buffer.from(expectedSig, "utf8");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return null;
+  }
+
+  return workspaceId;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -20,9 +56,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.redirect(`${appBaseUrl()}/settings?slack=invalid`);
   }
 
+  const workspaceId = verifyAndParseState(state);
+  if (!workspaceId) {
+    return NextResponse.redirect(`${appBaseUrl()}/settings?slack=invalid_state`);
+  }
+
   try {
     const workspace = await prisma.workspace.findUnique({
-      where: { id: state },
+      where: { id: workspaceId },
       select: { id: true },
     });
     if (!workspace) {

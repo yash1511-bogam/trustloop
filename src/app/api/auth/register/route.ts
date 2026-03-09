@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -27,6 +28,9 @@ function pendingRegisterKey(methodId: string): string {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const rateLimited = await enforceAuthRateLimit(request, "register");
+  if (rateLimited) return rateLimited;
+
   const body = await request.json().catch(() => null);
   const parsed = registerStartSchema.safeParse(body);
 
@@ -75,10 +79,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   if (existing) {
-    return NextResponse.json(
-      { error: "An account with that email already exists." },
-      { status: 409 },
-    );
+    // Log but return same response shape to prevent user enumeration
+    log.auth.warn("Registration attempt for existing email", { email });
+    return NextResponse.json({
+      methodId: "existing_placeholder",
+      message: "A verification code has been sent to your email.",
+    });
   }
 
   try {

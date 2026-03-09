@@ -20,7 +20,7 @@ locals {
     },
     {
       name  = "REDIS_URL"
-      value = "redis://${aws_elasticache_cluster.redis.cache_nodes[0].address}:6379"
+      value = "rediss://:${var.redis_auth_token}@${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
     },
     {
       name  = "STYTCH_PROJECT_ID"
@@ -306,6 +306,7 @@ resource "aws_db_instance" "postgres" {
   allocated_storage      = 20
   max_allocated_storage  = 100
   storage_type           = "gp3"
+  storage_encrypted      = true
   engine                 = "postgres"
   engine_version         = "16.4"
   instance_class         = var.db_instance_class
@@ -316,8 +317,9 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.db.id]
   publicly_accessible    = false
   backup_retention_period = 7
-  deletion_protection    = false
-  skip_final_snapshot    = true
+  deletion_protection    = true
+  skip_final_snapshot    = false
+  final_snapshot_identifier = "${local.name}-postgres-final"
   apply_immediately      = true
 }
 
@@ -326,15 +328,21 @@ resource "aws_elasticache_subnet_group" "main" {
   subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 }
 
-resource "aws_elasticache_cluster" "redis" {
-  cluster_id           = "${local.name}-redis"
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id = "${local.name}-redis"
+  description          = "${local.name} Redis replication group"
   engine               = "redis"
+  engine_version       = "7.1"
   node_type            = var.redis_node_type
-  num_cache_nodes      = 1
+  num_cache_clusters   = 1
   parameter_group_name = "default.redis7"
   port                 = 6379
   subnet_group_name    = aws_elasticache_subnet_group.main.name
   security_group_ids   = [aws_security_group.redis.id]
+
+  transit_encryption_enabled = true
+  auth_token                 = var.redis_auth_token
+  at_rest_encryption_enabled = true
 }
 
 resource "aws_sqs_queue" "reminder" {
@@ -826,4 +834,91 @@ resource "aws_cloudwatch_metric_alarm" "worker_scale_in" {
   }
 
   alarm_actions = [aws_appautoscaling_policy.worker_scale_in.arn]
+}
+
+resource "aws_wafv2_web_acl" "app" {
+  name        = "${local.name}-waf"
+  scope       = "REGIONAL"
+  description = "WAF for ${local.name} ALB"
+
+  default_action {
+    allow {}
+  }
+
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.name}-common-rules"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.name}-bad-inputs"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "RateLimitRule"
+    priority = 3
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = 2000
+        aggregate_key_type = "IP"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.name}-rate-limit"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${local.name}-waf"
+    sampled_requests_enabled   = true
+  }
+}
+
+resource "aws_wafv2_web_acl_association" "app" {
+  resource_arn = aws_lb.app.arn
+  web_acl_arn  = aws_wafv2_web_acl.app.arn
 }

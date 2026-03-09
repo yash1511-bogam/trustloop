@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { hasRole } from "@/lib/auth";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { processPastDueBillingAutomation } from "@/lib/billing";
 import { forbidden } from "@/lib/http";
@@ -8,7 +9,7 @@ import { forbidden } from "@/lib/http";
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.BILLING_AUTOMATION_CRON_SECRET;
   const cronHeader = request.headers.get("x-cron-secret");
-  const isCron = Boolean(cronSecret && cronHeader === cronSecret);
+  const isCron = verifyCronSecret(cronSecret, cronHeader);
 
   if (!isCron) {
     const access = await requireApiAuthAndRateLimit(request);

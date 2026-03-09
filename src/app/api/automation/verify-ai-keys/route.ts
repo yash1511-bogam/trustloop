@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { hasRole } from "@/lib/auth";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { testProviderKey } from "@/lib/ai/service";
 import { decryptSecret } from "@/lib/encryption";
@@ -12,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.AI_KEY_HEALTH_CRON_SECRET;
   const cronHeader = request.headers.get("x-cron-secret");
-  const isCron = Boolean(cronSecret && cronHeader === cronSecret);
+  const isCron = verifyCronSecret(cronSecret, cronHeader);
 
   let workspaceScope: string | null = null;
 

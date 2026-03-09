@@ -1,9 +1,11 @@
+import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { badRequest } from "@/lib/http";
 import { buildOAuthStartUrl, OAuthProvider } from "@/lib/stytch";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
+const OAUTH_NONCE_COOKIE_NAME = "trustloop_oauth_nonce";
 const OAUTH_CONTEXT_MAX_AGE_SECONDS = 10 * 60;
 
 const providerSchema = z.enum(["google", "github"]);
@@ -28,11 +30,22 @@ function setOAuthContextCookie(
     intent: "login" | "register";
     workspaceName?: string;
     inviteToken?: string;
+    nonce: string;
   },
 ): void {
   response.cookies.set({
     name: OAUTH_CONTEXT_COOKIE_NAME,
     value: encodeURIComponent(JSON.stringify(context)),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: OAUTH_CONTEXT_MAX_AGE_SECONDS,
+    path: "/",
+  });
+  // Store nonce separately so callback can verify the flow was initiated by this browser
+  response.cookies.set({
+    name: OAUTH_NONCE_COOKIE_NAME,
+    value: context.nonce,
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -86,6 +99,7 @@ export async function GET(
       intent,
       workspaceName: parsedQuery.data.workspaceName?.trim(),
       inviteToken: parsedQuery.data.inviteToken,
+      nonce: randomBytes(16).toString("hex"),
     });
     return response;
   } catch {

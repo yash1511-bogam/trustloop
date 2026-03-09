@@ -178,3 +178,9 @@ variable "acm_certificate_arn" {
   default     = ""
   description = "ACM certificate ARN for HTTPS. Leave empty to use HTTP only."
 }
+
+variable "redis_auth_token" {
+  type      = string
+  sensitive = true
+  description = "Auth token for Redis transit encryption. Must be at least 16 characters."
+}

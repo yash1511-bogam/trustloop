@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,9 @@ const forgotStartSchema = z.object({
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const rateLimited = await enforceAuthRateLimit(request, "forgot");
+  if (rateLimited) return rateLimited;
+
   const body = await request.json().catch(() => null);
   const parsed = forgotStartSchema.safeParse(body);
 
@@ -29,7 +33,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (!user) {
     return NextResponse.json({
-      methodId: null,
+      methodId: "no_account_placeholder",
       message: "If an account exists for that email, a recovery code has been sent.",
     });
   }

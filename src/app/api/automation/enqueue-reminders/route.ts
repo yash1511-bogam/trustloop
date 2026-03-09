@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { IncidentStatus, ReminderStatus, Role } from "@prisma/client";
 import { hasRole } from "@/lib/auth";
+import { verifyCronSecret } from "@/lib/cron-auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { enqueueReminder } from "@/lib/queue";
 import { forbidden } from "@/lib/http";
@@ -12,7 +13,7 @@ const STALE_MINUTES = Number(process.env.REMINDER_STALE_MINUTES ?? 240);
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.REMINDER_ENQUEUE_CRON_SECRET;
   const cronHeader = request.headers.get("x-cron-secret");
-  const isCron = Boolean(cronSecret && cronHeader === cronSecret);
+  const isCron = verifyCronSecret(cronSecret, cronHeader);
 
   let workspaceScope: string | null = null;
 

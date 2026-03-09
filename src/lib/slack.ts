@@ -26,12 +26,24 @@ function safeCompare(left: string, right: string): boolean {
   return timingSafeEqual(a, b);
 }
 
+function stateSigningKey(): string {
+  return process.env.KEY_ENCRYPTION_SECRET ?? "fallback-dev-key";
+}
+
+function signSlackState(workspaceId: string): string {
+  const sig = createHmac("sha256", stateSigningKey())
+    .update(workspaceId)
+    .digest("hex")
+    .slice(0, 16);
+  return `${workspaceId}.${sig}`;
+}
+
 export function slackOAuthRedirectUri(): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   return `${appUrl.replace(/\/$/, "")}/api/slack/oauth`;
 }
 
-export function slackInstallUrl(state?: string): string {
+export function slackInstallUrl(workspaceId?: string): string {
   const clientId = process.env.SLACK_CLIENT_ID;
   if (!clientId) {
     return "#";
@@ -50,8 +62,8 @@ export function slackInstallUrl(state?: string): string {
     scope,
     redirect_uri: redirectUri,
   });
-  if (state) {
-    params.set("state", state);
+  if (workspaceId) {
+    params.set("state", signSlackState(workspaceId));
   }
 
   return `https://slack.com/oauth/v2/authorize?${params.toString()}`;

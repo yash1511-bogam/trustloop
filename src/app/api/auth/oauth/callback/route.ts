@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
@@ -9,6 +10,7 @@ import { authenticateOAuthToken } from "@/lib/stytch";
 import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
+const OAUTH_NONCE_COOKIE_NAME = "trustloop_oauth_nonce";
 
 const callbackSchema = z.object({
   token: z.string().min(8),
@@ -23,6 +25,7 @@ const oauthContextSchema = z.object({
   intent: z.enum(["login", "register"]).optional(),
   workspaceName: z.string().min(2).max(80).optional(),
   inviteToken: z.string().uuid().optional(),
+  nonce: z.string().min(16),
 });
 
 function startOfUtcDay(): Date {
@@ -49,6 +52,15 @@ function buildRedirect(
 function clearOAuthContextCookie(response: NextResponse): void {
   response.cookies.set({
     name: OAUTH_CONTEXT_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    path: "/",
+  });
+  response.cookies.set({
+    name: OAUTH_NONCE_COOKIE_NAME,
     value: "",
     httpOnly: true,
     sameSite: "lax",
@@ -101,6 +113,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const oauthContext = readOAuthContextCookie(request);
+
+  // Verify the nonce cookie matches the nonce in the context cookie (CSRF protection)
+  if (!oauthContext) {
+    // No context cookie means the flow wasn't initiated from this browser
+    return buildRedirectWithClear(request, "/login", { error: "oauth_state_missing" });
+  }
+
+  const nonceCookie = request.cookies.get(OAUTH_NONCE_COOKIE_NAME)?.value;
+  if (!nonceCookie) {
+    return buildRedirectWithClear(request, "/login", { error: "oauth_state_mismatch" });
+  }
+
+  const a = Buffer.from(oauthContext.nonce, "utf8");
+  const b = Buffer.from(nonceCookie, "utf8");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return buildRedirectWithClear(request, "/login", { error: "oauth_state_mismatch" });
+  }
+
   const intent = oauthContext?.intent ?? parsed.data.intent ?? "login";
   const inviteToken = oauthContext?.inviteToken ?? parsed.data.inviteToken;
   const workspaceName = oauthContext?.workspaceName ?? parsed.data.workspaceName;

@@ -204,18 +204,8 @@ export async function processDodoWebhookEvent(input: {
   })();
 
   if (input.eventId) {
-    const existing = await prisma.billingEventLog.findUnique({
-      where: { eventId: input.eventId },
-      select: { id: true },
-    });
-    if (existing) {
-      log.billing.info("Skipping duplicate Dodo webhook event", {
-        workspaceId,
-        eventId: input.eventId,
-        eventType: input.event.type,
-      });
-      return { status: "duplicate", workspaceId };
-    }
+    // Skip the separate findUnique check — rely on the unique constraint below
+    // to handle deduplication atomically and avoid race conditions.
   }
 
   const workspace = await prisma.workspace.findUnique({

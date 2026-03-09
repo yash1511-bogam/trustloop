@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,9 @@ const loginStartSchema = z.object({
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const rateLimited = await enforceAuthRateLimit(request, "login");
+  if (rateLimited) return rateLimited;
+
   const body = await request.json().catch(() => null);
   const parsed = loginStartSchema.safeParse(body);
   if (!parsed.success) {
@@ -35,15 +39,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     if (!account) {
-      return NextResponse.json(
-        { error: "No workspace account found for that email. Create a workspace first." },
-        { status: 404 },
-      );
+      log.auth.warn("Login attempt for email with no workspace account", { email });
     }
 
+    // Always return the same response shape to prevent user enumeration
     return NextResponse.json({
       methodId: otp.methodId,
-      message: "A verification code has been sent to your email.",
+      message: "If an account exists, a verification code has been sent to your email.",
     });
   } catch (error) {
     const stytchError = extractStytchError(error);

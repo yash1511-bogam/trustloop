@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { setSessionCookie } from "@/lib/cookies";
 import { badRequest, notFound } from "@/lib/http";
 import { log } from "@/lib/logger";
@@ -13,6 +14,9 @@ const loginVerifySchema = z.object({
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const rateLimited = await enforceAuthRateLimit(request, "login-verify");
+  if (rateLimited) return rateLimited;
+
   const body = await request.json().catch(() => null);
   const parsed = loginVerifySchema.safeParse(body);
   if (!parsed.success) {
