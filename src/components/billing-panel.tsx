@@ -10,6 +10,7 @@ import {
   Receipt,
   RefreshCcw,
   ShieldCheck,
+  ArrowRight,
 } from "lucide-react";
 import { PlanTier, planDefinitionFor } from "@/lib/billing-plan";
 
@@ -187,43 +188,44 @@ const CHECKOUT_ELEMENT_ID = "billing-inline-checkout";
 const CHECKOUT_STORAGE_KEY = "trustloop.billing.pendingCheckout";
 const FINAL_PAYMENT_STATUSES = new Set(["failed", "succeeded", "cancelled", "canceled"]);
 
+// Adjusted theme to blend more seamlessly into the flat UI without visible borders
 const gatewayTheme = {
-  radius: "18px",
+  radius: "12px",
   light: {
-    bgPrimary: "#04050b",
-    bgSecondary: "#0b1020",
-    borderPrimary: "rgba(148, 163, 184, 0.28)",
-    borderSecondary: "rgba(148, 163, 184, 0.14)",
-    buttonPrimary: "#e2e8f0",
-    buttonPrimaryHover: "#f8fafc",
-    buttonSecondary: "#121a2c",
-    buttonSecondaryHover: "#172033",
-    buttonTextPrimary: "#020617",
-    buttonTextSecondary: "#e2e8f0",
-    inputFocusBorder: "#38bdf8",
-    textError: "#fca5a5",
+    bgPrimary: "transparent",
+    bgSecondary: "transparent",
+    borderPrimary: "transparent",
+    borderSecondary: "transparent",
+    buttonPrimary: "#0f172a",
+    buttonPrimaryHover: "#1e293b",
+    buttonSecondary: "transparent",
+    buttonSecondaryHover: "rgba(15, 23, 42, 0.05)",
+    buttonTextPrimary: "#f8fafc",
+    buttonTextSecondary: "#0f172a",
+    inputFocusBorder: "#cbd5e1",
+    textError: "#ef4444",
     textPlaceholder: "#94a3b8",
-    textPrimary: "#e5eefb",
-    textSecondary: "#94a3b8",
-    textSuccess: "#86efac",
+    textPrimary: "#0f172a",
+    textSecondary: "#64748b",
+    textSuccess: "#22c55e",
   },
   dark: {
-    bgPrimary: "#04050b",
-    bgSecondary: "#0b1020",
-    borderPrimary: "rgba(148, 163, 184, 0.28)",
-    borderSecondary: "rgba(148, 163, 184, 0.16)",
-    buttonPrimary: "#e2e8f0",
-    buttonPrimaryHover: "#f8fafc",
-    buttonSecondary: "#121a2c",
-    buttonSecondaryHover: "#172033",
-    buttonTextPrimary: "#020617",
-    buttonTextSecondary: "#e2e8f0",
-    inputFocusBorder: "#38bdf8",
-    textError: "#fca5a5",
-    textPlaceholder: "#94a3b8",
-    textPrimary: "#e5eefb",
+    bgPrimary: "transparent",
+    bgSecondary: "transparent",
+    borderPrimary: "transparent",
+    borderSecondary: "transparent",
+    buttonPrimary: "#f8fafc",
+    buttonPrimaryHover: "#e2e8f0",
+    buttonSecondary: "transparent",
+    buttonSecondaryHover: "rgba(248, 250, 252, 0.05)",
+    buttonTextPrimary: "#0f172a",
+    buttonTextSecondary: "#f8fafc",
+    inputFocusBorder: "#334155",
+    textError: "#f87171",
+    textPlaceholder: "#64748b",
+    textPrimary: "#f8fafc",
     textSecondary: "#94a3b8",
-    textSuccess: "#86efac",
+    textSuccess: "#4ade80",
   },
 };
 
@@ -267,7 +269,7 @@ function formatDateTime(value: string | null | undefined): string {
     return "N/A";
   }
 
-  return date.toLocaleString();
+  return date.toLocaleString("en-US");
 }
 
 function formatStatusLabel(value: string | null | undefined): string {
@@ -279,17 +281,6 @@ function formatStatusLabel(value: string | null | undefined): string {
     .replace(/_/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (character) => character.toUpperCase());
-}
-
-function statusToneClass(value: string | null | undefined): string {
-  const normalized = value?.toLowerCase() ?? "";
-  if (normalized.includes("active") || normalized.includes("succeeded") || normalized.includes("paid")) {
-    return "border-emerald-500/30 bg-emerald-500/10 text-emerald-200";
-  }
-  if (normalized.includes("past") || normalized.includes("failed") || normalized.includes("cancel")) {
-    return "border-red-500/30 bg-red-500/10 text-red-200";
-  }
-  return "border-sky-500/30 bg-sky-500/10 text-sky-100";
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -658,11 +649,11 @@ export function BillingPanel({
           checkoutUrl,
           elementId: CHECKOUT_ELEMENT_ID,
           options: {
-            fontSize: "sm",
+            fontSize: "md",
             fontWeight: "medium",
-            payButtonText: "Proceed to payment",
+            payButtonText: "Complete checkout",
             showSecurityBadge: true,
-            showTimer: true,
+            showTimer: false,
             themeConfig: gatewayTheme,
           },
         });
@@ -847,595 +838,285 @@ export function BillingPanel({
     FINAL_PAYMENT_STATUSES.has(sessionStatus.paymentStatus.toLowerCase());
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-16">
       {billingNotice ? (
-        <div className="rounded-2xl border border-sky-500/25 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
+        <div className="py-4 text-sm text-sky-400 border-l-2 border-sky-400 pl-4">
           {billingNotice}
         </div>
       ) : null}
 
       {!canManageBilling ? (
-        <div className="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <div className="py-4 text-sm text-amber-400 border-l-2 border-amber-400 pl-4">
           Billing changes are limited to workspace owners and managers. You can still review usage, plan details, and payment status here.
         </div>
       ) : null}
 
-      <section className="panel-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="kicker">Billing overview</p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-100">
-              {planDefinitionFor(planTier).label}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm text-neutral-400">
-              Choose a plan, review live pricing, then proceed to payment. The payment form only opens lower on the page after you confirm the selection.
-            </p>
-          </div>
-          <span className={`badge ${statusToneClass(paymentStatusValue)}`}>{paymentStatusLabel}</span>
+      {/* Overview Section */}
+      <section className="pb-10 border-b border-white/5">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <h2 className="text-xl font-medium text-slate-100">Overview</h2>
+          <span className={`text-sm tracking-wide ${paymentStatusValue.includes("active") || paymentStatusValue.includes("paid") ? "text-emerald-400" : "text-neutral-400"}`}>
+            {paymentStatusLabel}
+          </span>
         </div>
 
-        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Current plan</p>
-            <p className="mt-2 text-lg font-semibold text-slate-100">{planDefinitionFor(planTier).label}</p>
-            <p className="mt-1 text-sm text-neutral-400">{planDefinitionFor(planTier).headline}</p>
+        <div className="mt-8 grid gap-12 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <p className="text-sm tracking-wide text-neutral-500">Current plan</p>
+            <p className="mt-2 text-2xl font-light text-slate-100">{planDefinitionFor(planTier).label}</p>
           </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Last payment</p>
-            <p className="mt-2 text-lg font-semibold text-slate-100">
+          <div>
+            <p className="text-sm tracking-wide text-neutral-500">Last payment</p>
+            <p className="mt-2 text-2xl font-light text-slate-100">
               {formatMoney(billing?.lastPaymentAmount, billing?.lastPaymentCurrency)}
             </p>
             <p className="mt-1 text-sm text-neutral-400">{formatDateTime(billing?.lastPaymentAt)}</p>
           </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Renewal window</p>
-            <p className="mt-2 text-lg font-semibold text-slate-100">{formatDateTime(billing?.currentPeriodEnd)}</p>
+          <div>
+            <p className="text-sm tracking-wide text-neutral-500">Renewal window</p>
+            <p className="mt-2 text-2xl font-light text-slate-100">{formatDateTime(billing?.currentPeriodEnd)}</p>
             <p className="mt-1 text-sm text-neutral-400">Current period started {formatDateTime(billing?.currentPeriodStart)}</p>
           </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-xs uppercase tracking-[0.16em] text-neutral-500">Recovery reminders</p>
-            <p className="mt-2 text-lg font-semibold text-slate-100">{billing?.failureReminderCount ?? 0}</p>
-            <p className="mt-1 text-sm text-neutral-400">Past-due workspaces downgrade to Starter after the recovery window ends.</p>
+          <div>
+            <p className="text-sm tracking-wide text-neutral-500">Recovery reminders</p>
+            <p className="mt-2 text-2xl font-light text-slate-100">{billing?.failureReminderCount ?? 0}</p>
           </div>
         </div>
       </section>
 
-      <section className="panel-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="kicker">Step 1</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-100">Select a payment plan</h3>
-            <p className="mt-2 max-w-3xl text-sm text-neutral-400">
-              Pick the workspace plan first. Pricing and checkout stay separate so the page is easier to scan.
-            </p>
-          </div>
-          <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">
-            {availablePlans.length} plans available
+      {/* Plan Selection */}
+      <section className="pb-10 border-b border-white/5">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <h2 className="text-xl font-medium text-slate-100">Plan</h2>
+          <span className="text-sm text-neutral-500 tracking-wide">
+            {availablePlans.length} plans
           </span>
         </div>
 
-        <div className="mt-6 grid gap-4 xl:grid-cols-3">
+        <div className="mt-8 grid gap-8 xl:grid-cols-3">
           {availablePlans.map((plan) => {
             const isSelected = plan.id === selectedPlan;
             const isCurrent = plan.id === planTier;
             return (
               <article
-                className={`rounded-[28px] border p-5 transition-colors ${
-                  isSelected
-                    ? "border-sky-400/60 bg-sky-500/10"
-                    : "border-[var(--line)] bg-[var(--bg-soft)]"
+                className={`transition-opacity cursor-pointer flex flex-col ${
+                  isSelected ? "opacity-100" : "opacity-50 hover:opacity-100"
                 }`}
                 key={plan.id}
+                onClick={() => setSelectedPlan(plan.id)}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-lg font-semibold text-slate-100">{plan.label}</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.16em] text-sky-200/80">
-                      {plan.headline}
-                    </p>
-                  </div>
-                  {isCurrent ? <span className="badge">Current</span> : null}
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-2xl font-light text-slate-100">{plan.label}</p>
+                  {isCurrent && <span className="text-xs tracking-wider text-sky-400">CURRENT</span>}
+                  {isSelected && !isCurrent && <span className="text-xs tracking-wider text-emerald-400">SELECTED</span>}
                 </div>
-                <p className="mt-3 text-sm text-neutral-400">{plan.description}</p>
-                <div className="mt-4 max-h-40 overflow-y-auto pr-1">
-                  <ul className="space-y-2 text-sm text-neutral-300">
+                <p className="mt-2 text-sm text-neutral-400 leading-relaxed">{plan.description}</p>
+                <div className="mt-6 flex-grow">
+                  <ul className="space-y-3 text-sm text-neutral-300">
                     {plan.bullets.map((bullet) => (
-                      <li className="flex items-start gap-2" key={bullet}>
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                      <li className="flex items-start gap-3" key={bullet}>
+                        <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-neutral-500" />
                         <span>{bullet}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
-                <button
-                  className={isSelected ? "btn btn-primary mt-5 w-full" : "btn btn-ghost mt-5 w-full"}
-                  onClick={() => setSelectedPlan(plan.id)}
-                  type="button"
-                >
-                  {isSelected ? "Selected" : `Choose ${plan.label}`}
-                </button>
               </article>
             );
           })}
         </div>
       </section>
 
-      <section className="panel-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="kicker">Step 2</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-100">Review pricing</h3>
-            <p className="mt-2 max-w-3xl text-sm text-neutral-400">
-              Review the live billing preview for {selectedPlanDefinition.label}, apply a coupon if needed, then proceed to payment.
-            </p>
-          </div>
+      {/* Seamless Payment Flow */}
+      <section className="pb-10 border-b border-white/5">
+        <div className="flex flex-wrap items-baseline justify-between gap-4">
+          <h2 className="text-xl font-medium text-slate-100">Checkout</h2>
           {previewLoading ? (
-            <span className="inline-flex items-center gap-2 text-sm text-neutral-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Updating preview
+            <span className="text-sm tracking-wide text-neutral-500 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" /> Updating
             </span>
           ) : (
-            <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">Live Dodo preview</span>
+            <span className="text-sm tracking-wide text-neutral-500">Live preview</span>
           )}
         </div>
 
-        <div className="mt-6 space-y-4">
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-              <label className="space-y-2 text-sm">
-                <span className="font-medium text-slate-200">Coupon code</span>
-                <input
-                  className="input"
-                  disabled={!canManageBilling}
-                  onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
-                  placeholder="SAVE20"
-                  value={couponCode}
-                />
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  className="btn btn-ghost"
-                  disabled={!canManageBilling || previewLoading}
-                  onClick={refreshPricing}
-                  type="button"
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                  Update pricing
-                </button>
-                <button
-                  className="btn btn-ghost"
-                  disabled={!canManageBilling || (!couponCode && !previewCouponCode)}
-                  onClick={clearCoupon}
-                  type="button"
-                >
-                  Clear code
-                </button>
-              </div>
-            </div>
-            {previewDirty ? (
-              <p className="mt-3 text-xs text-amber-200">
-                Coupon edits are not applied yet. Refresh pricing before proceeding to payment.
+        <div className="mt-8 grid gap-16 lg:grid-cols-2">
+          {/* Left Column: Summary & Coupon */}
+          <div className="space-y-10">
+            <div>
+              <p className="text-3xl font-light text-slate-100 mb-6">
+                {formatMoney(
+                  effectiveCurrentBreakdown?.totalAmount,
+                  effectiveCurrentBreakdown?.currency,
+                )} <span className="text-lg text-neutral-500">due today</span>
               </p>
-            ) : null}
-          </div>
 
-          {previewError ? (
-            <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              {previewError}
-            </div>
-          ) : null}
-
-          {preview?.taxIdError ? (
-            <div className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              {preview.taxIdError}
-            </div>
-          ) : null}
-
-          <div className="rounded-[28px] border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-semibold text-slate-100">{selectedPlanDefinition.label}</p>
-                <p className="mt-1 text-sm text-neutral-400">{selectedPlanDefinition.description}</p>
-              </div>
-              <span className="text-sm text-neutral-400">
-                Currency: {effectiveCurrentBreakdown?.currency ?? preview?.currency ?? "USD"}
-              </span>
-            </div>
-
-            <div className="mt-4 max-h-[360px] space-y-4 overflow-y-auto pr-1">
-              {(preview?.productCart.length ? preview.productCart : [null]).map((item, index) => {
-                const title = item?.name ?? selectedPlanDefinition.label;
-                const description = item?.description ?? selectedPlanDefinition.description;
-
-                return (
-                  <div
-                    className="rounded-2xl border border-[var(--line)] bg-[var(--bg-soft)] p-4"
-                    key={item?.productId ?? index}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-slate-100">{title}</p>
-                        <p className="mt-1 text-sm text-neutral-400">{description}</p>
-                      </div>
-                      <span className="text-sm text-neutral-300">Qty {item?.quantity ?? 1}</span>
-                    </div>
-
-                    {item?.creditEntitlements.length ? (
-                      <ul className="mt-4 space-y-2 text-sm text-neutral-300">
-                        {item.creditEntitlements.map((credit) => (
-                          <li className="flex items-start gap-2" key={credit.creditEntitlementId}>
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-                            <span>
-                              {credit.amount} {credit.unit} {credit.name}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-
-                    {item?.meters.length ? (
-                      <div className="mt-4 space-y-2 rounded-xl border border-dashed border-[var(--line)] px-3 py-3 text-sm text-neutral-300">
-                        {item.meters.map((meter) => (
-                          <p key={`${item.productId}-${meter.name}`}>
-                            <span className="font-medium text-slate-200">{meter.name}</span>
-                            {meter.description ? `: ${meter.description}. ` : ": "}
-                            {meter.freeThreshold
-                              ? `Free up to ${meter.freeThreshold.toLocaleString()} ${meter.measurementUnit}, `
-                              : ""}
-                            then {meter.pricePerUnit} per {meter.measurementUnit}.
-                          </p>
-                        ))}
-                      </div>
-                    ) : null}
-
-                    {item?.addons.length ? (
-                      <div className="mt-4 space-y-2 text-sm text-neutral-300">
-                        {item.addons.map((addon) => (
-                          <div className="rounded-xl border border-[var(--line)] px-3 py-3" key={addon.addonId}>
-                            <p className="font-medium text-slate-200">{addon.name}</p>
-                            {addon.description ? (
-                              <p className="mt-1 text-neutral-400">{addon.description}</p>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
+              <div className="space-y-4 text-sm text-neutral-300">
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Subtotal</span>
+                  <span>{formatMoney(effectiveCurrentBreakdown?.subtotal, effectiveCurrentBreakdown?.currency)}</span>
+                </div>
+                {typeof effectiveCurrentBreakdown?.discount === "number" && effectiveCurrentBreakdown.discount > 0 && (
+                  <div className="flex justify-between text-emerald-400">
+                    <span>Discount</span>
+                    <span>-{formatMoney(effectiveCurrentBreakdown.discount, effectiveCurrentBreakdown.currency)}</span>
                   </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[rgba(2,6,23,0.5)] p-4 text-sm text-neutral-300">
-              <div className="flex items-center justify-between gap-3">
-                <span>Subtotal</span>
-                <span>
-                  {formatMoney(effectiveCurrentBreakdown?.subtotal, effectiveCurrentBreakdown?.currency)}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span>Discount</span>
-                <span>
-                  {typeof effectiveCurrentBreakdown?.discount === "number"
-                    ? `-${formatMoney(effectiveCurrentBreakdown.discount, effectiveCurrentBreakdown.currency)}`
-                    : "N/A"}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center justify-between gap-3">
-                <span>Tax</span>
-                <span>{formatMoney(effectiveCurrentBreakdown?.tax, effectiveCurrentBreakdown?.currency)}</span>
-              </div>
-              <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--line)] pt-3 text-base font-semibold text-slate-100">
-                <span>Due today</span>
-                <span>
-                  {formatMoney(
-                    effectiveCurrentBreakdown?.totalAmount,
-                    effectiveCurrentBreakdown?.currency,
-                  )}
-                </span>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Tax</span>
+                  <span>{formatMoney(effectiveCurrentBreakdown?.tax, effectiveCurrentBreakdown?.currency)}</span>
+                </div>
               </div>
 
-              {preview?.recurringBreakdown ? (
-                <div className="mt-4 rounded-xl border border-sky-500/20 bg-sky-500/10 px-3 py-3 text-sm text-sky-100">
-                  <p className="font-medium">Recurring terms</p>
-                  <p className="mt-2 text-sky-100/90">
-                    This subscription renews automatically until canceled. The renewal amount is{" "}
-                    <strong>
-                      {formatMoney(preview.recurringBreakdown.totalAmount, preview.currency)}
-                    </strong>{" "}
-                    per billing cycle, plus any applicable taxes displayed in payment.
+              {preview?.recurringBreakdown && (
+                <div className="mt-8 pt-8 border-t border-white/5">
+                  <p className="text-sm text-neutral-500 mb-2">Recurring</p>
+                  <p className="text-sm text-neutral-300">
+                    Renews automatically at <span className="text-slate-100">{formatMoney(preview.recurringBreakdown.totalAmount, preview.currency)}</span> per billing cycle.
                   </p>
                 </div>
-              ) : null}
-
-              <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-neutral-500">
-                <span>Billing country: {preview?.billingCountry ?? "Collected in payment"}</span>
-                <span>The payment form opens inline on this page after you proceed.</span>
-              </div>
+              )}
             </div>
+
+            <div className="pt-8 border-t border-white/5">
+              <label className="block text-sm text-neutral-500 mb-4">Promo code</label>
+              <div className="flex items-center gap-4">
+                <input
+                  className="bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors w-full placeholder:text-neutral-600"
+                  disabled={!canManageBilling}
+                  onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
+                  placeholder="Enter code"
+                  value={couponCode}
+                  onBlur={refreshPricing}
+                  onKeyDown={(e) => e.key === 'Enter' && refreshPricing()}
+                />
+                {(couponCode || previewCouponCode) && (
+                  <button
+                    className="text-sm text-neutral-500 hover:text-slate-300 transition-colors"
+                    onClick={clearCoupon}
+                    type="button"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              {previewDirty && (
+                <p className="mt-2 text-xs text-amber-400">Press enter to apply</p>
+              )}
+            </div>
+            {previewError && <p className="text-sm text-red-400">{previewError}</p>}
+            {preview?.taxIdError && <p className="text-sm text-red-400">{preview.taxIdError}</p>}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              className="btn btn-primary"
-              disabled={!canManageBilling || checkoutLoading || previewLoading}
-              onClick={checkoutSession && !sessionFinalized ? resumeCheckout : startCheckout}
-              type="button"
-            >
-              {checkoutLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Preparing payment
-                </>
-              ) : checkoutSession && !sessionFinalized ? (
-                <>
-                  <RefreshCcw className="h-4 w-4" />
-                  Reload payment form
-                </>
-              ) : (
-                <>
-                  <CreditCard className="h-4 w-4" />
-                  Proceed to payment
-                </>
-              )}
-            </button>
-            <a className="btn btn-ghost" href="/billing-policy" rel="noreferrer" target="_blank">
-              <Receipt className="h-4 w-4" />
+          {/* Right Column: Inline Form */}
+          <div>
+            {!checkoutSession ? (
+              <div className="h-full flex flex-col justify-center">
+                <button
+                  className="group flex items-center justify-between w-full py-6 border-b border-white/10 hover:border-sky-400 transition-colors text-left"
+                  disabled={!canManageBilling || checkoutLoading || previewLoading}
+                  onClick={startCheckout}
+                  type="button"
+                >
+                  <span className="text-2xl font-light text-slate-100">
+                    {checkoutLoading ? "Preparing secure checkout..." : "Proceed to payment"}
+                  </span>
+                  {!checkoutLoading && <ArrowRight className="h-6 w-6 text-neutral-500 group-hover:text-sky-400 transition-colors" />}
+                </button>
+                <p className="mt-6 text-sm text-neutral-500 flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" /> Secure inline payment
+                </p>
+              </div>
+            ) : (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {checkoutHint && !checkoutFrameReady && (
+                  <p className="text-sm text-neutral-500 mb-6">{checkoutHint}</p>
+                )}
+                {checkoutError && (
+                  <div className="mb-6 text-sm text-red-400 border-l-2 border-red-400 pl-4">
+                    {checkoutError}
+                  </div>
+                )}
+                
+                <div className="min-h-[300px]" id={CHECKOUT_ELEMENT_ID} />
+
+                {sessionStatus && (
+                  <div className="mt-8 text-sm text-neutral-500">
+                    {sessionFinalized ? (
+                      <button className="text-sky-400 hover:text-sky-300 transition-colors" onClick={startCheckout}>
+                        Start new payment session
+                      </button>
+                    ) : (
+                      <span>Session ID: {checkoutSession.sessionId}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Usage & Lifecycle Minimalist Grid */}
+      <section className="pb-10">
+        <h2 className="text-xl font-medium text-slate-100 mb-8">Activity & Quotas</h2>
+        <div className="grid gap-16 md:grid-cols-2">
+          <div className="space-y-8">
+            <h3 className="text-sm tracking-wide text-neutral-500 mb-6 uppercase">Lifecycle</h3>
+            <div>
+              <p className="text-sm text-neutral-400 mb-1">Current period</p>
+              <p className="text-slate-200">{formatDateTime(billing?.currentPeriodStart)} - {formatDateTime(billing?.currentPeriodEnd)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-neutral-400 mb-1">Cancellation</p>
+              <p className="text-slate-200">{billing?.canceledAt ? formatDateTime(billing.canceledAt) : "Active"}</p>
+              <p className="text-sm text-neutral-500 mt-1">{billing?.cancelReason ?? "No cancellation scheduled."}</p>
+            </div>
+            {billing?.lastInvoiceUrl && (
+              <div>
+                <a
+                  className="text-sm text-sky-400 hover:text-sky-300 transition-colors inline-flex items-center gap-2"
+                  href={billing.lastInvoiceUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  View latest invoice <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            )}
+            <a className="text-sm text-neutral-500 hover:text-slate-300 transition-colors inline-flex items-center gap-2" href="/billing-policy" rel="noreferrer" target="_blank">
               Refund policy
             </a>
           </div>
-        </div>
-      </section>
 
-      {checkoutSession ? (
-        <section className="panel-card p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="kicker">Step 3</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-100">Payment form</h3>
-              <p className="mt-2 max-w-3xl text-sm text-neutral-400">
-                Payment opens inline in a black secure surface. If card or bank verification is required, the flow continues in the same tab and returns here when finished.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className={`badge ${statusToneClass(paymentStatusValue)}`}>{paymentStatusLabel}</span>
-              {sessionStatusLoading ? (
-                <span className="inline-flex items-center gap-2 text-neutral-400">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Checking session
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          {checkoutHint ? <p className="mt-4 text-sm text-neutral-400">{checkoutHint}</p> : null}
-
-          {checkoutError ? (
-            <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>{checkoutError}</span>
-              </div>
-            </div>
-          ) : null}
-
-          {sessionStatus ? (
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-300">
-                <p className="text-neutral-500">Session created</p>
-                <p className="mt-2 font-medium text-slate-100">
-                  {formatDateTime(sessionStatus.sessionCreatedAt)}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-300">
-                <p className="text-neutral-500">Payment status</p>
-                <p className="mt-2 font-medium text-slate-100">
-                  {formatStatusLabel(sessionStatus.paymentStatus ?? sessionStatus.providerStatus)}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-300">
-                <p className="text-neutral-500">Customer</p>
-                <p className="mt-2 font-medium text-slate-100">
-                  {sessionStatus.customerName ?? sessionStatus.customerEmail ?? "Collected in payment"}
-                </p>
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-5 overflow-hidden rounded-[28px] border border-slate-800 bg-[linear-gradient(180deg,#06070d,#02030a)] p-6">
-            <div className="rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.16),transparent_45%),linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,6,23,0.98))] p-6">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="max-w-2xl">
-                  <p className="text-xs uppercase tracking-[0.18em] text-sky-200/75">Secure payment</p>
-                  <h4 className="mt-2 text-xl font-semibold text-slate-100">
-                    Black inline payment surface with same-tab verification
-                  </h4>
-                  <p className="mt-2 text-sm text-slate-300/85">
-                    TrustLoop keeps plan details on this page while Dodo renders the payment form inline below. OTP or bank verification continues in the same browser tab and returns to this billing session when complete.
-                  </p>
+          <div className="space-y-8">
+            <h3 className="text-sm tracking-wide text-neutral-500 mb-6 uppercase">Today's Usage</h3>
+            {[
+              { label: "Incidents", used: usage.incidentsCreated, limit: quota.incidentsPerDay },
+              { label: "Triage runs", used: usage.triageRuns, limit: quota.triageRunsPerDay },
+              { label: "Customer updates", used: usage.customerUpdates, limit: quota.customerUpdatesPerDay },
+              { label: "Reminder emails", used: usage.reminderEmailsSent, limit: quota.reminderEmailsPerDay },
+            ].map((row) => (
+              <div key={row.label}>
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-slate-200">{row.label}</span>
+                  <span className="text-neutral-500">{row.used} / {row.limit}</span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    className="btn btn-primary"
-                    onClick={sessionFinalized ? startCheckout : resumeCheckout}
-                    type="button"
-                  >
-                    <CreditCard className="h-4 w-4" />
-                    {sessionFinalized
-                      ? "Start new payment session"
-                      : gatewayOpen
-                        ? "Reload payment form"
-                        : "Open payment form"}
-                  </button>
-                  <a className="btn btn-ghost" href="/billing-policy" rel="noreferrer" target="_blank">
-                    <Receipt className="h-4 w-4" />
-                    Refund policy
-                  </a>
+                <div className="h-0.5 w-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full bg-sky-400 transition-all duration-1000 ease-out"
+                    style={{ width: `${percent(row.used, row.limit)}%` }}
+                  />
                 </div>
               </div>
-
-              <div className="mt-6 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                  <p className="text-slate-400">Form status</p>
-                  <p className="mt-2 font-medium text-slate-100">
-                    {sessionFinalized
-                      ? "Completed"
-                      : checkoutFrameReady
-                        ? "Visible on this page"
-                        : gatewayOpen
-                          ? "Loading on this page"
-                          : "Ready to load"}
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                  <p className="text-slate-400">Verification handling</p>
-                  <p className="mt-2 font-medium text-slate-100">Same tab, no popup windows</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                  <p className="text-slate-400">Session ID</p>
-                  <p className="mt-2 truncate font-medium text-slate-100">{checkoutSession.sessionId}</p>
-                </div>
-              </div>
-
-              <div className="mt-6 overflow-hidden rounded-[24px] border border-white/10 bg-[#04050b] p-3">
-                {!checkoutFrameReady ? (
-                  <div className="flex min-h-[120px] items-center gap-3 rounded-2xl border border-dashed border-white/10 bg-white/5 px-4 py-4 text-sm text-slate-300">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Preparing the inline payment form…
-                  </div>
-                ) : null}
-                <div className={checkoutFrameReady ? "mt-3" : "mt-4"} id={CHECKOUT_ELEMENT_ID} />
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4 text-sm text-neutral-400">
-            <p className="flex items-center gap-2 font-medium text-slate-100">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" />
-              Payment notes
-            </p>
-            <ul className="mt-3 space-y-2">
-              <li>Recurring pricing and totals stay visible above while the payment form is active.</li>
-              <li>OTP or bank verification continues in the same browser tab and returns to this billing screen.</li>
-              <li>The Dodo inline payment form keeps its legal footer and secure payment controls intact.</li>
-            </ul>
-          </div>
-        </section>
-      ) : (
-        <section className="rounded-[28px] border border-dashed border-[var(--line)] bg-[var(--bg-soft)]/55 px-6 py-8 text-sm text-neutral-400">
-          <div className="flex flex-wrap items-center gap-3">
-            <CreditCard className="h-5 w-5 text-sky-200" />
-            <p>The payment form opens inline on this page after you select a plan and click <span className="font-medium text-slate-100">Proceed to payment</span>.</p>
-          </div>
-        </section>
-      )}
-
-      <section className="panel-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="kicker">Billing status</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-100">Payment lifecycle</h3>
-          </div>
-          <span className={`badge ${statusToneClass(paymentStatusValue)}`}>{paymentStatusLabel}</span>
-        </div>
-
-        <div className="mt-5 grid gap-3 text-sm text-neutral-300 md:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-neutral-500">Current billing period</p>
-            <p className="mt-2 font-medium text-slate-100">{formatDateTime(billing?.currentPeriodStart)}</p>
-            <p className="mt-1 text-neutral-400">through {formatDateTime(billing?.currentPeriodEnd)}</p>
-          </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-neutral-500">Invoice and references</p>
-            {billing?.lastInvoiceUrl ? (
-              <a
-                className="mt-2 inline-flex items-center gap-2 font-medium text-sky-200 hover:text-sky-100"
-                href={billing.lastInvoiceUrl}
-                rel="noreferrer"
-                target="_blank"
-              >
-                Open latest invoice <ExternalLink className="h-4 w-4" />
-              </a>
-            ) : (
-              <p className="mt-2 text-neutral-400">Invoice link will appear after the next completed payment.</p>
-            )}
-          </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-neutral-500">Recovery automation</p>
-            <p className="mt-2 font-medium text-slate-100">
-              {billing?.failureReminderCount ?? 0} reminders sent
-            </p>
-            <p className="mt-1 text-neutral-400">
-              Past-due workspaces downgrade to Starter after the recovery window ends.
-            </p>
-          </div>
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4">
-            <p className="text-neutral-500">Cancellation</p>
-            <p className="mt-2 font-medium text-slate-100">
-              {billing?.canceledAt ? formatDateTime(billing.canceledAt) : "Active"}
-            </p>
-            <p className="mt-1 text-neutral-400">
-              {billing?.cancelReason ?? "No cancellation scheduled."}
-            </p>
+            ))}
           </div>
         </div>
-
-        {billing?.paymentFailedAt ? (
-          <div className="mt-4 rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-            Payment failure detected at {formatDateTime(billing.paymentFailedAt)}. Fix billing before the recovery window ends to avoid an automatic downgrade.
-          </div>
-        ) : null}
-      </section>
-
-      <section className="panel-card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="kicker">Usage today</p>
-            <h3 className="mt-2 text-xl font-semibold text-slate-100">Workspace limits</h3>
-          </div>
-          <span className="text-xs uppercase tracking-[0.16em] text-neutral-500">
-            Resets daily
-          </span>
-        </div>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          {[
-            {
-              label: "Incidents / day",
-              used: usage.incidentsCreated,
-              limit: quota.incidentsPerDay,
-            },
-            {
-              label: "Triage runs / day",
-              used: usage.triageRuns,
-              limit: quota.triageRunsPerDay,
-            },
-            {
-              label: "Customer updates / day",
-              used: usage.customerUpdates,
-              limit: quota.customerUpdatesPerDay,
-            },
-            {
-              label: "Reminder emails / day",
-              used: usage.reminderEmailsSent,
-              limit: quota.reminderEmailsPerDay,
-            },
-          ].map((row) => (
-            <article className="rounded-2xl border border-[var(--line)] bg-[var(--bg-base)] p-4" key={row.label}>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-medium text-slate-100">{row.label}</p>
-                <span className="text-sm text-neutral-400">
-                  {row.used} / {row.limit}
-                </span>
-              </div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-neutral-900">
-                <div
-                  className="h-full rounded-full bg-sky-500 transition-[width]"
-                  style={{ width: `${percent(row.used, row.limit)}%` }}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
+        {billing?.paymentFailedAt && (
+          <p className="mt-8 text-sm text-red-400">
+            Payment failure detected at {formatDateTime(billing.paymentFailedAt)}.
+          </p>
+        )}
       </section>
     </div>
   );

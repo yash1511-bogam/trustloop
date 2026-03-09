@@ -45,7 +45,7 @@ export function SettingsNav({ compact = false }: SettingsNavProps) {
             key={item.href}
           >
             <item.icon className="h-4 w-4" />
-            <span className="text-sm font-semibold">{item.label}</span>
+            <span>{item.label}</span>
           </Link>
         );
       })}

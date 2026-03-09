@@ -89,7 +89,7 @@ export function AppShellNav({ onNavigate, compact = false }: AppShellNavProps) {
         return (
           <Link className={className} href={item.href} key={item.href} onClick={onNavigate} title={item.label}>
             <item.icon className={compact ? "h-5 w-5" : "h-4 w-4"} />
-            {compact ? <span className="sr-only">{item.label}</span> : <span className="text-sm font-semibold">{item.label}</span>}
+            {compact ? <span className="sr-only">{item.label}</span> : <span>{item.label}</span>}
           </Link>
         );
       })}

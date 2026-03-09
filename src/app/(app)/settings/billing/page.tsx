@@ -78,8 +78,8 @@ export default async function SettingsBillingPage({
   ]);
 
   return (
-    <div className="space-y-8">
-      <section className="surface p-6">
+    <div className="space-y-12">
+      <section>
         <p className="kicker">Billing and plans</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-100">Manage plan changes and payment</h1>
         <p className="mt-2 max-w-3xl text-sm text-neutral-500">

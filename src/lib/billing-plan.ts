@@ -59,10 +59,10 @@ export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
       headline: "Lean coverage",
       description: "For smaller teams that need dependable incident coordination without a heavy monthly footprint.",
       bullets: [
-        `${quota.incidentsPerDay.toLocaleString()} incidents per day`,
-        `${quota.triageRunsPerDay.toLocaleString()} triage runs per day`,
-        `${quota.customerUpdatesPerDay.toLocaleString()} customer updates per day`,
-        `${quota.reminderEmailsPerDay.toLocaleString()} reminder emails per day`,
+        `${quota.incidentsPerDay.toLocaleString("en-US")} incidents per day`,
+        `${quota.triageRunsPerDay.toLocaleString("en-US")} triage runs per day`,
+        `${quota.customerUpdatesPerDay.toLocaleString("en-US")} customer updates per day`,
+        `${quota.reminderEmailsPerDay.toLocaleString("en-US")} reminder emails per day`,
       ],
     };
   }
@@ -74,10 +74,10 @@ export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
       headline: "High-scale operations",
       description: "For large or regulated teams that need very high throughput, stronger access controls, and fewer quota constraints.",
       bullets: [
-        `${quota.incidentsPerDay.toLocaleString()} incidents per day`,
-        `${quota.triageRunsPerDay.toLocaleString()} triage runs per day`,
-        `${quota.customerUpdatesPerDay.toLocaleString()} customer updates per day`,
-        `${quota.reminderEmailsPerDay.toLocaleString()} reminder emails per day`,
+        `${quota.incidentsPerDay.toLocaleString("en-US")} incidents per day`,
+        `${quota.triageRunsPerDay.toLocaleString("en-US")} triage runs per day`,
+        `${quota.customerUpdatesPerDay.toLocaleString("en-US")} customer updates per day`,
+        `${quota.reminderEmailsPerDay.toLocaleString("en-US")} reminder emails per day`,
       ],
     };
   }
@@ -88,10 +88,10 @@ export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
     headline: "Daily operator default",
     description: "Balanced limits for teams running incident intake, triage, and customer comms as part of daily operations.",
     bullets: [
-      `${quota.incidentsPerDay.toLocaleString()} incidents per day`,
-      `${quota.triageRunsPerDay.toLocaleString()} triage runs per day`,
-      `${quota.customerUpdatesPerDay.toLocaleString()} customer updates per day`,
-      `${quota.reminderEmailsPerDay.toLocaleString()} reminder emails per day`,
+      `${quota.incidentsPerDay.toLocaleString("en-US")} incidents per day`,
+      `${quota.triageRunsPerDay.toLocaleString("en-US")} triage runs per day`,
+      `${quota.customerUpdatesPerDay.toLocaleString("en-US")} customer updates per day`,
+      `${quota.reminderEmailsPerDay.toLocaleString("en-US")} reminder emails per day`,
     ],
   };
 }
