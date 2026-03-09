@@ -43,7 +43,8 @@
     "logs:billing": "node scripts/tail-logs.mjs billing",
     "logs:auth": "node scripts/tail-logs.mjs auth",
     "logs:ui": "node scripts/tail-logs.mjs ui",
-    "logs:list": "node scripts/tail-logs.mjs --list"
+    "logs:list": "node scripts/tail-logs.mjs --list",
+    "setup:env": "bash scripts/setup-env.sh"
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.1004.0",
