@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { appOrigin, appUrl } from "@/lib/app-url";
 import { badRequest } from "@/lib/http";
 import { buildOAuthStartUrl, OAuthProvider } from "@/lib/stytch";
 
@@ -18,9 +19,7 @@ const querySchema = z.object({
 function callbackUrl(input: {
   request: NextRequest;
 }): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? input.request.nextUrl.origin;
-  const base = appUrl.replace(/\/$/, "");
-  return `${base}/api/auth/oauth/callback`;
+  return `${appOrigin(input.request)}/api/auth/oauth/callback`;
 }
 
 function setOAuthContextCookie(
@@ -107,7 +106,7 @@ export async function GET(
       intent === "register"
         ? "/register?error=oauth_not_configured"
         : "/login?error=oauth_not_configured";
-    const response = NextResponse.redirect(new URL(fallback, request.nextUrl.origin));
+    const response = NextResponse.redirect(appUrl(fallback, request));
     clearOAuthContextCookie(response);
     return response;
   }

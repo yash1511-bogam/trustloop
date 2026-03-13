@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { appUrl } from "@/lib/app-url";
 import { setSessionCookie } from "@/lib/cookies";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -51,7 +52,7 @@ function redirectWithError(
   code: string,
   intent: "login" | "register" = "login",
 ): NextResponse {
-  const url = new URL(buildRedirectPath(intent), request.nextUrl.origin);
+  const url = appUrl(buildRedirectPath(intent), request);
   url.searchParams.set("error", code);
   const response = NextResponse.redirect(url);
   clearSamlContextCookie(response);
@@ -186,7 +187,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     await ensureWorkspaceSlug(prisma, workspace.id, workspace.name);
 
-    const response = NextResponse.redirect(new URL("/dashboard", request.nextUrl.origin));
+    const response = NextResponse.redirect(appUrl("/dashboard", request));
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
     clearSamlContextCookie(response);
 

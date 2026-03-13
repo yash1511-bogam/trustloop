@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { appOrigin, appUrl } from "@/lib/app-url";
 import { prisma } from "@/lib/prisma";
 import { buildSamlStartUrl, isSamlSsoSupported } from "@/lib/stytch";
 
@@ -25,7 +26,7 @@ function redirectWithError(
   code: string,
   intent: "login" | "register" = "login",
 ): NextResponse {
-  const url = new URL(redirectPath(intent), request.nextUrl.origin);
+  const url = appUrl(redirectPath(intent), request);
   url.searchParams.set("error", code);
   const response = NextResponse.redirect(url);
   clearSamlContextCookie(response);
@@ -62,8 +63,7 @@ function clearSamlContextCookie(response: NextResponse): void {
 }
 
 function callbackUrl(request: NextRequest): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
-  return `${appUrl.replace(/\/$/, "")}/api/auth/saml/callback`;
+  return `${appOrigin(request)}/api/auth/saml/callback`;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

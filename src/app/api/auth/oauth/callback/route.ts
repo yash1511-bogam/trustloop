@@ -2,6 +2,7 @@ import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
+import { appUrl } from "@/lib/app-url";
 import { setSessionCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
@@ -38,7 +39,7 @@ function buildRedirect(
   path: string,
   params?: Record<string, string | undefined>,
 ): NextResponse {
-  const url = new URL(path, request.nextUrl.origin);
+  const url = appUrl(path, request);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value) {
