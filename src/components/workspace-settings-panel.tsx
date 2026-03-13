@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldCheck, Slack } from "lucide-react";
+import { UpgradeGate } from "@/components/upgrade-gate";
 
 type WorkspaceSettings = {
   id: string;
@@ -170,21 +171,23 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           )}
         </label>
 
-        <label className="block space-y-3 md:col-span-2">
-          <span className="text-sm font-medium text-slate-300">SAML metadata URL (enterprise)</span>
-          <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
-            value={form.samlMetadataUrl}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                samlMetadataUrl: event.target.value,
-              }))
-            }
-            placeholder="https://idp.example.com/metadata"
-            disabled={loading}
-          />
-        </label>
+        <UpgradeGate allowed={workspace.planTier === "enterprise"} planLabel="Enterprise">
+          <label className="block space-y-3 md:col-span-2">
+            <span className="text-sm font-medium text-slate-300">SAML metadata URL (enterprise)</span>
+            <input
+              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+              value={form.samlMetadataUrl}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  samlMetadataUrl: event.target.value,
+                }))
+              }
+              placeholder="https://idp.example.com/metadata"
+              disabled={loading}
+            />
+          </label>
+        </UpgradeGate>
       </div>
 
       <div className="flex flex-wrap items-center gap-8 py-4 border-y border-white/5">
@@ -203,41 +206,45 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable status page</span>
         </label>
 
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <input
-            className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
-            checked={form.samlEnabled}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                samlEnabled: event.target.checked,
-              }))
-            }
-            type="checkbox"
-          />
-          <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable SAML SSO</span>
-        </label>
+        <UpgradeGate allowed={workspace.planTier === "enterprise"} planLabel="Enterprise">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input
+              className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+              checked={form.samlEnabled}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  samlEnabled: event.target.checked,
+                }))
+              }
+              type="checkbox"
+            />
+            <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable SAML SSO</span>
+          </label>
+        </UpgradeGate>
 
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <input
-            className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0 disabled:opacity-50"
-            checked={form.complianceMode}
-            disabled={workspace.complianceMode}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                complianceMode: event.target.checked,
-              }))
-            }
-            type="checkbox"
-          />
-          <div className="flex flex-col">
-            <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Compliance mode</span>
-            {form.complianceMode && (
-              <span className="text-[10px] text-amber-500 font-medium uppercase tracking-tight">Locked</span>
-            )}
-          </div>
-        </label>
+        <UpgradeGate allowed={workspace.planTier === "pro" || workspace.planTier === "enterprise"} planLabel="Scale">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <input
+              className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0 disabled:opacity-50"
+              checked={form.complianceMode}
+              disabled={workspace.complianceMode}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  complianceMode: event.target.checked,
+                }))
+              }
+              type="checkbox"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Compliance mode</span>
+              {form.complianceMode && (
+                <span className="text-[10px] text-amber-500 font-medium uppercase tracking-tight">Locked</span>
+              )}
+            </div>
+          </label>
+        </UpgradeGate>
       </div>
 
       {form.complianceMode && !workspace.complianceMode && (

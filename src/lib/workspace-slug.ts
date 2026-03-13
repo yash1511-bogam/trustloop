@@ -4,7 +4,7 @@ const MAX_SLUG_LENGTH = 60;
 
 type WorkspaceDbClient = PrismaClient | Prisma.TransactionClient;
 
-function slugBaseFromName(name: string): string {
+export function slugBaseFromName(name: string): string {
   const normalized = name
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 export default async function SettingsTeamPage() {
   const auth = await requireAuth();
 
-  const [members, invites, profile] = await Promise.all([
+  const [members, invites, profile, workspace] = await Promise.all([
     prisma.workspaceMembership.findMany({
       where: { workspaceId: auth.user.workspaceId },
       include: {
@@ -47,6 +47,10 @@ export default async function SettingsTeamPage() {
         phone: true,
         role: true,
       },
+    }),
+    prisma.workspace.findUniqueOrThrow({
+      where: { id: auth.user.workspaceId },
+      select: { planTier: true },
     }),
   ]);
 
@@ -90,7 +94,7 @@ export default async function SettingsTeamPage() {
           Keep personal contact details up to date for urgent P1 notifications.
         </p>
         <div className="mt-8">
-          <ProfileSettingsPanel profile={profile} />
+          <ProfileSettingsPanel profile={profile} planTier={workspace.planTier ?? "starter"} />
         </div>
       </section>
     </div>

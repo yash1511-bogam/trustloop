@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 export const API_KEY_SCOPES = [
   "incidents:read",
@@ -15,7 +15,238 @@ export const API_KEY_SCOPES = [
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
 
+export const API_KEY_ASSIGNABLE_SCOPES = [
+  "incidents:read",
+  "incidents:write",
+  "incidents:triage",
+  "customer-updates:write",
+  "status-updates:write",
+  "webhooks:ingest",
+] as const;
+
+export type AssignableApiKeyScope = (typeof API_KEY_ASSIGNABLE_SCOPES)[number];
+
+const API_KEY_SCOPE_METADATA: Record<
+  ApiKeyScope,
+  { label: string; description: string; assignable: boolean }
+> = {
+  "incidents:read": {
+    label: "Read incidents",
+    description: "List incidents, fetch incident detail, and read customer update drafts.",
+    assignable: true,
+  },
+  "incidents:write": {
+    label: "Create and edit incidents",
+    description: "Create incidents, update incident fields, and add internal notes.",
+    assignable: true,
+  },
+  "incidents:triage": {
+    label: "Run AI triage",
+    description: "Trigger AI triage on incidents through the API.",
+    assignable: true,
+  },
+  "incidents:delete": {
+    label: "Delete incidents",
+    description: "Reserved for future API delete flows.",
+    assignable: false,
+  },
+  "customer-updates:write": {
+    label: "Draft customer updates",
+    description: "Generate and manage customer-facing update drafts.",
+    assignable: true,
+  },
+  "customer-updates:approve": {
+    label: "Approve customer updates",
+    description: "Reserved for future approval APIs.",
+    assignable: false,
+  },
+  "status-updates:write": {
+    label: "Publish status updates",
+    description: "Publish status page updates for incidents.",
+    assignable: true,
+  },
+  "settings:read": {
+    label: "Read settings",
+    description: "Reserved for future workspace settings APIs.",
+    assignable: false,
+  },
+  "settings:write": {
+    label: "Write settings",
+    description: "Reserved for future workspace settings APIs.",
+    assignable: false,
+  },
+  "webhooks:ingest": {
+    label: "Authenticate webhook intake",
+    description: "Use the key on TrustLoop webhook endpoints instead of a signed secret.",
+    assignable: true,
+  },
+};
+
+export const API_KEY_SCOPE_OPTIONS = API_KEY_SCOPES.map((scope) => ({
+  id: scope,
+  ...API_KEY_SCOPE_METADATA[scope],
+}));
+
+export const API_KEY_ASSIGNABLE_SCOPE_OPTIONS = API_KEY_SCOPE_OPTIONS.filter(
+  (scope) => scope.assignable,
+);
+
+export const API_KEY_USAGE_PRESET_IDS = [
+  "read_only",
+  "incident_ingest",
+  "incident_response",
+  "webhook_ingest",
+] as const;
+
+export type ApiKeyUsagePresetId = (typeof API_KEY_USAGE_PRESET_IDS)[number];
+
+export const DEFAULT_API_KEY_USAGE_PRESET = "incident_response" as const;
+
+export const API_KEY_USAGE_PRESETS = [
+  {
+    id: "read_only",
+    label: "Read-only",
+    description: "Best for dashboards, exports, and systems that only need visibility.",
+    scopes: ["incidents:read"],
+  },
+  {
+    id: "incident_ingest",
+    label: "Incident intake",
+    description: "Create and update incidents from trusted internal automation.",
+    scopes: ["incidents:read", "incidents:write"],
+  },
+  {
+    id: "incident_response",
+    label: "Incident response",
+    description: "Read incidents, update them, run triage, and publish updates.",
+    scopes: [
+      "incidents:read",
+      "incidents:write",
+      "incidents:triage",
+      "customer-updates:write",
+      "status-updates:write",
+    ],
+  },
+  {
+    id: "webhook_ingest",
+    label: "Webhook intake",
+    description: "Authenticate direct webhook delivery into TrustLoop endpoints.",
+    scopes: ["webhooks:ingest"],
+  },
+] as const satisfies ReadonlyArray<{
+  id: ApiKeyUsagePresetId;
+  label: string;
+  description: string;
+  scopes: readonly AssignableApiKeyScope[];
+}>;
+
 const apiKeyScopeSet = new Set<string>(API_KEY_SCOPES);
+const apiKeyUsagePresetMap = new Map(
+  API_KEY_USAGE_PRESETS.map((preset) => [preset.id, preset]),
+);
+
+export function getApiKeyUsagePreset(
+  presetId: string | null | undefined,
+): (typeof API_KEY_USAGE_PRESETS)[number] | null {
+  if (!presetId) {
+    return null;
+  }
+
+  return apiKeyUsagePresetMap.get(presetId as ApiKeyUsagePresetId) ?? null;
+}
+
+export function scopesForApiKeyUsagePreset(
+  presetId: string | null | undefined,
+): AssignableApiKeyScope[] {
+  const preset = getApiKeyUsagePreset(presetId);
+  return preset ? [...preset.scopes] : [];
+}
+
+export const API_KEY_EXPIRY_OPTION_IDS = [
+  "7_days",
+  "30_days",
+  "90_days",
+  "180_days",
+  "365_days",
+  "never",
+] as const;
+
+export type ApiKeyExpiryOptionId = (typeof API_KEY_EXPIRY_OPTION_IDS)[number];
+
+export const DEFAULT_API_KEY_EXPIRY_OPTION = "90_days" as const;
+
+export const API_KEY_EXPIRY_OPTIONS = [
+  {
+    id: "7_days",
+    label: "7 days",
+    description: "Short-lived access for temporary integrations or validation.",
+    days: 7,
+  },
+  {
+    id: "30_days",
+    label: "30 days",
+    description: "Suitable for short production rollouts and partner handoffs.",
+    days: 30,
+  },
+  {
+    id: "90_days",
+    label: "90 days",
+    description: "Recommended default for internal automation and rotating agents.",
+    days: 90,
+  },
+  {
+    id: "180_days",
+    label: "180 days",
+    description: "Long-lived machine access that still rotates on a regular cadence.",
+    days: 180,
+  },
+  {
+    id: "365_days",
+    label: "1 year",
+    description: "Use only for tightly controlled systems with periodic manual review.",
+    days: 365,
+  },
+  {
+    id: "never",
+    label: "Never expires",
+    description: "No automatic expiry. Use only when rotation is handled externally.",
+    days: null,
+  },
+] as const satisfies ReadonlyArray<{
+  id: ApiKeyExpiryOptionId;
+  label: string;
+  description: string;
+  days: number | null;
+}>;
+
+const apiKeyExpiryOptionMap = new Map(
+  API_KEY_EXPIRY_OPTIONS.map((option) => [option.id, option]),
+);
+
+export function resolveApiKeyExpiryDate(
+  optionId: string | null | undefined,
+  baseDate = new Date(),
+): Date | null {
+  if (!optionId) {
+    return null;
+  }
+
+  const option = apiKeyExpiryOptionMap.get(optionId as ApiKeyExpiryOptionId);
+  if (!option || option.days === null) {
+    return null;
+  }
+
+  const expiresAt = new Date(baseDate);
+  expiresAt.setUTCDate(expiresAt.getUTCDate() + option.days);
+  return expiresAt;
+}
+
+export function isApiKeyExpired(
+  expiresAt: Date | null | undefined,
+  at = new Date(),
+): boolean {
+  return Boolean(expiresAt && expiresAt.getTime() <= at.getTime());
+}
 
 function isIpv4(value: string): boolean {
   const parts = value.split(".");

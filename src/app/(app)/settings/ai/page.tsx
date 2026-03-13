@@ -1,6 +1,9 @@
 import { AiSettingsPanel } from "@/components/ai-settings-panel";
 import { ApiKeySettingsPanel } from "@/components/api-key-settings-panel";
+import { UpgradeGate } from "@/components/upgrade-gate";
 import { requireAuth } from "@/lib/auth";
+import { normalizeApiKeyScopes } from "@/lib/api-key-scopes";
+import { isFeatureAllowed } from "@/lib/feature-gate";
 import { prisma } from "@/lib/prisma";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 
@@ -8,7 +11,7 @@ export default async function SettingsAiPage() {
   const auth = await requireAuth();
   const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 
-  const [keys, workflows, apiKeys] = await Promise.all([
+  const [keys, workflows, apiKeys, workspace] = await Promise.all([
     prisma.aiProviderKey.findMany({
       where: { workspaceId: auth.user.workspaceId },
       select: {
@@ -38,10 +41,16 @@ export default async function SettingsAiPage() {
         id: true,
         name: true,
         keyPrefix: true,
+        scopes: true,
         isActive: true,
         createdAt: true,
         lastUsedAt: true,
+        expiresAt: true,
       },
+    }),
+    prisma.workspace.findUniqueOrThrow({
+      where: { id: auth.user.workspaceId },
+      select: { planTier: true },
     }),
   ]);
 
@@ -69,17 +78,21 @@ export default async function SettingsAiPage() {
       <section className="pb-10">
         <h2 className="text-xl font-medium text-slate-100">Workspace API keys</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Generate and revoke Bearer keys used by monitoring agents and automation clients.
+          Generate Bearer keys for specific automation use cases, set an expiry window, and revoke them when they are no longer needed.
         </p>
         <div className="mt-8">
-          <ApiKeySettingsPanel
-            initialKeys={apiKeys.map((key) => ({
-              ...key,
-              createdAt: key.createdAt.toISOString(),
-              lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
-            }))}
-            turnstileSiteKey={siteKey}
-          />
+          <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "api_keys")} planLabel="Scale">
+            <ApiKeySettingsPanel
+              initialKeys={apiKeys.map((key) => ({
+                ...key,
+                scopes: normalizeApiKeyScopes(key.scopes),
+                createdAt: key.createdAt.toISOString(),
+                lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
+                expiresAt: key.expiresAt?.toISOString() ?? null,
+              }))}
+              turnstileSiteKey={siteKey}
+            />
+          </UpgradeGate>
         </div>
       </section>
     </div>

@@ -95,6 +95,9 @@ enum EmailNotificationType {
   AUTH_RECOVERY
   ONBOARDING_WELCOME
   ONBOARDING_GUIDE
+  TRIAL_STARTED
+  TRIAL_REMINDER
+  TRIAL_EXPIRED
 }
 
 enum EmailDeliveryStatus {
@@ -123,6 +126,7 @@ enum BillingSubscriptionStatus {
   ACTIVE
   PAST_DUE
   CANCELED
+  TRIALING
 }
 
 enum BillingEventProcessStatus {
@@ -166,6 +170,7 @@ model Workspace {
   samlOrganizationId              String?
   samlConnectionId                String?
   complianceMode                  Boolean                       @default(false)
+  trialEndsAt                     DateTime?
   createdAt                       DateTime                      @default(now())
   updatedAt                       DateTime                      @updatedAt
   users                           User[]
@@ -451,11 +456,13 @@ model WorkspaceApiKey {
   ipAllowlist String[]   @default([])
   createdAt   DateTime   @default(now())
   lastUsedAt  DateTime?
+  expiresAt   DateTime?
   isActive    Boolean    @default(true)
   auditLogs   AuditLog[] @relation("AuditActorApiKey")
 
   @@unique([keyPrefix])
   @@index([workspaceId, isActive])
+  @@index([workspaceId, expiresAt])
 }
 
 model WorkspaceInvite {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
+import { sendRecoveryInstructionsEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     where: { email },
     select: {
       id: true,
+      name: true,
+      workspaceId: true,
+      workspace: { select: { name: true } },
     },
   });
 
@@ -52,6 +56,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const otp = await sendEmailOtpLoginOrCreate(email);
+
+    sendRecoveryInstructionsEmail({
+      workspaceId: user.workspaceId,
+      toEmail: email,
+      workspaceName: user.workspace?.name ?? "your workspace",
+      userName: user.name,
+    }).catch((err) =>
+      log.auth.error("Failed to send recovery instructions email", { email, error: err instanceof Error ? err.message : String(err) }),
+    );
 
     return NextResponse.json({
       methodId: otp.methodId,

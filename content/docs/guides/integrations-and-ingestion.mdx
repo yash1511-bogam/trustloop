@@ -64,17 +64,98 @@ Enable incident creation, triage alerts, and customer update threads directly wi
 
 Generate workspace API keys in **Settings → AI & API Keys**.
 
+When you create a key, TrustLoop now asks for two things in addition to the name:
+
+1. A **usage preset** that preselects the right scopes for the job
+2. An **expiry window** so the key automatically ages out if you forget to rotate it
+
 Use API keys when:
 
 - Creating incidents from internal systems
 - Updating incidents via trusted automation
-- Authenticating without a session cookie
+- Running triage or publishing updates from approved services
+- Authenticating webhook ingestion without a browser session
+
+### Recommended Usage Presets
+
+| Preset | What it enables | Default scopes |
+| --- | --- | --- |
+| Read-only | Dashboards, exports, and systems that only inspect incidents | `incidents:read` |
+| Incident intake | Creating and updating incidents from automation | `incidents:read`, `incidents:write` |
+| Incident response | Running triage and publishing customer/status updates | `incidents:read`, `incidents:write`, `incidents:triage`, `customer-updates:write`, `status-updates:write` |
+| Webhook intake | Authenticating calls to TrustLoop webhook endpoints with a Bearer key | `webhooks:ingest` |
+
+You can keep the preset scopes as-is or fine-tune the individual permissions before saving the key.
+
+### Create an API Key
+
+1. Navigate to **Settings → AI & API Keys**.
+2. In **Workspace API keys**, enter a descriptive name.
+3. Choose the closest **usage preset**.
+4. Review the preselected scopes and uncheck anything the integration does not need.
+5. Choose an **expiry** such as 30 days, 90 days, or never.
+6. Complete the Turnstile check and create the key.
+7. Copy the revealed secret immediately. TrustLoop never shows the full secret again.
 
 <CodeBlock title="Authorization header">
   <Pre>
     <code className="language-http">{`Authorization: Bearer sk-tl-xxxxxxxx.your-secret-value`}</code>
   </Pre>
 </CodeBlock>
+
+### Example: Create an Incident
+
+This flow requires a key with `incidents:write`.
+
+<CodeBlock title="Create an incident with a workspace API key">
+  <Pre>
+    <code className="language-bash">{`curl -X POST https://your-trustloop-app.com/api/incidents \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer sk-tl-xxxxxxxx.your-secret-value' \\
+  -d '{
+    "title": "Model hallucination spike",
+    "description": "Production support volume increased after the latest model deployment.",
+    "severity": "P2",
+    "sourceTicketRef": "internal-ops-2048"
+  }'`}</code>
+  </Pre>
+</CodeBlock>
+
+### Example: List Incidents
+
+This flow requires a key with `incidents:read`.
+
+<CodeBlock title="List recent incidents">
+  <Pre>
+    <code className="language-bash">{`curl 'https://your-trustloop-app.com/api/incidents?limit=20' \\
+  -H 'Authorization: Bearer sk-tl-xxxxxxxx.your-secret-value'`}</code>
+  </Pre>
+</CodeBlock>
+
+### Example: Authenticate Webhook Intake with a Bearer Key
+
+If you choose the **Webhook intake** preset, the key must include `webhooks:ingest`.
+
+<CodeBlock title="Use a Bearer key on the generic webhook endpoint">
+  <Pre>
+    <code className="language-bash">{`curl -X POST https://your-trustloop-app.com/api/webhooks/generic \\
+  -H 'Content-Type: application/json' \\
+  -H 'Authorization: Bearer sk-tl-xxxxxxxx.your-secret-value' \\
+  -d '{
+    "title": "Latency regression detected",
+    "description": "p95 latency crossed the SLO threshold in us-east-1.",
+    "severity": "P1",
+    "sourceRef": "obs-latency-991"
+  }'`}</code>
+  </Pre>
+</CodeBlock>
+
+### Expiry and Rotation
+
+- Expired keys are rejected automatically during authentication.
+- Revoked keys remain visible in settings for auditability but can no longer be used.
+- Prefer short-lived keys for external partners and long-running agents that can rotate automatically.
+- If a key is shared with a third-party system, create a dedicated key instead of reusing one across integrations.
 
 ## Slack Configuration
 
@@ -105,7 +186,7 @@ The payload included an external reference matching an existing incident. TrustL
 
 ### API key stopped working
 
-Navigate to **Settings → AI & API Keys** and confirm the key is still marked as active.
+Navigate to **Settings → AI & API Keys** and confirm the key is still marked as active and has not passed its expiry date.
 
 ### Slack connected but alerts are not posting
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react";
+import { UpgradeGate } from "@/components/upgrade-gate";
 
 type Quota = {
   apiRequestsPerMinute: number;
@@ -28,9 +29,10 @@ type NumericQuotaField =
 
 type Props = {
   initialQuota: Quota;
+  planTier: string;
 };
 
-export function QuotaSettingsPanel({ initialQuota }: Props) {
+export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
   const [quota, setQuota] = useState<Quota>(initialQuota);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -174,60 +176,64 @@ export function QuotaSettingsPanel({ initialQuota }: Props) {
       </div>
 
       <div className="py-6 border-y border-white/5 space-y-8">
-        <label className="flex items-center gap-3 cursor-pointer group">
-          <input
-            className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
-            checked={quota.onCallRotationEnabled}
-            onChange={(event) =>
-              setQuota((prev) => ({
-                ...prev,
-                onCallRotationEnabled: event.target.checked,
-              }))
-            }
-            type="checkbox"
-          />
-          <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">
-            Enable on-call rotation for P1 SMS escalations
-          </span>
-        </label>
-
-        {quota.onCallRotationEnabled && (
-          <div className="grid gap-8 md:grid-cols-2 animate-in fade-in slide-in-from-top-2 duration-300">
-            <label className="block space-y-3">
-              <span className="text-sm font-medium text-slate-300">Rotation interval (hours)</span>
+        <UpgradeGate allowed={planTier === "pro" || planTier === "enterprise"} planLabel="Scale">
+          <div className="space-y-8">
+            <label className="flex items-center gap-3 cursor-pointer group">
               <input
-                className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
-                type="number"
-                min={1}
-                max={168}
-                value={quota.onCallRotationIntervalHours}
-                onChange={(event) => updateField("onCallRotationIntervalHours", event.target.value)}
-                disabled={loading}
+                className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+                checked={quota.onCallRotationEnabled}
+                onChange={(event) =>
+                  setQuota((prev) => ({
+                    ...prev,
+                    onCallRotationEnabled: event.target.checked,
+                  }))
+                }
+                type="checkbox"
               />
+              <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">
+                Enable on-call rotation for P1 SMS escalations
+              </span>
             </label>
 
-            <div className="space-y-3">
-              <span className="text-sm font-medium text-slate-300 block">Rotation anchor</span>
-              <div className="flex items-center justify-between gap-4 border-b border-white/20 pb-1.5">
-                <span className="text-sm text-slate-100">
-                  {new Date(quota.onCallRotationAnchorAt).toLocaleString("en-US")}
-                </span>
-                <button
-                  className="text-[10px] uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1"
-                  type="button"
-                  onClick={() =>
-                    setQuota((prev) => ({
-                      ...prev,
-                      onCallRotationAnchorAt: new Date().toISOString(),
-                    }))
-                  }
-                >
-                  <RefreshCcw className="w-3 h-3" /> Reset
-                </button>
+            {quota.onCallRotationEnabled && (
+              <div className="grid gap-8 md:grid-cols-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <label className="block space-y-3">
+                  <span className="text-sm font-medium text-slate-300">Rotation interval (hours)</span>
+                  <input
+                    className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+                    type="number"
+                    min={1}
+                    max={168}
+                    value={quota.onCallRotationIntervalHours}
+                    onChange={(event) => updateField("onCallRotationIntervalHours", event.target.value)}
+                    disabled={loading}
+                  />
+                </label>
+
+                <div className="space-y-3">
+                  <span className="text-sm font-medium text-slate-300 block">Rotation anchor</span>
+                  <div className="flex items-center justify-between gap-4 border-b border-white/20 pb-1.5">
+                    <span className="text-sm text-slate-100">
+                      {new Date(quota.onCallRotationAnchorAt).toLocaleString("en-US")}
+                    </span>
+                    <button
+                      className="text-[10px] uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1"
+                      type="button"
+                      onClick={() =>
+                        setQuota((prev) => ({
+                          ...prev,
+                          onCallRotationAnchorAt: new Date().toISOString(),
+                        }))
+                      }
+                    >
+                      <RefreshCcw className="w-3 h-3" /> Reset
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        </UpgradeGate>
       </div>
 
       <div className="flex items-center justify-between pt-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, type ComponentType } from "react";
+import { useRef, useState, type ComponentType } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -17,10 +17,12 @@ import {
   BellRing,
   Bot,
   Check,
+  ChevronDown,
   Gauge,
   Handshake,
   LayoutDashboard,
   MailCheck,
+  Minus,
   ShieldCheck,
   Sparkles,
   Workflow,
@@ -118,8 +120,8 @@ const plans: Plan[] = [
     period: "/workspace/mo",
     description: "For early-stage AI product teams handling customer incidents weekly.",
     bullets: [
-      "1 workspace",
-      "Up to 500 incidents / month",
+      "Up to 50 incidents / day",
+      "100 AI triage runs / day",
       "Provider BYOK: OpenAI, Gemini, Anthropic",
       "Email reminders and executive trends",
     ],
@@ -131,10 +133,10 @@ const plans: Plan[] = [
     period: "/workspace/mo",
     description: "For multi-team SaaS organizations with daily AI incident operations.",
     bullets: [
-      "3 workspaces",
-      "Advanced quotas and rate limits",
-      "Priority queue worker throughput",
-      "Advanced analytics and export",
+      "Up to 200 incidents / day",
+      "300 AI triage runs / day",
+      "On-call rotation and compliance mode",
+      "Advanced analytics, PDF export, and API keys",
     ],
     cta: "Start Scale",
     featured: true,
@@ -145,8 +147,8 @@ const plans: Plan[] = [
     period: "",
     description: "For regulated and high-volume software companies with strict reliability targets.",
     bullets: [
-      "Unlimited workspaces",
-      "SSO and custom retention",
+      "Unlimited incidents and triage runs",
+      "SAML SSO and custom retention",
       "Private networking and VPC options",
       "Dedicated onboarding and support",
     ],
@@ -184,8 +186,34 @@ const navLinks = [
   { href: "#faq", label: "FAQ" },
 ];
 
+type ComparisonRow = { feature: string; starter: string; scale: string; enterprise: string };
+
+const comparisonRows: ComparisonRow[] = [
+  { feature: "Price", starter: "$199/mo", scale: "$649/mo", enterprise: "Custom" },
+  { feature: "Incidents per day", starter: "50", scale: "200", enterprise: "Unlimited" },
+  { feature: "AI triage runs per day", starter: "100", scale: "300", enterprise: "Unlimited" },
+  { feature: "Customer updates per day", starter: "100", scale: "300", enterprise: "Unlimited" },
+  { feature: "Reminder emails per day", starter: "120", scale: "500", enterprise: "Unlimited" },
+  { feature: "BYOK (OpenAI, Gemini, Anthropic)", starter: "✓", scale: "✓", enterprise: "✓" },
+  { feature: "Webhook integrations", starter: "✓", scale: "✓", enterprise: "✓" },
+  { feature: "Slack integration", starter: "✓", scale: "✓", enterprise: "✓" },
+  { feature: "Public status page", starter: "✓", scale: "✓", enterprise: "✓" },
+  { feature: "Executive analytics", starter: "✓", scale: "✓", enterprise: "✓" },
+  { feature: "On-call rotation", starter: "—", scale: "✓", enterprise: "✓" },
+  { feature: "Compliance mode", starter: "—", scale: "✓", enterprise: "✓" },
+  { feature: "Incident PDF export", starter: "—", scale: "✓", enterprise: "✓" },
+  { feature: "Workspace API keys", starter: "—", scale: "✓", enterprise: "✓" },
+  { feature: "On-call phone escalation", starter: "—", scale: "✓", enterprise: "✓" },
+  { feature: "SAML SSO", starter: "—", scale: "—", enterprise: "✓" },
+  { feature: "Custom data retention", starter: "—", scale: "—", enterprise: "✓" },
+  { feature: "Dedicated onboarding", starter: "—", scale: "—", enterprise: "✓" },
+  { feature: "14-day free trial", starter: "✓", scale: "✓", enterprise: "✓" },
+];
+
 export function MarketingLanding() {
   const scope = useRef<HTMLDivElement>(null);
+  const comparisonRef = useRef<HTMLDivElement>(null);
+  const [showComparison, setShowComparison] = useState(false);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 1000], [0, 220]);
 
@@ -577,6 +605,49 @@ export function MarketingLanding() {
               );
             })}
           </div>
+
+          <div className="mt-10 flex justify-center">
+            <button
+              className="btn btn-ghost btn-lg gap-2"
+              onClick={() => {
+                setShowComparison((v) => {
+                  if (!v) setTimeout(() => comparisonRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+                  return !v;
+                });
+              }}
+              type="button"
+            >
+              {showComparison ? "Hide" : "Check"} Full Comparison
+              <ChevronDown className={`h-4 w-4 transition-transform ${showComparison ? "rotate-180" : ""}`} />
+            </button>
+          </div>
+
+          {showComparison && (
+            <div ref={comparisonRef} className="mt-10 overflow-x-auto rounded-lg border border-neutral-800">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-800 bg-neutral-900">
+                    <th className="px-6 py-4 text-left font-semibold text-white">Feature</th>
+                    <th className="px-6 py-4 text-center font-semibold text-white">Starter</th>
+                    <th className="px-6 py-4 text-center font-semibold text-cyan-400">Scale</th>
+                    <th className="px-6 py-4 text-center font-semibold text-white">Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonRows.map((row) => (
+                    <tr key={row.feature} className="border-b border-neutral-800/50 last:border-0">
+                      <td className="px-6 py-3 text-neutral-300">{row.feature}</td>
+                      {[row.starter, row.scale, row.enterprise].map((val, i) => (
+                        <td key={i} className="px-6 py-3 text-center">
+                          {val === "✓" ? <Check className="mx-auto h-4 w-4 text-emerald-400" /> : val === "—" ? <Minus className="mx-auto h-4 w-4 text-neutral-600" /> : <span className="text-neutral-300">{val}</span>}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32" id="faq">

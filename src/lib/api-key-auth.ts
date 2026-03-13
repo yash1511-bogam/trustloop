@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
 import {
   isRequestIpAllowed,
+  isApiKeyExpired,
   normalizeApiKeyScopes,
   normalizeIpAllowlist,
 } from "@/lib/api-key-scopes";
@@ -24,6 +25,7 @@ export type ApiKeyIdentity = {
 
 type CachedIdentity = {
   identity: ApiKeyIdentity;
+  expiresAtIso: string | null;
 };
 
 function tokenCacheKey(token: string): string {
@@ -70,6 +72,10 @@ export async function authenticateApiKeyRequest(
   const cacheKey = tokenCacheKey(token);
   const cached = await redisGetJson<CachedIdentity>(cacheKey);
   if (cached?.identity) {
+    if (isApiKeyExpired(cached.expiresAtIso ? new Date(cached.expiresAtIso) : null)) {
+      await redisDelete(cacheKey);
+      return null;
+    }
     return cached.identity;
   }
 
@@ -87,12 +93,17 @@ export async function authenticateApiKeyRequest(
       keyPrefix: true,
       scopes: true,
       ipAllowlist: true,
+      expiresAt: true,
       keyHash: true,
       isActive: true,
     },
   });
 
   if (!row || !row.isActive) {
+    return null;
+  }
+
+  if (isApiKeyExpired(row.expiresAt)) {
     return null;
   }
 
@@ -124,6 +135,7 @@ export async function authenticateApiKeyRequest(
       cacheKey,
       {
         identity,
+        expiresAtIso: row.expiresAt?.toISOString() ?? null,
       },
       API_KEY_CACHE_TTL_SECONDS,
     ),
@@ -137,11 +149,13 @@ export async function createWorkspaceApiKey(input: {
   name: string;
   scopes?: string[] | null;
   ipAllowlist?: string[] | null;
+  expiresAt?: Date | null;
 }): Promise<{
   apiKey: string;
   keyPrefix: string;
   id: string;
   createdAt: Date;
+  expiresAt: Date | null;
 }> {
   const name = input.name.trim();
 
@@ -160,10 +174,12 @@ export async function createWorkspaceApiKey(input: {
           keyHash,
           scopes: normalizeApiKeyScopes(input.scopes),
           ipAllowlist: normalizeIpAllowlist(input.ipAllowlist),
+          expiresAt: input.expiresAt ?? null,
         },
         select: {
           id: true,
           createdAt: true,
+          expiresAt: true,
         },
       });
 
@@ -172,6 +188,7 @@ export async function createWorkspaceApiKey(input: {
         keyPrefix,
         id: created.id,
         createdAt: created.createdAt,
+        expiresAt: created.expiresAt,
       };
     } catch (error) {
       if (

@@ -3,6 +3,7 @@
 import { AIIncidentCategory, IncidentSeverity, IncidentStatus } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { UpgradeGate } from "@/components/upgrade-gate";
 
 type Props = {
   incidentId: string;
@@ -15,6 +16,7 @@ type Props = {
     name: string;
     role: string;
   }>;
+  planTier: string;
 };
 
 export function IncidentActions({
@@ -24,6 +26,7 @@ export function IncidentActions({
   category,
   ownerUserId,
   owners,
+  planTier,
 }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -285,13 +288,15 @@ export function IncidentActions({
             >
               {publishing ? "Publishing..." : "Publish to status page"}
             </button>
-            <a
-              className="btn btn-ghost"
-              href={`/api/incidents/${incidentId}/export?format=pdf`}
-              target="_blank"
-            >
-              Download incident PDF
-            </a>
+            <UpgradeGate allowed={planTier === "pro" || planTier === "enterprise"} planLabel="Scale">
+              <a
+                className="btn btn-ghost"
+                href={`/api/incidents/${incidentId}/export?format=pdf`}
+                target="_blank"
+              >
+                Download incident PDF
+              </a>
+            </UpgradeGate>
           </div>
         </div>
       ) : null}

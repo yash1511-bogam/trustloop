@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { UpgradeGate } from "@/components/upgrade-gate";
 
 type Profile = {
   id: string;
@@ -13,9 +14,10 @@ type Profile = {
 
 type Props = {
   profile: Profile;
+  planTier: string;
 };
 
-export function ProfileSettingsPanel({ profile }: Props) {
+export function ProfileSettingsPanel({ profile, planTier }: Props) {
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [loading, setLoading] = useState(false);
@@ -78,22 +80,24 @@ export function ProfileSettingsPanel({ profile }: Props) {
           />
         </label>
 
-        <label className="block space-y-3 md:col-span-2">
-          <span className="text-sm font-medium text-slate-300 flex items-center justify-between">
-            On-call phone
-            <span className="text-xs text-neutral-500 font-normal border border-white/10 px-2 py-0.5 rounded-full">E.164 Format</span>
-          </span>
-          <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
-            placeholder="+14155552671"
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            disabled={loading}
-          />
-          <p className="text-xs text-neutral-500 mt-2">
-            Used exclusively for high-severity P1 incident escalations. Keep this up to date to ensure you never miss critical alerts.
-          </p>
-        </label>
+        <UpgradeGate allowed={planTier === "pro" || planTier === "enterprise"} planLabel="Scale">
+          <label className="block space-y-3 md:col-span-2">
+            <span className="text-sm font-medium text-slate-300 flex items-center justify-between">
+              On-call phone
+              <span className="text-xs text-neutral-500 font-normal border border-white/10 px-2 py-0.5 rounded-full">E.164 Format</span>
+            </span>
+            <input
+              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+              placeholder="+14155552671"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              disabled={loading}
+            />
+            <p className="text-xs text-neutral-500 mt-2">
+              Used exclusively for high-severity P1 incident escalations. Keep this up to date to ensure you never miss critical alerts.
+            </p>
+          </label>
+        </UpgradeGate>
       </div>
 
       <div className="pt-4 flex items-center justify-between border-t border-white/5">

@@ -1,6 +1,7 @@
 import { WebhookIntegrationType } from "@prisma/client";
 import { NextRequest } from "next/server";
 import { authenticateApiKeyRequest } from "@/lib/api-key-auth";
+import { apiKeyHasScopes } from "@/lib/api-key-scopes";
 import { prisma } from "@/lib/prisma";
 import {
   getWebhookIntegrationSecret,
@@ -18,7 +19,7 @@ export async function resolveWebhookAccess(input: {
   type: WebhookIntegrationType;
 }): Promise<WebhookAccess | null> {
   const apiKey = await authenticateApiKeyRequest(input.request);
-  if (apiKey) {
+  if (apiKey && apiKeyHasScopes(apiKey.scopes, ["webhooks:ingest"])) {
     return {
       workspaceId: apiKey.workspaceId,
       mode: "api_key",

@@ -2,8 +2,10 @@ import { IntegrationsPanel } from "@/components/integrations-panel";
 import { OnCallPanel } from "@/components/on-call-panel";
 import { PushNotificationPanel } from "@/components/push-notification-panel";
 import { QuotaSettingsPanel } from "@/components/quota-settings-panel";
+import { UpgradeGate } from "@/components/upgrade-gate";
 import { WorkspaceSettingsPanel } from "@/components/workspace-settings-panel";
 import { requireAuth } from "@/lib/auth";
+import { isFeatureAllowed } from "@/lib/feature-gate";
 import { prisma } from "@/lib/prisma";
 import { slackInstallUrl } from "@/lib/slack";
 import { listWebhookIntegrations } from "@/lib/webhook-integration";
@@ -81,6 +83,7 @@ export default async function SettingsWorkspacePage() {
               onCallRotationIntervalHours: quota.onCallRotationIntervalHours,
               onCallRotationAnchorAt: quota.onCallRotationAnchorAt.toISOString(),
             }}
+            planTier={workspace.planTier ?? "starter"}
           />
         </div>
       </section>
@@ -89,7 +92,9 @@ export default async function SettingsWorkspacePage() {
         <h2 className="text-xl font-medium text-slate-100">On-call rotation</h2>
         <p className="mt-1 text-sm text-neutral-500">View the current on-call schedule and rotation status for P1 escalations.</p>
         <div className="mt-8">
-          <OnCallPanel />
+          <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "on_call")} planLabel="Scale">
+            <OnCallPanel />
+          </UpgradeGate>
         </div>
       </section>
 

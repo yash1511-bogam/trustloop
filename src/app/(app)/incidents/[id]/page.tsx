@@ -53,6 +53,11 @@ export default async function IncidentDetailPage({
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
 
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: auth.user.workspaceId },
+    select: { planTier: true },
+  });
+
   return (
     <>
       <section className="surface p-6">
@@ -115,6 +120,7 @@ export default async function IncidentDetailPage({
               category={incident.category}
               ownerUserId={incident.ownerUserId}
               owners={owners}
+              planTier={workspace.planTier ?? "starter"}
             />
           </section>
 

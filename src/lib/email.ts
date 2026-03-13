@@ -511,3 +511,94 @@ export async function sendPlanCanceledEmail(input: {
     ].join("\n"),
   });
 }
+
+export async function sendTrialStartedEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  userName: string;
+  planTier: string;
+  trialEndsAt: Date;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+  const endsFormatted = input.trialEndsAt.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.TRIAL_STARTED,
+    toEmail: input.toEmail,
+    subject: `Your 14-day ${input.planTier} trial has started`,
+    html: [
+      `<p>Hi ${input.userName},</p>`,
+      `<p>Your 14-day free trial of the <strong>${input.planTier}</strong> plan for <strong>${input.workspaceName}</strong> is now active.</p>`,
+      `<p>You have full access to all ${input.planTier} features until <strong>${endsFormatted}</strong>.</p>`,
+      "<p>No charges will be made during the trial. Add a payment method before the trial ends to continue uninterrupted.</p>",
+      `<p><a href="${baseUrl}/settings/billing">Set up billing</a> · <a href="${baseUrl}/dashboard">Open dashboard</a></p>`,
+    ].join(""),
+    text: [
+      `Hi ${input.userName},`,
+      `Your 14-day free trial of the ${input.planTier} plan for ${input.workspaceName} is now active.`,
+      `You have full access until ${endsFormatted}.`,
+      "No charges during the trial. Add a payment method before it ends to continue.",
+      `Set up billing: ${baseUrl}/settings/billing`,
+    ].join("\n"),
+  });
+}
+
+export async function sendTrialReminderEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  planTier: string;
+  daysRemaining: number;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+  const urgency = input.daysRemaining <= 1 ? "expires tomorrow" : `expires in ${input.daysRemaining} days`;
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.TRIAL_REMINDER,
+    toEmail: input.toEmail,
+    subject: `Your TrustLoop trial ${urgency}`,
+    html: [
+      `<p>Your <strong>${input.planTier}</strong> trial for <strong>${input.workspaceName}</strong> ${urgency}.</p>`,
+      "<p>Subscribe now to keep your current plan features and quotas. Without a subscription, your workspace will be downgraded to Starter.</p>",
+      `<p><a href="${baseUrl}/settings/billing">Subscribe now</a></p>`,
+    ].join(""),
+    text: [
+      `Your ${input.planTier} trial for ${input.workspaceName} ${urgency}.`,
+      "Subscribe now to keep your plan features. Without a subscription, you'll be downgraded to Starter.",
+      `Subscribe: ${baseUrl}/settings/billing`,
+    ].join("\n"),
+  });
+}
+
+export async function sendTrialExpiredEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  previousPlanTier: string;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.TRIAL_EXPIRED,
+    toEmail: input.toEmail,
+    subject: "Your TrustLoop trial has ended",
+    html: [
+      `<p>The <strong>${input.previousPlanTier}</strong> trial for <strong>${input.workspaceName}</strong> has expired.</p>`,
+      "<p>Your workspace has been downgraded to the <strong>Starter</strong> plan. Subscribe anytime to restore your previous plan and quotas.</p>",
+      `<p><a href="${baseUrl}/settings/billing">Choose a plan</a></p>`,
+    ].join(""),
+    text: [
+      `The ${input.previousPlanTier} trial for ${input.workspaceName} has expired.`,
+      "Your workspace has been downgraded to Starter. Subscribe anytime to restore your plan.",
+      `Choose a plan: ${baseUrl}/settings/billing`,
+    ].join("\n"),
+  });
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
+import { sendAuthOtpNoticeEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -47,11 +48,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
       select: {
         id: true,
+        name: true,
+        workspaceId: true,
+        workspace: { select: { name: true } },
       },
     });
 
     if (!account) {
       log.auth.warn("Login attempt for email with no workspace account", { email });
+    }
+
+    if (account?.workspaceId) {
+      sendAuthOtpNoticeEmail({
+        workspaceId: account.workspaceId,
+        toEmail: email,
+        workspaceName: account.workspace?.name ?? "your workspace",
+        userName: account.name,
+      }).catch((err) =>
+        log.auth.error("Failed to send OTP notice email", { email, error: err instanceof Error ? err.message : String(err) }),
+      );
     }
 
     // Always return the same response shape to prevent user enumeration
