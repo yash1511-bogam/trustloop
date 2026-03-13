@@ -3,12 +3,14 @@ import { Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { createWorkspaceApiKey } from "@/lib/api-key-auth";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { badRequest, forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const createSchema = z.object({
   name: z.string().min(2).max(120),
+  turnstileToken: z.string().min(1).optional().nullable(),
 });
 
 const revokeSchema = z.object({
@@ -39,13 +41,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     },
   });
 
-  return NextResponse.json({
-    keys: keys.map((key) => ({
-      ...key,
-      createdAt: key.createdAt.toISOString(),
-      lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
-    })),
-  });
+  return withRateLimitHeaders(
+    NextResponse.json({
+      keys: keys.map((key) => ({
+        ...key,
+        createdAt: key.createdAt.toISOString(),
+        lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
+      })),
+    }),
+    access.rateLimit,
+  );
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -68,22 +73,36 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return badRequest("Invalid API key payload.");
   }
 
+  const turnstile = await verifyTurnstileToken({
+    request,
+    token: parsed.data.turnstileToken,
+  });
+  if (!turnstile.success) {
+    return NextResponse.json(
+      { error: "Security verification failed. Try again." },
+      { status: 400 },
+    );
+  }
+
   const created = await createWorkspaceApiKey({
     workspaceId: auth.workspaceId,
     name: parsed.data.name,
   });
 
-  return NextResponse.json(
-    {
-      key: {
-        id: created.id,
-        keyPrefix: created.keyPrefix,
-        createdAt: created.createdAt.toISOString(),
+  return withRateLimitHeaders(
+    NextResponse.json(
+      {
+        key: {
+          id: created.id,
+          keyPrefix: created.keyPrefix,
+          createdAt: created.createdAt.toISOString(),
+        },
+        apiKey: created.apiKey,
+        message: "Copy this API key now. It will not be shown again.",
       },
-      apiKey: created.apiKey,
-      message: "Copy this API key now. It will not be shown again.",
-    },
-    { status: 201 },
+      { status: 201 },
+    ),
+    access.rateLimit,
   );
 }
 
@@ -122,5 +141,8 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     return notFound("API key not found.");
   }
 
-  return NextResponse.json({ success: true });
+  return withRateLimitHeaders(
+    NextResponse.json({ success: true }),
+    access.rateLimit,
+  );
 }

@@ -2,9 +2,11 @@ import { AiSettingsPanel } from "@/components/ai-settings-panel";
 import { ApiKeySettingsPanel } from "@/components/api-key-settings-panel";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 
 export default async function SettingsAiPage() {
   const auth = await requireAuth();
+  const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 
   const [keys, workflows, apiKeys] = await Promise.all([
     prisma.aiProviderKey.findMany({
@@ -76,6 +78,7 @@ export default async function SettingsAiPage() {
               createdAt: key.createdAt.toISOString(),
               lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
             }))}
+            turnstileSiteKey={siteKey}
           />
         </div>
       </section>

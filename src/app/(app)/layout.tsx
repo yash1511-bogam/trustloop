@@ -1,6 +1,7 @@
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { listUserWorkspaceMemberships } from "@/lib/workspace-membership";
 
 export default async function AppLayout({
   children,
@@ -8,16 +9,26 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const auth = await requireAuth();
-  const workspace = await prisma.workspace.findUnique({
-    where: { id: auth.user.workspaceId },
-    select: { complianceMode: true },
-  });
+  const [workspace, memberships] = await Promise.all([
+    prisma.workspace.findUnique({
+      where: { id: auth.user.workspaceId },
+      select: { complianceMode: true },
+    }),
+    listUserWorkspaceMemberships(auth.user.id),
+  ]);
 
   return (
     <AppShellFrame
       complianceMode={workspace?.complianceMode ?? false}
       userName={auth.user.name}
+      currentWorkspaceId={auth.user.workspaceId}
       workspaceName={auth.user.workspaceName}
+      workspaces={memberships.map((membership) => ({
+        id: membership.workspace.id,
+        name: membership.workspace.name,
+        role: membership.role,
+        slug: membership.workspace.slug,
+      }))}
     >
       {children}
     </AppShellFrame>

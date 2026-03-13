@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ApiKeyScope, apiKeyHasScopes } from "@/lib/api-key-scopes";
 import { AuthContext, getAuth } from "@/lib/auth";
 import { ApiKeyIdentity, authenticateApiKeyRequest } from "@/lib/api-key-auth";
 import { enforceWorkspaceRateLimit } from "@/lib/policy";
-import { tooManyRequests, unauthorized } from "@/lib/http";
+import { applyRateLimitHeaders, forbidden, tooManyRequests, unauthorized } from "@/lib/http";
 
 export type ApiAccessContext =
   | {
@@ -22,7 +23,10 @@ export type ApiAccessContext =
 
 type RequireOptions = {
   allowApiKey?: boolean;
+  requiredApiKeyScopes?: ApiKeyScope[];
 };
+
+export type ApiRateLimitState = Awaited<ReturnType<typeof enforceWorkspaceRateLimit>>;
 
 function toSessionAccess(auth: AuthContext): ApiAccessContext {
   return {
@@ -48,8 +52,8 @@ export async function requireApiAuthAndRateLimit(
   request?: NextRequest,
   options?: RequireOptions,
 ): Promise<
-  | { auth: ApiAccessContext; response: null }
-  | { auth: null; response: NextResponse }
+  | { auth: ApiAccessContext; response: null; rateLimit: ApiRateLimitState }
+  | { auth: null; response: NextResponse; rateLimit: null }
 > {
   let access: ApiAccessContext | null = null;
 
@@ -71,6 +75,18 @@ export async function requireApiAuthAndRateLimit(
     return {
       auth: null,
       response: unauthorized(),
+      rateLimit: null,
+    };
+  }
+
+  if (
+    access.kind === "api_key" &&
+    !apiKeyHasScopes(access.apiKey.scopes, options?.requiredApiKeyScopes)
+  ) {
+    return {
+      auth: null,
+      response: forbidden(),
+      rateLimit: null,
     };
   }
 
@@ -94,12 +110,22 @@ export async function requireApiAuthAndRateLimit(
         "Workspace request rate exceeded. Please retry shortly.",
         rateLimit.retryAfterSeconds,
         details,
+        rateLimit,
       ),
+      rateLimit: null,
     };
   }
 
   return {
     auth: access,
     response: null,
+    rateLimit,
   };
+}
+
+export function withRateLimitHeaders(
+  response: NextResponse,
+  rateLimit: ApiRateLimitState,
+): NextResponse {
+  return applyRateLimitHeaders(response, rateLimit);
 }

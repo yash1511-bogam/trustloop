@@ -1,5 +1,21 @@
 import { NextResponse } from "next/server";
 
+export type RateLimitHeaderInput = {
+  limit: number;
+  remaining: number;
+  resetAtUnix: number;
+};
+
+export function applyRateLimitHeaders(
+  response: NextResponse,
+  input: RateLimitHeaderInput,
+): NextResponse {
+  response.headers.set("X-RateLimit-Limit", String(input.limit));
+  response.headers.set("X-RateLimit-Remaining", String(Math.max(0, input.remaining)));
+  response.headers.set("X-RateLimit-Reset", String(input.resetAtUnix));
+  return response;
+}
+
 export function badRequest(message: string): NextResponse {
   return NextResponse.json({ error: message }, { status: 400 });
 }
@@ -20,6 +36,7 @@ export function tooManyRequests(
   message: string,
   retryAfterSeconds = 60,
   details?: Record<string, unknown>,
+  rateLimit?: RateLimitHeaderInput,
 ): NextResponse {
   const response = NextResponse.json(
     {
@@ -30,7 +47,7 @@ export function tooManyRequests(
     { status: 429 },
   );
   response.headers.set("Retry-After", String(retryAfterSeconds));
-  return response;
+  return rateLimit ? applyRateLimitHeaders(response, rateLimit) : response;
 }
 
 export function quotaExceeded(message: string): NextResponse {

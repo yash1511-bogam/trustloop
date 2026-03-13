@@ -7,15 +7,18 @@ export default async function SettingsTeamPage() {
   const auth = await requireAuth();
 
   const [members, invites, profile] = await Promise.all([
-    prisma.user.findMany({
+    prisma.workspaceMembership.findMany({
       where: { workspaceId: auth.user.workspaceId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        createdAt: true,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            createdAt: true,
+          },
+        },
       },
       orderBy: [{ role: "asc" }, { createdAt: "asc" }],
     }),
@@ -70,8 +73,12 @@ export default async function SettingsTeamPage() {
               expiresAt: invite.expiresAt.toISOString(),
             }))}
             members={members.map((member) => ({
-              ...member,
-              createdAt: member.createdAt.toISOString(),
+              id: member.user.id,
+              name: member.user.name,
+              email: member.user.email,
+              phone: member.user.phone,
+              role: member.role,
+              createdAt: member.user.createdAt.toISOString(),
             }))}
           />
         </div>

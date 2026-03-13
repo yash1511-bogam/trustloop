@@ -84,6 +84,26 @@ export async function processReminderPayload(input: {
   });
 
   try {
+    // Skip reminders for workspaces with canceled or past-due billing
+    const billing = await prisma.workspaceBilling.findUnique({
+      where: { workspaceId: payload.workspaceId },
+      select: { status: true },
+    });
+    if (billing?.status === "CANCELED" || billing?.status === "PAST_DUE") {
+      log.worker.info("Skipping reminder for workspace with inactive billing", {
+        workspaceId: payload.workspaceId,
+        incidentId: payload.incidentId,
+        billingStatus: billing.status,
+      });
+      if (input.messageId) {
+        await prisma.reminderJobLog.updateMany({
+          where: { queueMessageId: input.messageId },
+          data: { status: ReminderStatus.PROCESSED, processedAt: new Date(), errorMessage: `Skipped: billing ${billing.status}` },
+        });
+      }
+      return;
+    }
+
     const [incident, quotaPolicy] = await Promise.all([
       prisma.incident.findFirst({
         where: {

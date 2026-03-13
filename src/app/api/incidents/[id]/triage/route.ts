@@ -1,21 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, EventType, WorkflowType } from "@prisma/client";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { decryptSecret } from "@/lib/encryption";
 import { badRequest, notFound, quotaExceeded } from "@/lib/http";
 import { AiProviderError, generateIncidentTriage } from "@/lib/ai/service";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { enqueueReminder } from "@/lib/queue";
 import { log } from "@/lib/logger";
+import { dispatchOutboundWebhookEvent } from "@/lib/outbound-webhooks";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { postIncidentAlert } from "@/lib/slack";
+import { notifyIncidentPush } from "@/lib/incident-push";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
+  const access = await requireApiAuthAndRateLimit(request, {
+    allowApiKey: true,
+    requiredApiKeyScopes: ["incidents:triage"],
+  });
   if (access.response) {
     return access.response;
   }
@@ -100,6 +106,7 @@ export async function POST(
         category: triage.category,
         summary: triage.summary,
         triagedAt: new Date(),
+        firstRespondedAt: incident.firstRespondedAt ?? new Date(),
         triageRunCount: { increment: 1 },
       },
     });
@@ -200,9 +207,44 @@ export async function POST(
 
   await consumeWorkspaceQuota(auth.workspaceId, "triage", 1);
   await refreshWorkspaceReadModels(auth.workspaceId);
-
-  return NextResponse.json({
-    incident: updated,
-    triage,
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "incident.triaged",
+    targetType: "incident",
+    targetId: incident.id,
+    summary: `Ran AI triage for ${incident.title}.`,
+    metadata: {
+      severity: triage.severity,
+      category: triage.category,
+      provider,
+      model: workflow?.model ?? null,
+    },
   });
+
+  notifyIncidentPush({
+    workspaceId: auth.workspaceId,
+    incidentId: incident.id,
+    incidentTitle: incident.title,
+    event: "triaged",
+    severity: triage.severity,
+  });
+
+  void dispatchOutboundWebhookEvent({
+    workspaceId: auth.workspaceId,
+    eventType: "incident.triaged",
+    incidentId: incident.id,
+    payload: {
+      incidentId: incident.id,
+      triage,
+    },
+  });
+
+  return withRateLimitHeaders(
+    NextResponse.json({
+      incident: updated,
+      triage,
+    }),
+    access.rateLimit,
+  );
 }

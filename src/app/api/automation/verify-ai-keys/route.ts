@@ -32,6 +32,45 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     workspaceScope = auth.workspaceId;
   }
 
+  // Auto-re-enable keys disabled by a previous health check after a cooldown period
+  const COOLDOWN_MINUTES = 60;
+  const cooldownThreshold = new Date(Date.now() - COOLDOWN_MINUTES * 60_000);
+  const disabledKeys = await prisma.aiProviderKey.findMany({
+    where: {
+      isActive: false,
+      healthStatus: "FAILED",
+      lastVerifiedAt: { lt: cooldownThreshold },
+      workspaceId: workspaceScope ?? undefined,
+    },
+  });
+
+  for (const dk of disabledKeys) {
+    const retryResult = await testProviderKey({
+      provider: dk.provider,
+      apiKey: decryptSecret(dk.encryptedKey),
+    });
+    if (retryResult.success) {
+      await prisma.aiProviderKey.update({
+        where: { id: dk.id },
+        data: {
+          isActive: true,
+          healthStatus: "OK",
+          lastVerifiedAt: new Date(),
+          lastVerificationError: null,
+        },
+      });
+      log.app.info("AI key auto-re-enabled after cooldown", {
+        workspaceId: dk.workspaceId,
+        provider: dk.provider,
+      });
+    } else {
+      await prisma.aiProviderKey.update({
+        where: { id: dk.id },
+        data: { lastVerifiedAt: new Date(), lastVerificationError: retryResult.message.slice(0, 500) },
+      });
+    }
+  }
+
   const keys = await prisma.aiProviderKey.findMany({
     where: {
       isActive: true,

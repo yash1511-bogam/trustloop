@@ -6,6 +6,7 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateSamlToken, isSamlSsoSupported } from "@/lib/stytch";
 import { ensureWorkspaceSlug } from "@/lib/workspace-slug";
+import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const SAML_CONTEXT_COOKIE_NAME = "trustloop_saml_context";
 
@@ -110,19 +111,33 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     const existing = await prisma.user.findFirst({
       where: {
-        workspaceId: workspace.id,
         OR: [{ stytchUserId: authResult.stytchUserId }, { email: normalizedEmail }],
       },
       select: {
         id: true,
         email: true,
         stytchUserId: true,
+        workspaceId: true,
       },
     });
 
     let userId = existing?.id ?? null;
 
-    if (existing) {
+    const existingMembership = existing
+      ? await prisma.workspaceMembership.findUnique({
+          where: {
+            workspaceId_userId: {
+              workspaceId: workspace.id,
+              userId: existing.id,
+            },
+          },
+          select: {
+            role: true,
+          },
+        })
+      : null;
+
+    if (existing && existingMembership) {
       if (existing.stytchUserId !== authResult.stytchUserId) {
         try {
           await prisma.user.update({
@@ -140,6 +155,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           });
         }
       }
+
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: {
+          workspaceId: workspace.id,
+          role: existingMembership.role,
+        },
+      });
     } else {
       const invite = await prisma.workspaceInvite.findFirst({
         where: {
@@ -159,17 +182,38 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
 
       const created = await prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-          data: {
-            workspaceId: workspace.id,
-            email: normalizedEmail,
-            name: authResult.name?.trim() || fallbackName(normalizedEmail),
-            role: invite.role,
-            stytchUserId: authResult.stytchUserId,
-          },
-          select: {
-            id: true,
-          },
+        const user = existing
+          ? await tx.user.update({
+              where: { id: existing.id },
+              data: {
+                workspaceId: workspace.id,
+                role: invite.role,
+                stytchUserId:
+                  existing.stytchUserId !== authResult.stytchUserId
+                    ? authResult.stytchUserId
+                    : undefined,
+              },
+              select: {
+                id: true,
+              },
+            })
+          : await tx.user.create({
+              data: {
+                workspaceId: workspace.id,
+                email: normalizedEmail,
+                name: authResult.name?.trim() || fallbackName(normalizedEmail),
+                role: invite.role,
+                stytchUserId: authResult.stytchUserId,
+              },
+              select: {
+                id: true,
+              },
+            });
+
+        await ensureWorkspaceMembership(tx, {
+          workspaceId: workspace.id,
+          userId: user.id,
+          role: invite.role,
         });
 
         await tx.workspaceInvite.update({

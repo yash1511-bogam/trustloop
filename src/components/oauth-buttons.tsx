@@ -9,6 +9,7 @@ type Props = {
   mode: Mode;
   workspaceName?: string;
   inviteToken?: string;
+  turnstileToken?: string | null;
   disabled?: boolean;
 };
 
@@ -47,6 +48,7 @@ function oauthHref(input: {
   mode: Mode;
   workspaceName?: string;
   inviteToken?: string;
+  turnstileToken?: string | null;
 }): string {
   const params = new URLSearchParams({
     intent: input.mode,
@@ -59,11 +61,20 @@ function oauthHref(input: {
   if (input.inviteToken) {
     params.set("inviteToken", input.inviteToken);
   }
+  if (input.turnstileToken) {
+    params.set("turnstileToken", input.turnstileToken);
+  }
 
   return `/api/auth/oauth/${input.provider}?${params.toString()}`;
 }
 
-export function OAuthButtons({ mode, workspaceName, inviteToken, disabled }: Props) {
+export function OAuthButtons({
+  mode,
+  workspaceName,
+  inviteToken,
+  turnstileToken,
+  disabled,
+}: Props) {
   const hrefs = useMemo(() => {
     return providerOptions.map((provider) => ({
       ...provider,
@@ -72,23 +83,27 @@ export function OAuthButtons({ mode, workspaceName, inviteToken, disabled }: Pro
         mode,
         workspaceName,
         inviteToken,
+        turnstileToken,
       }),
     }));
-  }, [mode, workspaceName, inviteToken]);
+  }, [mode, workspaceName, inviteToken, turnstileToken]);
 
   return (
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-2">
         {hrefs.map((provider) => (
-          <a
+          <button
             aria-disabled={disabled}
             className={`btn btn-ghost justify-center text-center py-2.5 rounded-xl border border-neutral-800 hover:bg-neutral-800 transition-all ${disabled ? "pointer-events-none opacity-60" : ""}`}
-            href={provider.href}
             key={provider.id}
+            onClick={() => {
+              window.location.assign(provider.href);
+            }}
+            type="button"
           >
             <provider.icon className="h-4 w-4" />
             <span className="text-sm font-medium">{provider.label}</span>
-          </a>
+          </button>
         ))}
       </div>
     </div>

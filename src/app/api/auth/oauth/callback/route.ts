@@ -9,6 +9,7 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateOAuthToken } from "@/lib/stytch";
 import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
+import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
 const OAUTH_NONCE_COOKIE_NAME = "trustloop_oauth_nonce";
@@ -159,7 +160,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    if (existing) {
+    if (existing && intent !== "register" && !inviteToken) {
       if (existing.stytchUserId !== authResult.stytchUserId) {
         try {
           await prisma.user.update({
@@ -186,7 +187,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return response;
     }
 
-    if (intent !== "register") {
+    if (intent !== "register" && !inviteToken) {
       return buildRedirectWithClear(request, "/register", {
         email,
         error: "oauth_no_workspace_account",
@@ -213,14 +214,32 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           throw new Error("invite_email_mismatch");
         }
 
-        const user = await tx.user.create({
-          data: {
-            workspaceId: invite.workspaceId,
-            email,
-            name: authResult.name?.trim() || "Team Member",
-            role: invite.role,
-            stytchUserId: authResult.stytchUserId,
-          },
+        const user = existing
+          ? await tx.user.update({
+              where: { id: existing.id },
+              data: {
+                workspaceId: invite.workspaceId,
+                role: invite.role,
+                stytchUserId:
+                  existing.stytchUserId !== authResult.stytchUserId
+                    ? authResult.stytchUserId
+                    : undefined,
+              },
+            })
+          : await tx.user.create({
+              data: {
+                workspaceId: invite.workspaceId,
+                email,
+                name: authResult.name?.trim() || "Team Member",
+                role: invite.role,
+                stytchUserId: authResult.stytchUserId,
+              },
+            });
+
+        await ensureWorkspaceMembership(tx, {
+          workspaceId: invite.workspaceId,
+          userId: user.id,
+          role: invite.role,
         });
 
         await tx.workspaceInvite.update({
@@ -242,15 +261,27 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         workspaceName?.trim() || defaultWorkspaceName(authResult.name, email),
       );
 
-      const user = await tx.user.create({
-        data: {
-          workspaceId: workspace.id,
-          email,
-          name: authResult.name?.trim() || "Workspace Owner",
-          role: Role.OWNER,
-          stytchUserId: authResult.stytchUserId,
-        },
-      });
+      const user = existing
+        ? await tx.user.update({
+            where: { id: existing.id },
+            data: {
+              workspaceId: workspace.id,
+              role: Role.OWNER,
+              stytchUserId:
+                existing.stytchUserId !== authResult.stytchUserId
+                  ? authResult.stytchUserId
+                  : undefined,
+            },
+          })
+        : await tx.user.create({
+            data: {
+              workspaceId: workspace.id,
+              email,
+              name: authResult.name?.trim() || "Workspace Owner",
+              role: Role.OWNER,
+              stytchUserId: authResult.stytchUserId,
+            },
+          });
 
       await tx.workflowSetting.createMany({
         data: [
@@ -287,6 +318,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           usageDate: startOfUtcDay(),
         },
         update: {},
+      });
+
+      await ensureWorkspaceMembership(tx, {
+        workspaceId: workspace.id,
+        userId: user.id,
+        role: Role.OWNER,
       });
 
       return { user, workspace };

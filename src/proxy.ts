@@ -20,7 +20,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   ].join("; "),
 };
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const response = NextResponse.next();
 
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {

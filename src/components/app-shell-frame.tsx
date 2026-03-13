@@ -5,18 +5,28 @@ import { useEffect, useState } from "react";
 import { AppShellNav } from "@/components/app-shell-nav";
 import { LogoutButton } from "@/components/logout-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 type AppShellFrameProps = {
   workspaceName: string;
+  currentWorkspaceId: string;
   userName: string;
   complianceMode: boolean;
+  workspaces: Array<{
+    id: string;
+    name: string;
+    role: string;
+    slug: string | null;
+  }>;
   children: React.ReactNode;
 };
 
 export function AppShellFrame({
   workspaceName,
+  currentWorkspaceId,
   userName,
   complianceMode,
+  workspaces,
   children,
 }: AppShellFrameProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -116,6 +126,12 @@ export function AppShellFrame({
                 Compliance mode
               </span>
             ) : null}
+            <div className="mt-3">
+              <WorkspaceSwitcher
+                currentWorkspaceId={currentWorkspaceId}
+                workspaces={workspaces}
+              />
+            </div>
           </div>
         )}
 

@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
-import { hasRole } from "@/lib/auth";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { hasRole, invalidateSessionAuthCache } from "@/lib/auth";
+import { recordAuditForAccess } from "@/lib/audit";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { SESSION_COOKIE_NAME } from "@/lib/constants";
 import { badRequest, forbidden } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { slackInstallUrl } from "@/lib/slack";
+import { isFeatureAllowed, featureGateError } from "@/lib/feature-gate";
 import {
   authenticateB2BMemberSession,
   isSamlSsoSupported,
   syncWorkspaceSamlConnection,
 } from "@/lib/stytch";
+import { deleteWorkspaceAndRehomeUsers } from "@/lib/workspace-admin";
 
 const statusSlugPattern = /^[a-z0-9-]{3,60}$/;
 
 const updateSchema = z.object({
+  name: z.string().trim().min(2).max(80).optional(),
   slug: z
     .string()
     .trim()
@@ -38,6 +42,12 @@ const updateSchema = z.object({
     .max(500)
     .optional()
     .nullable(),
+  customerUpdateApprovalsRequired: z.coerce.number().int().min(1).max(5).optional(),
+  disconnectSlack: z.boolean().optional(),
+});
+
+const deleteSchema = z.object({
+  confirmName: z.string().trim().min(2).max(80),
 });
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -107,6 +117,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       statusPageEnabled: true,
       complianceMode: true,
       name: true,
+      planTier: true,
       samlEnabled: true,
       samlMetadataUrl: true,
       samlOrganizationId: true,
@@ -115,6 +126,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
   if (!current) {
     return forbidden();
+  }
+
+  if (parsed.data.samlEnabled && !isFeatureAllowed(current.planTier, "saml")) {
+    return badRequest(featureGateError("saml"));
+  }
+
+  if (parsed.data.complianceMode && !current.complianceMode && !isFeatureAllowed(current.planTier, "compliance")) {
+    return badRequest(featureGateError("compliance"));
   }
 
   const nextStatusPageEnabled =

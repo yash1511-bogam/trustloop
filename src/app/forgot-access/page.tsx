@@ -3,12 +3,14 @@ import { LifeBuoy, ShieldCheck, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { ForgotAccessForm } from "@/components/forgot-access-form";
 import { getAuth } from "@/lib/auth";
+import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 
 export default async function ForgotAccessPage() {
   const auth = await getAuth();
   if (auth) {
     redirect("/dashboard");
   }
+  const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 
   return (
     <main className="container-shell fade-in py-12 md:py-16">
@@ -43,7 +45,7 @@ export default async function ForgotAccessPage() {
             Enter your work email to get a recovery code and verify identity.
           </p>
 
-          <ForgotAccessForm />
+          <ForgotAccessForm turnstileSiteKey={siteKey} />
 
           <p className="mt-6 text-sm text-neutral-400">
             Back to{" "}

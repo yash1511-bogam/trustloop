@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
 import { getAuth } from "@/lib/auth";
 import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
+import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 
 const oauthErrorMessages: Record<string, string> = {
   oauth_not_configured:
@@ -28,6 +29,8 @@ const oauthErrorMessages: Record<string, string> = {
   saml_invite_required:
     "Your SAML identity is valid, but your account is not provisioned in this workspace. Ask for an invite.",
   saml_auth_failed: "SAML sign-in failed. Try again or use email OTP.",
+  security_verification_failed:
+    "Security verification failed. Complete the Turnstile check and try again.",
 };
 
 export default async function LoginPage({
@@ -40,6 +43,7 @@ export default async function LoginPage({
   if (auth) {
     redirect("/dashboard");
   }
+  const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 
   const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
 
@@ -82,7 +86,7 @@ export default async function LoginPage({
             </p>
           ) : null}
 
-          <LoginForm />
+          <LoginForm turnstileSiteKey={siteKey} />
 
           <div className="mt-8 space-y-2">
             <p className="text-sm text-neutral-400">

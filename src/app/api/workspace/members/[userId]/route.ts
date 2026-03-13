@@ -2,26 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { badRequest, forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
+import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const patchSchema = z.object({
   role: z.nativeEnum(Role),
 });
 
 async function ensureNotLastOwner(workspaceId: string, userId: string): Promise<boolean> {
-  const owners = await prisma.user.count({
+  const owners = await prisma.workspaceMembership.count({
     where: {
       workspaceId,
       role: Role.OWNER,
     },
   });
   if (owners <= 1) {
-    const target = await prisma.user.findFirst({
+    const target = await prisma.workspaceMembership.findFirst({
       where: {
-        id: userId,
         workspaceId,
+        userId,
         role: Role.OWNER,
       },
       select: { id: true },
@@ -54,13 +56,14 @@ export async function PATCH(
   }
 
   const { userId } = await params;
-  const existing = await prisma.user.findFirst({
+  const existing = await prisma.workspaceMembership.findFirst({
     where: {
-      id: userId,
       workspaceId: auth.workspaceId,
+      userId,
     },
     select: {
       id: true,
+      userId: true,
       role: true,
     },
   });
@@ -75,20 +78,55 @@ export async function PATCH(
     }
   }
 
-  const member = await prisma.user.update({
-    where: { id: existing.id },
-    data: {
+  const member = await prisma.$transaction(async (tx) => {
+    const updatedMembership = await tx.workspaceMembership.update({
+      where: { id: existing.id },
+      data: {
+        role: parsed.data.role,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            workspaceId: true,
+          },
+        },
+      },
+    });
+
+    if (updatedMembership.user.workspaceId === auth.workspaceId) {
+      await tx.user.update({
+        where: { id: updatedMembership.user.id },
+        data: {
+          role: parsed.data.role,
+        },
+      });
+    }
+
+    return {
+      id: updatedMembership.user.id,
+      role: updatedMembership.role,
+      name: updatedMembership.user.name,
+      email: updatedMembership.user.email,
+    };
+  });
+
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "workspace.member_role_updated",
+    targetType: "workspace_membership",
+    targetId: existing.id,
+    summary: `Updated member role to ${parsed.data.role}.`,
+    metadata: {
+      memberUserId: member.id,
       role: parsed.data.role,
-    },
-    select: {
-      id: true,
-      role: true,
-      name: true,
-      email: true,
     },
   });
 
-  return NextResponse.json({ member });
+  return withRateLimitHeaders(NextResponse.json({ member }), access.rateLimit);
 }
 
 export async function DELETE(
@@ -112,13 +150,14 @@ export async function DELETE(
     return badRequest("Use role transfer before removing yourself.");
   }
 
-  const target = await prisma.user.findFirst({
+  const target = await prisma.workspaceMembership.findFirst({
     where: {
-      id: userId,
       workspaceId: auth.workspaceId,
+      userId,
     },
     select: {
       id: true,
+      userId: true,
       role: true,
     },
   });
@@ -133,9 +172,51 @@ export async function DELETE(
     }
   }
 
-  await prisma.user.delete({
-    where: { id: target.id },
+  await prisma.$transaction(async (tx) => {
+    await tx.workspaceMembership.delete({
+      where: { id: target.id },
+    });
+
+    const remainingMemberships = await tx.workspaceMembership.count({
+      where: { userId: target.userId },
+    });
+
+    if (remainingMemberships === 0) {
+      await tx.user.delete({
+        where: { id: target.userId },
+      });
+      return;
+    }
+
+    const nextMembership = await tx.workspaceMembership.findFirst({
+      where: { userId: target.userId },
+      orderBy: { createdAt: "asc" },
+    });
+    if (nextMembership) {
+      await tx.user.update({
+        where: { id: target.userId },
+        data: {
+          workspaceId: nextMembership.workspaceId,
+          role: nextMembership.role,
+        },
+      });
+    }
   });
 
-  return NextResponse.json({ success: true });
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "workspace.member_removed",
+    targetType: "workspace_membership",
+    targetId: target.id,
+    summary: "Removed member from workspace.",
+    metadata: {
+      memberUserId: target.userId,
+    },
+  });
+
+  return withRateLimitHeaders(
+    NextResponse.json({ success: true }),
+    access.rateLimit,
+  );
 }

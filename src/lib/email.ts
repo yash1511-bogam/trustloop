@@ -313,6 +313,40 @@ export async function sendOwnerAssignedEmail(input: {
   });
 }
 
+export async function sendCustomerUpdateEmail(input: {
+  workspaceId: string;
+  incidentId: string;
+  toEmail: string;
+  customerName?: string | null;
+  incidentTitle: string;
+  body: string;
+}): Promise<LoggedEmailResult> {
+  const greeting = input.customerName?.trim() ? `Hi ${input.customerName.trim()},` : "Hello,";
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    incidentId: input.incidentId,
+    type: EmailNotificationType.CUSTOMER_UPDATE,
+    toEmail: input.toEmail,
+    subject: `Update: ${input.incidentTitle}`,
+    html: [
+      `<p>${greeting}</p>`,
+      `<p>We have an update regarding <strong>${input.incidentTitle}</strong>.</p>`,
+      `<p>${input.body.replace(/\n/g, "<br />")}</p>`,
+      "<p>We will continue sharing updates as we make progress.</p>",
+    ].join(""),
+    text: [
+      greeting,
+      "",
+      `We have an update regarding ${input.incidentTitle}.`,
+      "",
+      input.body,
+      "",
+      "We will continue sharing updates as we make progress.",
+    ].join("\n"),
+  });
+}
+
 export async function sendWorkspaceInviteEmail(input: {
   workspaceId: string;
   toEmail: string;

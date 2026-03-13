@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldCheck, Slack } from "lucide-react";
 
 type WorkspaceSettings = {
@@ -40,6 +40,20 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [slackChannels, setSlackChannels] = useState<Array<{ id: string; name: string; isMember: boolean }>>([]);
+  const [channelsLoading, setChannelsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!workspace.slackTeamId) return;
+    setChannelsLoading(true);
+    fetch("/api/slack/channels")
+      .then((res) => res.json())
+      .then((data: { channels?: Array<{ id: string; name: string; isMember: boolean }> }) => {
+        setSlackChannels(data.channels ?? []);
+      })
+      .catch(() => setSlackChannels([]))
+      .finally(() => setChannelsLoading(false));
+  }, [workspace.slackTeamId]);
 
   const hasChanges = 
     form.slug !== (workspace.slug ?? "") ||
@@ -120,19 +134,40 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">Slack incident channel ID</span>
-          <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
-            value={form.slackChannelId}
-            onChange={(event) =>
-              setForm((prev) => ({
-                ...prev,
-                slackChannelId: event.target.value,
-              }))
-            }
-            placeholder="C0123456789"
-            disabled={loading}
-          />
+          <span className="text-sm font-medium text-slate-300">Slack incident channel</span>
+          {workspace.slackTeamId && slackChannels.length > 0 ? (
+            <select
+              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors"
+              value={form.slackChannelId}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  slackChannelId: event.target.value,
+                }))
+              }
+              disabled={loading}
+            >
+              <option value="">Select a channel</option>
+              {slackChannels.map((ch) => (
+                <option key={ch.id} value={ch.id}>
+                  #{ch.name}{ch.isMember ? "" : " (bot not in channel)"}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+              value={form.slackChannelId}
+              onChange={(event) =>
+                setForm((prev) => ({
+                  ...prev,
+                  slackChannelId: event.target.value,
+                }))
+              }
+              placeholder={channelsLoading ? "Loading channels…" : "C0123456789"}
+              disabled={loading || channelsLoading}
+            />
+          )}
         </label>
 
         <label className="block space-y-3 md:col-span-2">

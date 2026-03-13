@@ -3,6 +3,7 @@ import { z } from "zod";
 import { appOrigin, appUrl } from "@/lib/app-url";
 import { prisma } from "@/lib/prisma";
 import { buildSamlStartUrl, isSamlSsoSupported } from "@/lib/stytch";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const SAML_CONTEXT_COOKIE_NAME = "trustloop_saml_context";
 const SAML_CONTEXT_MAX_AGE_SECONDS = 10 * 60;
@@ -69,6 +70,13 @@ function callbackUrl(request: NextRequest): string {
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const parsedIntent = intentSchema.safeParse(request.nextUrl.searchParams.get("intent"));
   const intent = parsedIntent.success ? parsedIntent.data : "login";
+  const turnstile = await verifyTurnstileToken({
+    request,
+    token: request.nextUrl.searchParams.get("turnstileToken"),
+  });
+  if (!turnstile.success) {
+    return redirectWithError(request, "security_verification_failed", intent);
+  }
 
   if (!isSamlSsoSupported()) {
     return redirectWithError(request, "saml_not_configured", intent);

@@ -7,12 +7,21 @@ import {
   Prisma,
 } from "@prisma/client";
 import { z } from "zod";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { badRequest, quotaExceeded } from "@/lib/http";
 import { createIncidentRecord } from "@/lib/incident-service";
+import {
+  applyTemplateToIncidentInput,
+  findPotentialDuplicateIncident,
+  loadIncidentTemplate,
+  normalizeTagNames,
+} from "@/lib/incident-metadata";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
+import { notifyIncidentPush } from "@/lib/incident-push";
+import { dispatchOutboundWebhookEvent } from "@/lib/outbound-webhooks";
 
 const createIncidentSchema = z.object({
   title: z.string().min(3).max(180),
@@ -24,6 +33,8 @@ const createIncidentSchema = z.object({
   category: z.nativeEnum(AIIncidentCategory).optional().nullable(),
   modelVersion: z.string().max(100).optional().nullable(),
   sourceTicketRef: z.string().max(120).optional().nullable(),
+  templateId: z.string().min(10).max(64).optional().nullable(),
+  tagNames: z.array(z.string().max(40)).max(20).optional().default([]),
 });
 
 const querySchema = z.object({
@@ -171,7 +182,10 @@ async function searchIncidentIdsWithFullText(input: {
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
+  const access = await requireApiAuthAndRateLimit(request, {
+    allowApiKey: true,
+    requiredApiKeyScopes: ["incidents:read"],
+  });
   if (access.response) {
     return access.response;
   }
@@ -308,15 +322,21 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
 
-  return NextResponse.json({
-    incidents: page,
-    nextCursor,
-    members,
-  });
+  return withRateLimitHeaders(
+    NextResponse.json({
+      incidents: page,
+      nextCursor,
+      members,
+    }),
+    access.rateLimit,
+  );
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
+  const access = await requireApiAuthAndRateLimit(request, {
+    allowApiKey: true,
+    requiredApiKeyScopes: ["incidents:write"],
+  });
   if (access.response) {
     return access.response;
   }
@@ -327,6 +347,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (!parsed.success) {
     return badRequest("Invalid incident payload.");
+  }
+
+  const template = await loadIncidentTemplate(auth.workspaceId, parsed.data.templateId);
+  const templatedInput = applyTemplateToIncidentInput(template, {
+    title: parsed.data.title,
+    description: parsed.data.description,
+    severity: parsed.data.severity ?? IncidentSeverity.P3,
+    category: parsed.data.category ?? null,
+    channel: parsed.data.channel ?? IncidentChannel.EMAIL,
+    modelVersion: parsed.data.modelVersion,
+    tagNames: normalizeTagNames(parsed.data.tagNames),
+  });
+
+  const duplicate = await findPotentialDuplicateIncident({
+    workspaceId: auth.workspaceId,
+    title: templatedInput.title ?? parsed.data.title,
+    customerEmail: parsed.data.customerEmail,
+    modelVersion: templatedInput.modelVersion,
+    sourceTicketRef: parsed.data.sourceTicketRef,
+  });
+  if (duplicate) {
+    return NextResponse.json(
+      {
+        error: "A matching open incident already exists.",
+        duplicateIncidentId: duplicate.id,
+      },
+      { status: 409 },
+    );
   }
 
   const quota = await enforceWorkspaceQuota(auth.workspaceId, "incidents");
@@ -341,15 +389,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       {
         workspaceId: auth.workspaceId,
         actorUserId: auth.actorUserId,
-        title: parsed.data.title,
-        description: parsed.data.description,
+        title: templatedInput.title ?? parsed.data.title,
+        description: templatedInput.description ?? parsed.data.description,
         customerName: parsed.data.customerName,
         customerEmail: parsed.data.customerEmail,
-        channel: parsed.data.channel ?? IncidentChannel.EMAIL,
-        severity: parsed.data.severity ?? IncidentSeverity.P3,
-        category: parsed.data.category ?? null,
-        modelVersion: parsed.data.modelVersion,
+        channel: templatedInput.channel ?? IncidentChannel.EMAIL,
+        severity: templatedInput.severity ?? IncidentSeverity.P3,
+        category: templatedInput.category ?? null,
+        modelVersion: templatedInput.modelVersion,
         sourceTicketRef: parsed.data.sourceTicketRef,
+        templateId: template?.id ?? null,
+        tagNames: templatedInput.tagNames,
         ownerUserId: auth.kind === "session" ? auth.actorUserId : undefined,
         sourceLabel: auth.kind === "api_key" ? `API key ${auth.apiKey.name}` : "web",
       },
@@ -359,6 +409,40 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   await consumeWorkspaceQuota(auth.workspaceId, "incidents", 1);
   await refreshWorkspaceReadModels(auth.workspaceId);
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "incident.created",
+    targetType: "incident",
+    targetId: incident.id,
+    summary: `Created incident ${incident.title}.`,
+    metadata: {
+      templateId: template?.id ?? null,
+      tagNames: templatedInput.tagNames,
+      severity: incident.severity,
+      category: incident.category,
+    },
+  });
 
-  return NextResponse.json({ incident }, { status: 201 });
+  notifyIncidentPush({
+    workspaceId: auth.workspaceId,
+    incidentId: incident.id,
+    incidentTitle: incident.title,
+    event: "created",
+    severity: incident.severity,
+  });
+
+  void dispatchOutboundWebhookEvent({
+    workspaceId: auth.workspaceId,
+    eventType: "incident.created",
+    incidentId: incident.id,
+    payload: {
+      incident,
+    },
+  });
+
+  return withRateLimitHeaders(
+    NextResponse.json({ incident }, { status: 201 }),
+    access.rateLimit,
+  );
 }

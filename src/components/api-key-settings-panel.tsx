@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2, KeyRound, X, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 
 type ApiKeyRow = {
   id: string;
@@ -14,15 +18,19 @@ type ApiKeyRow = {
 
 type Props = {
   initialKeys: ApiKeyRow[];
+  turnstileSiteKey?: string | null;
 };
 
-export function ApiKeySettingsPanel({ initialKeys }: Props) {
+export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
+  const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [keys, setKeys] = useState(initialKeys);
   const [name, setName] = useState("Monitoring pipeline");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const requiresTurnstile = Boolean(turnstileSiteKey);
 
   async function refresh() {
     const response = await fetch("/api/workspace/api-keys");
@@ -39,6 +47,10 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
   }
 
   async function createKey() {
+    if (requiresTurnstile && !turnstileToken) {
+      setError("Complete the security check before creating an API key.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -47,10 +59,11 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
     const response = await fetch("/api/workspace/api-keys", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, turnstileToken }),
     });
 
     setLoading(false);
+    turnstileRef.current?.reset();
 
     const payload = (await response.json().catch(() => null)) as
       | { apiKey?: string; message?: string; error?: string }
@@ -111,9 +124,14 @@ export function ApiKeySettingsPanel({ initialKeys }: Props) {
             placeholder="e.g. CI/CD Pipeline"
             disabled={loading}
           />
+          <TurnstileWidget
+            ref={turnstileRef}
+            siteKey={turnstileSiteKey}
+            onTokenChange={setTurnstileToken}
+          />
           <button 
             className="btn btn-primary" 
-            disabled={loading || !name.trim()} 
+            disabled={loading || !name.trim() || (requiresTurnstile && !turnstileToken)} 
             onClick={createKey} 
             type="button"
           >

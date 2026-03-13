@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ReminderStatus } from "@prisma/client";
 import { ExecutiveCharts } from "@/components/executive-charts";
+import { RefreshDataButton } from "@/components/refresh-data-button";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getExecutiveDashboard } from "@/lib/read-models";
@@ -89,11 +90,7 @@ export default async function ExecutivePage() {
             <Link className="btn btn-ghost text-xs !min-h-[32px] px-3" href="/api/incidents/export?format=csv">
               Export CSV
             </Link>
-            <form action="/api/workspace/refresh-read-models" method="post">
-              <button className="btn btn-primary text-xs !min-h-[32px] px-4" type="submit">
-                Refresh data
-              </button>
-            </form>
+            <RefreshDataButton />
           </div>
         </div>
         <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">

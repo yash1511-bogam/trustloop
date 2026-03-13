@@ -6,9 +6,11 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
 import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const loginStartSchema = z.object({
   email: z.email().max(160),
+  turnstileToken: z.string().min(1).optional().nullable(),
 });
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -22,6 +24,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const email = parsed.data.email.toLowerCase().trim();
+  const turnstile = await verifyTurnstileToken({
+    request,
+    token: parsed.data.turnstileToken,
+  });
+  if (!turnstile.success) {
+    return NextResponse.json(
+      { error: "Security verification failed. Try again." },
+      { status: 400 },
+    );
+  }
 
   try {
     const otp = await sendEmailOtpLoginOrCreate(email);

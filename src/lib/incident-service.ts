@@ -13,6 +13,11 @@ import {
   sanitizeLongText,
   sanitizeSingleLine,
 } from "@/lib/sanitize";
+import {
+  buildIncidentDuplicateFingerprint,
+  replaceIncidentTags,
+} from "@/lib/incident-metadata";
+import { buildIncidentSlaFields, ensureWorkspaceSlaPolicy } from "@/lib/sla";
 
 export type IncidentCreateInput = {
   workspaceId: string;
@@ -28,6 +33,8 @@ export type IncidentCreateInput = {
   sourceTicketRef?: string | null;
   sourceLabel?: string;
   ownerUserId?: string | null;
+  templateId?: string | null;
+  tagNames?: string[];
 };
 
 async function defaultOwnerUserId(workspaceId: string): Promise<string | null> {
@@ -59,6 +66,9 @@ export async function createIncidentRecord(
 
   const ownerUserId =
     input.ownerUserId !== undefined ? input.ownerUserId : await defaultOwnerUserId(input.workspaceId);
+  const customerEmail = sanitizeEmail(input.customerEmail);
+  const modelVersion = sanitizeSingleLine(input.modelVersion, 100);
+  const policy = await ensureWorkspaceSlaPolicy(input.workspaceId, executor);
 
   const created = await executor.incident.create({
     data: {
@@ -66,16 +76,36 @@ export async function createIncidentRecord(
       title,
       description,
       customerName: sanitizeCustomerName(input.customerName),
-      customerEmail: sanitizeEmail(input.customerEmail),
+      customerEmail,
       channel: input.channel ?? IncidentChannel.EMAIL,
       severity: input.severity ?? IncidentSeverity.P3,
       status: IncidentStatus.NEW,
       category: input.category ?? null,
       ownerUserId: ownerUserId ?? null,
-      modelVersion: sanitizeSingleLine(input.modelVersion, 100),
+      templateId: input.templateId ?? null,
+      modelVersion,
       sourceTicketRef: sanitizeSingleLine(input.sourceTicketRef, 120),
+      duplicateFingerprint: buildIncidentDuplicateFingerprint({
+        title,
+        customerEmail,
+        modelVersion,
+      }),
+      ...buildIncidentSlaFields({
+        severity: input.severity ?? IncidentSeverity.P3,
+        policy,
+      }),
     },
   });
+
+  await replaceIncidentTags(
+    {
+      workspaceId: input.workspaceId,
+      incidentId: created.id,
+      tagNames: input.tagNames ?? [],
+      assignedByUserId: input.actorUserId ?? null,
+    },
+    executor,
+  );
 
   const source = input.sourceLabel ? ` via ${input.sourceLabel}` : "";
   await executor.incidentEvent.create({

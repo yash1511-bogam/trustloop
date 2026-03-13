@@ -1,33 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { SamlSsoForm } from "@/components/saml-sso-form";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 
 type Props = {
   initialWorkspaceName?: string;
   initialEmail?: string;
   inviteToken?: string;
+  turnstileSiteKey?: string | null;
 };
 
 export function RegisterForm({
   initialWorkspaceName,
   initialEmail,
   inviteToken,
+  turnstileSiteKey,
 }: Props) {
   const router = useRouter();
+  const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [workspaceName, setWorkspaceName] = useState(initialWorkspaceName ?? "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState(initialEmail ?? "");
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const requiresTurnstile = Boolean(turnstileSiteKey);
 
   async function startRegistration(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (requiresTurnstile && !turnstileToken) {
+      setError("Complete the security check before continuing.");
+      return;
+    }
     setError(null);
     setMessage(null);
     setSubmitting(true);
@@ -40,10 +53,12 @@ export function RegisterForm({
         name,
         email,
         inviteToken: inviteToken ?? undefined,
+        turnstileToken,
       }),
     });
 
     setSubmitting(false);
+    turnstileRef.current?.reset();
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as
@@ -99,9 +114,14 @@ export function RegisterForm({
         mode="register"
         workspaceName={workspaceName}
         inviteToken={inviteToken}
-        disabled={submitting}
+        turnstileToken={turnstileToken}
+        disabled={submitting || (requiresTurnstile && !turnstileToken)}
       />
-      <SamlSsoForm disabled={submitting} mode="register" />
+      <SamlSsoForm
+        disabled={submitting || (requiresTurnstile && !turnstileToken)}
+        mode="register"
+        turnstileToken={turnstileToken}
+      />
 
       <div className="flex items-center gap-2 text-xs text-neutral-500">
         <div className="h-px flex-1 bg-neutral-900" />
@@ -156,7 +176,17 @@ export function RegisterForm({
           />
         </div>
 
-        <button className="btn btn-primary w-full" disabled={submitting} type="submit">
+        <TurnstileWidget
+          ref={turnstileRef}
+          siteKey={turnstileSiteKey}
+          onTokenChange={setTurnstileToken}
+        />
+
+        <button
+          className="btn btn-primary w-full"
+          disabled={submitting || (requiresTurnstile && !turnstileToken)}
+          type="submit"
+        >
           {submitting ? "Sending code..." : "Send verification code"}
         </button>
       </form>

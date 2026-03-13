@@ -119,6 +119,7 @@ export async function enforceWorkspaceRateLimit(workspaceId: string): Promise<{
   limit: number;
   remaining: number;
   retryAfterSeconds: number;
+  resetAtUnix: number;
 }> {
   const policy = await ensureQuotaPolicy(workspaceId);
   const limit = policy.apiRequestsPerMinute;
@@ -133,6 +134,7 @@ export async function enforceWorkspaceRateLimit(workspaceId: string): Promise<{
     limit,
     remaining,
     retryAfterSeconds: 60,
+    resetAtUnix: (bucket + 1) * 60,
   };
 }
 

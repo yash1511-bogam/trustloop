@@ -8,12 +8,17 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { badRequest, forbidden, notFound } from "@/lib/http";
+import { replaceIncidentTags } from "@/lib/incident-metadata";
 import { log } from "@/lib/logger";
+import { dispatchOutboundWebhookEvent } from "@/lib/outbound-webhooks";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
+import { buildIncidentSlaFields, ensureWorkspaceSlaPolicy } from "@/lib/sla";
 import { sendOwnerAssignedEmail } from "@/lib/email";
+import { notifyIncidentPush } from "@/lib/incident-push";
 
 const patchSchema = z.object({
   status: z.nativeEnum(IncidentStatus).optional(),
@@ -21,13 +26,18 @@ const patchSchema = z.object({
   category: z.nativeEnum(AIIncidentCategory).optional().nullable(),
   summary: z.string().max(1000).optional().nullable(),
   ownerUserId: z.string().optional().nullable(),
+  templateId: z.string().min(10).max(64).optional().nullable(),
+  tagNames: z.array(z.string().max(40)).max(20).optional(),
 });
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit(_request, { allowApiKey: true });
+  const access = await requireApiAuthAndRateLimit(_request, {
+    allowApiKey: true,
+    requiredApiKeyScopes: ["incidents:read"],
+  });
   if (access.response) {
     return access.response;
   }
@@ -49,6 +59,43 @@ export async function GET(
         },
         orderBy: { createdAt: "desc" },
       },
+      tagAssignments: {
+        include: {
+          tag: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+      customerUpdateDrafts: {
+        orderBy: [{ updatedAt: "desc" }],
+        take: 5,
+        include: {
+          approvals: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -56,14 +103,17 @@ export async function GET(
     return notFound("Incident not found.");
   }
 
-  return NextResponse.json({ incident });
+  return withRateLimitHeaders(NextResponse.json({ incident }), access.rateLimit);
 }
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
+  const access = await requireApiAuthAndRateLimit(request, {
+    allowApiKey: true,
+    requiredApiKeyScopes: ["incidents:write"],
+  });
   if (access.response) {
     return access.response;
   }
@@ -115,6 +165,8 @@ export async function PATCH(
     resolvedAtValue =
       parsed.data.status === IncidentStatus.RESOLVED ? new Date() : null;
   }
+  const nextSeverity = parsed.data.severity ?? existing.severity;
+  const policy = await ensureWorkspaceSlaPolicy(auth.workspaceId);
 
   const updated = await prisma.$transaction(async (tx) => {
     const incident = await tx.incident.update({
@@ -126,9 +178,35 @@ export async function PATCH(
           parsed.data.category !== undefined ? parsed.data.category : undefined,
         summary: parsed.data.summary?.trim() || null,
         ownerUserId: parsed.data.ownerUserId ?? undefined,
+        templateId:
+          parsed.data.templateId !== undefined ? parsed.data.templateId : undefined,
         resolvedAt: resolvedAtValue,
+        firstRespondedAt:
+          existing.firstRespondedAt ??
+          (parsed.data.summary || parsed.data.status || parsed.data.ownerUserId || parsed.data.category
+            ? new Date()
+            : undefined),
+        ...(parsed.data.severity && parsed.data.severity !== existing.severity
+          ? buildIncidentSlaFields({
+              createdAt: existing.createdAt,
+              severity: parsed.data.severity,
+              policy,
+            })
+          : {}),
       },
     });
+
+    if (parsed.data.tagNames !== undefined) {
+      await replaceIncidentTags(
+        {
+          workspaceId: auth.workspaceId,
+          incidentId: incident.id,
+          tagNames: parsed.data.tagNames,
+          assignedByUserId: auth.actorUserId,
+        },
+        tx,
+      );
+    }
 
     const changed: string[] = [];
     if (parsed.data.status && parsed.data.status !== existing.status) {
@@ -147,6 +225,12 @@ export async function PATCH(
       parsed.data.ownerUserId !== existing.ownerUserId
     ) {
       changed.push("owner updated");
+    }
+    if (parsed.data.templateId !== undefined && parsed.data.templateId !== existing.templateId) {
+      changed.push("template updated");
+    }
+    if (parsed.data.tagNames !== undefined) {
+      changed.push("tags updated");
     }
 
     if (
@@ -215,7 +299,52 @@ export async function PATCH(
   }
 
   await refreshWorkspaceReadModels(auth.workspaceId);
-  return NextResponse.json({ incident: updated });
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: parsed.data.status === IncidentStatus.RESOLVED ? "incident.resolved" : "incident.updated",
+    targetType: "incident",
+    targetId: existing.id,
+    summary:
+      parsed.data.status === IncidentStatus.RESOLVED
+        ? `Resolved incident ${updated.title}.`
+        : `Updated incident ${updated.title}.`,
+    metadata: {
+      status: updated.status,
+      severity: updated.severity,
+      category: updated.category,
+      templateId: updated.templateId,
+      ownerUserId: updated.ownerUserId,
+      tagNames: parsed.data.tagNames ?? null,
+    },
+  });
+
+  if (parsed.data.ownerUserId && parsed.data.ownerUserId !== existing.ownerUserId) {
+    notifyIncidentPush({
+      workspaceId: auth.workspaceId,
+      incidentId: existing.id,
+      incidentTitle: updated.title,
+      event: "assigned",
+      assigneeUserId: parsed.data.ownerUserId,
+    });
+  }
+
+  void dispatchOutboundWebhookEvent({
+    workspaceId: auth.workspaceId,
+    eventType:
+      updated.status === IncidentStatus.RESOLVED
+        ? "incident.resolved"
+        : "incident.updated",
+    incidentId: updated.id,
+    payload: {
+      incident: updated,
+    },
+  });
+
+  return withRateLimitHeaders(
+    NextResponse.json({ incident: updated }),
+    access.rateLimit,
+  );
 }
 
 export async function DELETE(
@@ -263,6 +392,17 @@ export async function DELETE(
     where: { id: incident.id },
   });
   await refreshWorkspaceReadModels(auth.workspaceId);
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "incident.deleted",
+    targetType: "incident",
+    targetId: incident.id,
+    summary: `Deleted incident ${incident.id}.`,
+  });
 
-  return NextResponse.json({ deleted: true });
+  return withRateLimitHeaders(
+    NextResponse.json({ deleted: true }),
+    access.rateLimit,
+  );
 }

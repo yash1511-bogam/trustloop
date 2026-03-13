@@ -7,12 +7,14 @@ import { prisma } from "@/lib/prisma";
 import { redisSetJson } from "@/lib/redis";
 import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
 import { isPendingStytchUserId, sendEmailOtpLoginOrCreate } from "@/lib/stytch";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const registerStartSchema = z.object({
   name: z.string().min(2).max(80),
   email: z.email().max(160),
   workspaceName: z.string().min(2).max(80),
   inviteToken: z.string().uuid().optional(),
+  turnstileToken: z.string().min(1).optional().nullable(),
 });
 
 type PendingRegisterPayload = {
@@ -39,6 +41,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const email = parsed.data.email.toLowerCase().trim();
+  const turnstile = await verifyTurnstileToken({
+    request,
+    token: parsed.data.turnstileToken,
+  });
+  if (!turnstile.success) {
+    return NextResponse.json(
+      { error: "Security verification failed. Try again." },
+      { status: 400 },
+    );
+  }
   let workspaceName = parsed.data.workspaceName.trim();
   let inviteToken: string | undefined;
 
@@ -77,13 +89,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     where: { email },
     select: { id: true },
   });
-
   if (existing) {
-    // Log but return same response shape to prevent user enumeration
-    log.auth.warn("Registration attempt for existing email", { email });
-    return NextResponse.json({
-      methodId: "existing_placeholder",
-      message: "A verification code has been sent to your email.",
+    log.auth.info("Starting registration flow for existing user", {
+      email,
+      inviteToken: inviteToken ?? null,
     });
   }
 

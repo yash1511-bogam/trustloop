@@ -5,6 +5,7 @@ import { RegisterForm } from "@/components/register-form";
 import { getAuth } from "@/lib/auth";
 import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
 import { prisma } from "@/lib/prisma";
+import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 
 const oauthErrorMessages: Record<string, string> = {
   oauth_not_configured:
@@ -33,6 +34,8 @@ const oauthErrorMessages: Record<string, string> = {
   saml_invite_required:
     "Your SAML identity is valid, but no active invite was found for this workspace.",
   saml_auth_failed: "SAML sign-up failed. Try again or use email OTP.",
+  security_verification_failed:
+    "Security verification failed. Complete the Turnstile check and try again.",
 };
 
 export default async function RegisterPage({
@@ -52,6 +55,7 @@ export default async function RegisterPage({
   if (auth) {
     redirect("/dashboard");
   }
+  const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 
   const inviteToken = params.invite;
   const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
@@ -129,6 +133,7 @@ export default async function RegisterPage({
             initialEmail={inviteEmail}
             initialWorkspaceName={invite?.workspace.name}
             inviteToken={invite?.token}
+            turnstileSiteKey={siteKey}
           />
 
           <p className="mt-8 text-sm text-neutral-400">

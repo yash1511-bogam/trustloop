@@ -4,6 +4,7 @@ import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { badRequest, forbidden } from "@/lib/http";
+import { isFeatureAllowed, featureGateError } from "@/lib/feature-gate";
 import { prisma } from "@/lib/prisma";
 import { redisDelete } from "@/lib/redis";
 
@@ -62,6 +63,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const parsed = quotaSchema.safeParse(body);
   if (!parsed.success) {
     return badRequest("Invalid quota payload.");
+  }
+
+  if (parsed.data.onCallRotationEnabled) {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: auth.workspaceId },
+      select: { planTier: true },
+    });
+    if (!isFeatureAllowed(workspace?.planTier, "on_call")) {
+      return badRequest(featureGateError("on_call"));
+    }
   }
 
   const quota = await prisma.workspaceQuota.upsert({

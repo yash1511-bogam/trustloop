@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { authenticateEmailOtp } from "@/lib/stytch";
 import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
+import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const registerVerifySchema = z.object({
   methodId: z.string().min(6).max(200),
@@ -73,15 +74,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           { stytchUserId: authResult.stytchUserId },
         ],
       },
-      select: { id: true },
+      select: {
+        id: true,
+        stytchUserId: true,
+      },
     });
-
-    if (existing) {
-      return NextResponse.json(
-        { error: "An account with that identity already exists." },
-        { status: 409 },
-      );
-    }
 
     const created = await prisma.$transaction(async (tx) => {
       if (pending.inviteToken) {
@@ -100,14 +97,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           throw new Error("Invite email mismatch.");
         }
 
-        const createdUser = await tx.user.create({
-          data: {
-            workspaceId: invite.workspaceId,
-            email: pending.email,
-            name: pending.name,
-            role: invite.role,
-            stytchUserId: authResult.stytchUserId,
-          },
+        const createdUser = existing
+          ? await tx.user.update({
+              where: { id: existing.id },
+              data: {
+                workspaceId: invite.workspaceId,
+                role: invite.role,
+                stytchUserId:
+                  existing.stytchUserId !== authResult.stytchUserId
+                    ? authResult.stytchUserId
+                    : undefined,
+              },
+            })
+          : await tx.user.create({
+              data: {
+                workspaceId: invite.workspaceId,
+                email: pending.email,
+                name: pending.name,
+                role: invite.role,
+                stytchUserId: authResult.stytchUserId,
+              },
+            });
+
+        await ensureWorkspaceMembership(tx, {
+          workspaceId: invite.workspaceId,
+          userId: createdUser.id,
+          role: invite.role,
         });
 
         await tx.workspaceInvite.update({
@@ -124,15 +139,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
       const workspace = await createWorkspaceWithGeneratedSlug(tx, pending.workspaceName);
 
-      const createdUser = await tx.user.create({
-        data: {
-          workspaceId: workspace.id,
-          email: pending.email,
-          name: pending.name,
-          role: Role.OWNER,
-          stytchUserId: authResult.stytchUserId,
-        },
-      });
+      const createdUser = existing
+        ? await tx.user.update({
+            where: { id: existing.id },
+            data: {
+              workspaceId: workspace.id,
+              role: Role.OWNER,
+              stytchUserId:
+                existing.stytchUserId !== authResult.stytchUserId
+                  ? authResult.stytchUserId
+                  : undefined,
+            },
+          })
+        : await tx.user.create({
+            data: {
+              workspaceId: workspace.id,
+              email: pending.email,
+              name: pending.name,
+              role: Role.OWNER,
+              stytchUserId: authResult.stytchUserId,
+            },
+          });
 
       await tx.workflowSetting.createMany({
         data: [
@@ -169,6 +196,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           usageDate: startOfUtcDay(),
         },
         update: {},
+      });
+
+      await ensureWorkspaceMembership(tx, {
+        workspaceId: workspace.id,
+        userId: createdUser.id,
+        role: Role.OWNER,
       });
 
       return { user: createdUser, workspace };

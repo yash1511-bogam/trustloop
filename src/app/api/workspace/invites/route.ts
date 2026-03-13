@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { sendWorkspaceInviteEmail } from "@/lib/email";
 import { badRequest, forbidden, notFound } from "@/lib/http";
 import { log } from "@/lib/logger";
@@ -75,10 +76,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const email = parsed.data.email.trim().toLowerCase();
 
-  const existingMember = await prisma.user.findFirst({
+  const existingMember = await prisma.workspaceMembership.findFirst({
     where: {
       workspaceId: auth.workspaceId,
-      email,
+      user: {
+        email,
+      },
     },
     select: { id: true },
   });
@@ -130,15 +133,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
   }
 
-  return NextResponse.json(
-    {
-      invite: {
-        ...invite,
-        createdAt: invite.createdAt.toISOString(),
-        expiresAt: invite.expiresAt.toISOString(),
-      },
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "workspace.invite_created",
+    targetType: "workspace_invite",
+    targetId: invite.id,
+    summary: `Invited ${invite.email} to workspace.`,
+    metadata: {
+      role: invite.role,
+      expiresAt: invite.expiresAt.toISOString(),
     },
-    { status: 201 },
+  });
+
+  return withRateLimitHeaders(
+    NextResponse.json(
+      {
+        invite: {
+          ...invite,
+          createdAt: invite.createdAt.toISOString(),
+          expiresAt: invite.expiresAt.toISOString(),
+        },
+      },
+      { status: 201 },
+    ),
+    access.rateLimit,
   );
 }
 
@@ -172,5 +191,17 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     return notFound("Invite not found.");
   }
 
-  return NextResponse.json({ success: true });
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "workspace.invite_revoked",
+    targetType: "workspace_invite",
+    targetId: parsed.data.id,
+    summary: "Revoked workspace invite.",
+  });
+
+  return withRateLimitHeaders(
+    NextResponse.json({ success: true }),
+    access.rateLimit,
+  );
 }

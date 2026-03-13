@@ -230,6 +230,47 @@ export async function openSlackIncidentModal(input: {
   });
 }
 
+export async function listSlackChannels(botToken: string): Promise<
+  Array<{ id: string; name: string; isMember: boolean }>
+> {
+  const channels: Array<{ id: string; name: string; isMember: boolean }> = [];
+  let cursor: string | undefined;
+
+  do {
+    const body: Record<string, unknown> = {
+      types: "public_channel,private_channel",
+      exclude_archived: true,
+      limit: 200,
+    };
+    if (cursor) {
+      body.cursor = cursor;
+    }
+
+    const payload = (await slackApiCall<
+      SlackApiResponse & {
+        channels?: Array<{
+          id: string;
+          name: string;
+          is_member?: boolean;
+        }>;
+        response_metadata?: { next_cursor?: string };
+      }
+    >("/conversations.list", botToken, body));
+
+    for (const ch of payload.channels ?? []) {
+      channels.push({
+        id: ch.id,
+        name: ch.name,
+        isMember: ch.is_member ?? false,
+      });
+    }
+
+    cursor = payload.response_metadata?.next_cursor || undefined;
+  } while (cursor);
+
+  return channels;
+}
+
 export async function postSlackMessage(input: {
   botToken: string;
   channelId: string;

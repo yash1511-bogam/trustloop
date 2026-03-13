@@ -1,19 +1,34 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 
-export function ForgotAccessForm() {
+type ForgotAccessFormProps = {
+  turnstileSiteKey?: string | null;
+};
+
+export function ForgotAccessForm({ turnstileSiteKey }: ForgotAccessFormProps) {
   const router = useRouter();
+  const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [email, setEmail] = useState("");
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const requiresTurnstile = Boolean(turnstileSiteKey);
 
   async function requestRecovery(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (requiresTurnstile && !turnstileToken) {
+      setError("Complete the security check before continuing.");
+      return;
+    }
     setError(null);
     setMessage(null);
     setSubmitting(true);
@@ -21,10 +36,11 @@ export function ForgotAccessForm() {
     const response = await fetch("/api/auth/forgot", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, turnstileToken }),
     });
 
     setSubmitting(false);
+    turnstileRef.current?.reset();
 
     const payload = (await response.json().catch(() => null)) as
       | { methodId?: string | null; message?: string; error?: string }
@@ -88,7 +104,17 @@ export function ForgotAccessForm() {
           />
         </div>
 
-        <button className="btn btn-primary w-full" disabled={submitting} type="submit">
+        <TurnstileWidget
+          ref={turnstileRef}
+          siteKey={turnstileSiteKey}
+          onTokenChange={setTurnstileToken}
+        />
+
+        <button
+          className="btn btn-primary w-full"
+          disabled={submitting || (requiresTurnstile && !turnstileToken)}
+          type="submit"
+        >
           {submitting ? "Sending recovery code..." : "Send recovery code"}
         </button>
       </form>

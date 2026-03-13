@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -13,23 +13,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return forbidden();
   }
 
-  const members = await prisma.user.findMany({
+  const members = await prisma.workspaceMembership.findMany({
     where: { workspaceId: auth.workspaceId },
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      phone: true,
-      role: true,
-      createdAt: true,
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          createdAt: true,
+        },
+      },
     },
     orderBy: [{ role: "asc" }, { createdAt: "asc" }],
   });
 
-  return NextResponse.json({
-    members: members.map((member) => ({
-      ...member,
-      createdAt: member.createdAt.toISOString(),
-    })),
-  });
+  return withRateLimitHeaders(
+    NextResponse.json({
+      members: members.map((member) => ({
+        id: member.user.id,
+        name: member.user.name,
+        email: member.user.email,
+        phone: member.user.phone,
+        role: member.role,
+        createdAt: member.user.createdAt.toISOString(),
+      })),
+    }),
+    access.rateLimit,
+  );
 }

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { appOrigin, appUrl } from "@/lib/app-url";
 import { badRequest } from "@/lib/http";
 import { buildOAuthStartUrl, OAuthProvider } from "@/lib/stytch";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
 const OAUTH_NONCE_COOKIE_NAME = "trustloop_oauth_nonce";
@@ -14,6 +15,7 @@ const querySchema = z.object({
   intent: z.enum(["login", "register"]).optional(),
   workspaceName: z.string().min(2).max(80).optional(),
   inviteToken: z.string().uuid().optional(),
+  turnstileToken: z.string().min(1).optional(),
 });
 
 function callbackUrl(input: {
@@ -65,6 +67,18 @@ function clearOAuthContextCookie(response: NextResponse): void {
   });
 }
 
+function redirectWithError(
+  request: NextRequest,
+  intent: "login" | "register",
+  code: string,
+): NextResponse {
+  const url = appUrl(intent === "register" ? "/register" : "/login", request);
+  url.searchParams.set("error", code);
+  const response = NextResponse.redirect(url);
+  clearOAuthContextCookie(response);
+  return response;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
@@ -82,6 +96,14 @@ export async function GET(
   }
 
   const intent = parsedQuery.data.intent ?? "login";
+
+  const turnstile = await verifyTurnstileToken({
+    request,
+    token: parsedQuery.data.turnstileToken,
+  });
+  if (!turnstile.success) {
+    return redirectWithError(request, intent, "security_verification_failed");
+  }
   const target = callbackUrl({
     request,
   });

@@ -2,6 +2,11 @@ import { createHash, randomBytes } from "crypto";
 import { compare, hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { NextRequest } from "next/server";
+import {
+  isRequestIpAllowed,
+  normalizeApiKeyScopes,
+  normalizeIpAllowlist,
+} from "@/lib/api-key-scopes";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson, redisSetJson } from "@/lib/redis";
 
@@ -13,6 +18,8 @@ export type ApiKeyIdentity = {
   workspaceId: string;
   name: string;
   keyPrefix: string;
+  scopes: string[];
+  ipAllowlist: string[];
 };
 
 type CachedIdentity = {
@@ -78,12 +85,19 @@ export async function authenticateApiKeyRequest(
       workspaceId: true,
       name: true,
       keyPrefix: true,
+      scopes: true,
+      ipAllowlist: true,
       keyHash: true,
       isActive: true,
     },
   });
 
   if (!row || !row.isActive) {
+    return null;
+  }
+
+  const ipAllowlist = normalizeIpAllowlist(row.ipAllowlist);
+  if (!isRequestIpAllowed(request, ipAllowlist)) {
     return null;
   }
 
@@ -97,6 +111,8 @@ export async function authenticateApiKeyRequest(
     workspaceId: row.workspaceId,
     name: row.name,
     keyPrefix: row.keyPrefix,
+    scopes: normalizeApiKeyScopes(row.scopes),
+    ipAllowlist,
   };
 
   await Promise.all([
@@ -119,6 +135,8 @@ export async function authenticateApiKeyRequest(
 export async function createWorkspaceApiKey(input: {
   workspaceId: string;
   name: string;
+  scopes?: string[] | null;
+  ipAllowlist?: string[] | null;
 }): Promise<{
   apiKey: string;
   keyPrefix: string;
@@ -140,6 +158,8 @@ export async function createWorkspaceApiKey(input: {
           name,
           keyPrefix,
           keyHash,
+          scopes: normalizeApiKeyScopes(input.scopes),
+          ipAllowlist: normalizeIpAllowlist(input.ipAllowlist),
         },
         select: {
           id: true,

@@ -1,21 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { SamlSsoForm } from "@/components/saml-sso-form";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 
-export function LoginForm() {
+type LoginFormProps = {
+  turnstileSiteKey?: string | null;
+};
+
+export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
   const router = useRouter();
+  const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [email, setEmail] = useState("");
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const requiresTurnstile = Boolean(turnstileSiteKey);
 
   async function startChallenge(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (requiresTurnstile && !turnstileToken) {
+      setError("Complete the security check before continuing.");
+      return;
+    }
     setError(null);
     setMessage(null);
     setSubmitting(true);
@@ -23,10 +38,11 @@ export function LoginForm() {
     const response = await fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, turnstileToken }),
     });
 
     setSubmitting(false);
+    turnstileRef.current?.reset();
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as
@@ -78,8 +94,16 @@ export function LoginForm() {
 
   return (
     <div className="space-y-4">
-      <OAuthButtons mode="login" disabled={submitting} />
-      <SamlSsoForm disabled={submitting} mode="login" />
+      <OAuthButtons
+        mode="login"
+        turnstileToken={turnstileToken}
+        disabled={submitting || (requiresTurnstile && !turnstileToken)}
+      />
+      <SamlSsoForm
+        disabled={submitting || (requiresTurnstile && !turnstileToken)}
+        mode="login"
+        turnstileToken={turnstileToken}
+      />
 
       <div className="flex items-center gap-2 text-xs text-neutral-500">
         <div className="h-px flex-1 bg-neutral-900" />
@@ -104,7 +128,17 @@ export function LoginForm() {
           />
         </div>
 
-        <button className="btn btn-primary w-full" disabled={submitting} type="submit">
+        <TurnstileWidget
+          ref={turnstileRef}
+          siteKey={turnstileSiteKey}
+          onTokenChange={setTurnstileToken}
+        />
+
+        <button
+          className="btn btn-primary w-full"
+          disabled={submitting || (requiresTurnstile && !turnstileToken)}
+          type="submit"
+        >
           {submitting ? "Sending code..." : "Send verification code"}
         </button>
       </form>
