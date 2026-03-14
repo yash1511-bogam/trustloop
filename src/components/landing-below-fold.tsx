@@ -150,7 +150,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Features */}
-      <section className="mx-auto max-w-6xl pb-16 md:pb-32" id="features">
+      <section className="mx-auto max-w-[1200px] pb-16 md:pb-32 scroll-mt-24" id="features">
         <div className="mb-12 flex flex-col items-center text-center">
           <p className="kicker">Core capabilities</p>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Built to run incident operations at production scale.</h2>
@@ -167,7 +167,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Workflow */}
-      <section className="mx-auto w-full max-w-[1200px] grid gap-16 pb-16 md:grid-cols-2 md:items-start md:pb-32" id="workflow">
+      <section className="mx-auto w-full max-w-[1200px] grid gap-16 pb-16 md:grid-cols-2 md:items-start md:pb-32 scroll-mt-24" id="workflow">
         <div className="flex flex-col">
           <p className="kicker">Workflow</p>
           <h3 className="mt-4 text-4xl font-bold text-white leading-tight">From alert to executive signal.</h3>
@@ -202,7 +202,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Pricing */}
-      <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32" id="pricing">
+      <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32 scroll-mt-24" id="pricing">
         <div className="mb-12 flex flex-col items-center text-center">
           <p className="kicker">Pricing</p>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Clear pricing for incident volume and operational maturity.</h2>
@@ -281,7 +281,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32" id="faq">
+      <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32 scroll-mt-24" id="faq">
         <div className="mb-12 flex flex-col items-center text-center">
           <p className="kicker">FAQ</p>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Everything needed to evaluate and launch quickly.</h2>
@@ -300,7 +300,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* CTA + Early Access */}
-      <section id="early-access" className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32">
+      <section id="early-access" className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32 scroll-mt-24">
         <framerMotion.div className="grid gap-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-white shadow-2xl md:grid-cols-2 md:p-16" initial={{ opacity: 0, y: 14 }} transition={{ duration: 0.45 }} viewport={{ once: true, amount: 0.4 }} whileInView={{ opacity: 1, y: 0 }}>
           <div className="flex flex-col justify-center">
             <p className="kicker text-neutral-400">Ready to ship safer AI products?</p>
@@ -327,7 +327,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-neutral-800/50 bg-black/20 backdrop-blur-2xl px-6">
+      <footer className="border-t border-neutral-800/50 bg-black/20 backdrop-blur-2xl">
         <div className="mx-auto w-full max-w-[1200px] grid gap-10 py-16 md:grid-cols-4 md:py-24">
           <div className="flex flex-col items-start">
             <a className="flex items-center gap-3 text-sm font-bold tracking-wide text-white" href="#top">

@@ -8,6 +8,8 @@ import { buildBillingCheckoutPayload } from "@/lib/billing-checkout";
 import { badRequest, forbidden } from "@/lib/http";
 import { dodoClient, dodoProductIdForPlan } from "@/lib/dodo";
 import { prisma } from "@/lib/prisma";
+import { redisGetJson, redisSetJson } from "@/lib/redis";
+import { log } from "@/lib/logger";
 
 const schema = z.object({
   plan: z.enum(["starter", "pro", "enterprise"]),
@@ -64,6 +66,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const couponCode = parsed.data.couponCode?.trim() || null;
   const plan = parsed.data.plan;
 
+  // Idempotency: prevent duplicate checkout sessions from rapid clicks.
+  // Cache key scoped to workspace + plan + coupon for a short window.
+  const idempotencyKey = `checkout:idem:${workspace.id}:${plan}:${couponCode ?? "none"}`;
+  type CachedSession = { checkoutUrl: string; sessionId: string };
+  const cached = await redisGetJson<CachedSession>(idempotencyKey);
+  if (cached) {
+    log.billing.info("Returning cached checkout session (idempotency)", {
+      workspaceId: workspace.id,
+      plan,
+      sessionId: cached.sessionId,
+    });
+    return NextResponse.json({
+      checkoutUrl: cached.checkoutUrl,
+      sessionId: cached.sessionId,
+    });
+  }
+
   try {
     const session = await dodoClient().checkoutSessions.create(
       buildBillingCheckoutPayload({
@@ -77,6 +96,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         workspaceId: workspace.id,
       }),
     );
+
+    // Cache the session for 60 seconds to deduplicate rapid retries.
+    if (session.checkout_url && session.session_id) {
+      await redisSetJson<CachedSession>(
+        idempotencyKey,
+        { checkoutUrl: session.checkout_url, sessionId: session.session_id },
+        60,
+      ).catch(() => {});
+    }
 
     await prisma.workspaceBilling.upsert({
       where: { workspaceId: workspace.id },

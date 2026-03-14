@@ -78,7 +78,7 @@ export function MarketingLanding() {
         className="pointer-events-none absolute right-[-90px] top-[320px] h-96 w-96 rounded-full bg-[radial-gradient(circle,_rgba(250,173,20,0.32),_rgba(250,173,20,0))] blur-3xl parallax-fast"
       />
 
-      <header className="sticky top-0 z-50 w-full">
+      <header className="sticky top-0 z-50 w-full px-6">
         <framerMotion.div style={{ paddingTop, paddingLeft: paddingX, paddingRight: paddingX }} className="flex w-full justify-center">
           <framerMotion.div
             style={{ borderRadius: headerRadius, backgroundColor: headerBg, borderColor: headerBorder, borderWidth: 1, boxShadow: headerShadow }}

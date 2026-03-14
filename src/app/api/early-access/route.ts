@@ -52,14 +52,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const otp = generateOtp();
     const methodId = randomUUID();
 
-    await sendEarlyAccessOtpEmail({ toEmail: email, code: otp });
-
+    // Store in Redis BEFORE sending email so a Redis failure doesn't
+    // cause a false error after the email was already delivered.
     await redisSetJson<PendingEarlyAccess>(earlyAccessKey(methodId), {
       name: parsed.data.name.trim(),
       email,
       companyName: parsed.data.companyName?.trim(),
       otpHash: await hashOtp(otp),
     }, 15 * 60);
+
+    await sendEarlyAccessOtpEmail({ toEmail: email, code: otp });
 
     return NextResponse.json({ methodId, message: "Verification code sent to your email." });
   } catch (error) {

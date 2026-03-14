@@ -37,9 +37,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  let otp: Awaited<ReturnType<typeof sendEmailOtpLoginOrCreate>>;
   try {
-    const otp = await sendEmailOtpLoginOrCreate(email);
+    otp = await sendEmailOtpLoginOrCreate(email);
+  } catch (error) {
+    const stytchError = extractStytchError(error);
+    log.auth.error("Failed to start login challenge", {
+      email,
+      errorType: stytchError?.error_type,
+      errorMessage: stytchError?.error_message,
+      requestId: stytchError?.request_id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      {
+        error: authChallengeErrorMessage(error, "Unable to start login challenge."),
+      },
+      { status: 400 },
+    );
+  }
 
+  // OTP was sent — always return success from here so the UI never
+  // shows an error that would cause the user to retry and receive
+  // duplicate codes.
+  try {
     const account = await prisma.user.findFirst({
       where: {
         OR: [
@@ -71,26 +92,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         log.auth.error("Failed to send OTP notice email", { email, error: err instanceof Error ? err.message : String(err) }),
       );
     }
-
-    // Always return the same response shape to prevent user enumeration
-    return NextResponse.json({
-      methodId: otp.methodId,
-      message: "If an account exists, a verification code has been sent to your email.",
-    });
-  } catch (error) {
-    const stytchError = extractStytchError(error);
-    log.auth.error("Failed to start login challenge", {
+  } catch (postOtpError) {
+    log.auth.error("Post-OTP operations failed (login)", {
       email,
-      errorType: stytchError?.error_type,
-      errorMessage: stytchError?.error_message,
-      requestId: stytchError?.request_id,
-      error: error instanceof Error ? error.message : String(error),
+      error: postOtpError instanceof Error ? postOtpError.message : String(postOtpError),
     });
-    return NextResponse.json(
-      {
-        error: authChallengeErrorMessage(error, "Unable to start login challenge."),
-      },
-      { status: 400 },
-    );
   }
+
+  // Always return the same response shape to prevent user enumeration
+  return NextResponse.json({
+    methodId: otp.methodId,
+    message: "If an account exists, a verification code has been sent to your email.",
+  });
 }

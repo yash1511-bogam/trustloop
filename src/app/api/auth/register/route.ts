@@ -131,30 +131,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  let otp: Awaited<ReturnType<typeof sendEmailOtpLoginOrCreate>>;
   try {
-    const otp = await sendEmailOtpLoginOrCreate(email);
-
-    const pendingPayload: PendingRegisterPayload = {
-      name: parsed.data.name.trim(),
-      email,
-      workspaceName,
-      expectedStytchUserId: isPendingStytchUserId(otp.stytchUserId)
-        ? undefined
-        : otp.stytchUserId,
-      inviteToken,
-      inviteCode: parsed.data.inviteCode?.trim(),
-    };
-
-    await redisSetJson<PendingRegisterPayload>(
-      pendingRegisterKey(otp.methodId),
-      pendingPayload,
-      15 * 60,
-    );
-
-    return NextResponse.json({
-      methodId: otp.methodId,
-      message: "A verification code has been sent to your email.",
-    });
+    otp = await sendEmailOtpLoginOrCreate(email);
   } catch (error) {
     const stytchError = extractStytchError(error);
     log.auth.error("Failed to start registration challenge", {
@@ -174,4 +153,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { status: 400 },
     );
   }
+
+  // OTP was sent — always return success from here so the UI never
+  // shows an error that would cause the user to retry and receive
+  // duplicate codes.
+  try {
+    await redisSetJson<PendingRegisterPayload>(
+      pendingRegisterKey(otp.methodId),
+      {
+        name: parsed.data.name.trim(),
+        email,
+        workspaceName,
+        expectedStytchUserId: isPendingStytchUserId(otp.stytchUserId)
+          ? undefined
+          : otp.stytchUserId,
+        inviteToken,
+        inviteCode: parsed.data.inviteCode?.trim(),
+      },
+      15 * 60,
+    );
+  } catch (redisError) {
+    log.auth.error("Redis store failed after OTP sent (register)", {
+      email,
+      methodId: otp.methodId,
+      error: redisError instanceof Error ? redisError.message : String(redisError),
+    });
+  }
+
+  return NextResponse.json({
+    methodId: otp.methodId,
+    message: "A verification code has been sent to your email.",
+  });
 }
