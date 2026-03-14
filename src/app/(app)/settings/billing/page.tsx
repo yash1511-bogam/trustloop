@@ -1,7 +1,11 @@
 import { BillingPanel } from "@/components/billing-panel";
 import { Role } from "@prisma/client";
 import { hasRole, requireAuth } from "@/lib/auth";
-import { normalizePlanTier } from "@/lib/billing-plan";
+import {
+  clampQuotaToPlan,
+  quotasForPlan,
+  resolveEffectivePlanTier,
+} from "@/lib/billing-plan";
 import { dodoCheckoutMode } from "@/lib/dodo";
 import { prisma } from "@/lib/prisma";
 
@@ -33,11 +37,42 @@ export default async function SettingsBillingPage({
       new Date().getUTCDate(),
     ),
   );
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: auth.user.workspaceId },
+    select: {
+      planTier: true,
+      trialEndsAt: true,
+      billing: {
+        select: {
+          status: true,
+          discountCode: true,
+          lastPaymentAt: true,
+          lastPaymentAmount: true,
+          lastPaymentCurrency: true,
+          lastInvoiceUrl: true,
+          paymentFailedAt: true,
+          currentPeriodStart: true,
+          currentPeriodEnd: true,
+          canceledAt: true,
+          cancelReason: true,
+          failureReminderCount: true,
+        },
+      },
+    },
+  });
+  const effectivePlanTier = resolveEffectivePlanTier({
+    planTier: workspace.planTier,
+    billingStatus: workspace.billing?.status,
+    trialEndsAt: workspace.trialEndsAt,
+  });
 
-  const [quota, usage, workspace] = await Promise.all([
+  const [quota, usage] = await Promise.all([
     prisma.workspaceQuota.upsert({
       where: { workspaceId: auth.user.workspaceId },
-      create: { workspaceId: auth.user.workspaceId },
+      create: {
+        workspaceId: auth.user.workspaceId,
+        ...quotasForPlan(effectivePlanTier),
+      },
       update: {},
     }),
     prisma.workspaceDailyUsage.upsert({
@@ -53,29 +88,8 @@ export default async function SettingsBillingPage({
       },
       update: {},
     }),
-    prisma.workspace.findUniqueOrThrow({
-      where: { id: auth.user.workspaceId },
-      select: {
-        planTier: true,
-        billing: {
-          select: {
-            status: true,
-            discountCode: true,
-            lastPaymentAt: true,
-            lastPaymentAmount: true,
-            lastPaymentCurrency: true,
-            lastInvoiceUrl: true,
-            paymentFailedAt: true,
-            currentPeriodStart: true,
-            currentPeriodEnd: true,
-            canceledAt: true,
-            cancelReason: true,
-            failureReminderCount: true,
-          },
-        },
-      },
-    }),
   ]);
+  const clampedQuota = clampQuotaToPlan(quota, effectivePlanTier);
 
   return (
     <div className="space-y-16 pt-8">
@@ -91,7 +105,7 @@ export default async function SettingsBillingPage({
         billingNotice={billingNoticeFromQuery(params.billing)}
         canManageBilling={hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])}
         checkoutMode={dodoCheckoutMode()}
-        planTier={normalizePlanTier(workspace.planTier)}
+        planTier={effectivePlanTier}
         usage={{
           incidentsCreated: usage.incidentsCreated,
           triageRuns: usage.triageRuns,
@@ -99,10 +113,10 @@ export default async function SettingsBillingPage({
           reminderEmailsSent: usage.reminderEmailsSent,
         }}
         quota={{
-          incidentsPerDay: quota.incidentsPerDay,
-          triageRunsPerDay: quota.triageRunsPerDay,
-          customerUpdatesPerDay: quota.customerUpdatesPerDay,
-          reminderEmailsPerDay: quota.reminderEmailsPerDay,
+          incidentsPerDay: clampedQuota.incidentsPerDay,
+          triageRunsPerDay: clampedQuota.triageRunsPerDay,
+          customerUpdatesPerDay: clampedQuota.customerUpdatesPerDay,
+          reminderEmailsPerDay: clampedQuota.reminderEmailsPerDay,
         }}
         billing={
           workspace.billing

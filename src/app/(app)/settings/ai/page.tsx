@@ -3,6 +3,7 @@ import { ApiKeySettingsPanel } from "@/components/api-key-settings-panel";
 import { UpgradeGate } from "@/components/upgrade-gate";
 import { requireAuth } from "@/lib/auth";
 import { normalizeApiKeyScopes } from "@/lib/api-key-scopes";
+import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 import { prisma } from "@/lib/prisma";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
@@ -50,9 +51,22 @@ export default async function SettingsAiPage() {
     }),
     prisma.workspace.findUniqueOrThrow({
       where: { id: auth.user.workspaceId },
-      select: { planTier: true },
+      select: {
+        planTier: true,
+        trialEndsAt: true,
+        billing: {
+          select: {
+            status: true,
+          },
+        },
+      },
     }),
   ]);
+  const effectivePlanTier = resolveEffectivePlanTier({
+    planTier: workspace.planTier,
+    billingStatus: workspace.billing?.status,
+    trialEndsAt: workspace.trialEndsAt,
+  });
 
   return (
     <div className="space-y-16 pt-8">
@@ -65,14 +79,16 @@ export default async function SettingsAiPage() {
       </section>
 
       <section className="pb-10 border-b border-white/5">
-        <AiSettingsPanel
-          keys={keys.map((key) => ({
-            ...key,
-            lastVerifiedAt: key.lastVerifiedAt?.toISOString() ?? null,
-            updatedAt: key.updatedAt.toISOString(),
-          }))}
-          workflows={workflows}
-        />
+        <UpgradeGate allowed={isFeatureAllowed(effectivePlanTier, "ai_keys")} planLabel="Starter">
+          <AiSettingsPanel
+            keys={keys.map((key) => ({
+              ...key,
+              lastVerifiedAt: key.lastVerifiedAt?.toISOString() ?? null,
+              updatedAt: key.updatedAt.toISOString(),
+            }))}
+            workflows={workflows}
+          />
+        </UpgradeGate>
       </section>
 
       <section className="pb-10">
@@ -81,7 +97,7 @@ export default async function SettingsAiPage() {
           Generate Bearer keys for specific automation use cases, set an expiry window, and revoke them when they are no longer needed.
         </p>
         <div className="mt-8">
-          <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "api_keys")} planLabel="Scale">
+          <UpgradeGate allowed={isFeatureAllowed(effectivePlanTier, "api_keys")} planLabel="Pro">
             <ApiKeySettingsPanel
               initialKeys={apiKeys.map((key) => ({
                 ...key,

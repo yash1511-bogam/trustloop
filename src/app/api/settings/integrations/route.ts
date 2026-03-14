@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role, WebhookIntegrationType } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
+import { recordAuditForAccess } from "@/lib/audit";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { featureGateError } from "@/lib/feature-gate";
+import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
 import { badRequest, forbidden } from "@/lib/http";
 import {
   createWebhookSecret,
@@ -26,6 +29,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = access.auth;
   if (auth.kind !== "session") {
     return forbidden();
+  }
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "webhooks"))) {
+    return NextResponse.json({ error: featureGateError("webhooks") }, { status: 403 });
   }
 
   const integrations = await listWebhookIntegrations(auth.workspaceId);
@@ -58,6 +64,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   if (auth.kind !== "session") {
     return forbidden();
   }
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "webhooks"))) {
+    return NextResponse.json({ error: featureGateError("webhooks") }, { status: 403 });
+  }
   if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
     return forbidden();
   }
@@ -74,6 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       type: parsed.data.type,
       isActive: parsed.data.isActive,
     });
+    recordAuditForAccess({ access: auth, request, action: "integration.updated", targetType: "Integration", summary: `Set ${parsed.data.type} integration active=${parsed.data.isActive}` }).catch(() => {});
     return NextResponse.json({ success: true });
   }
 
@@ -89,6 +99,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     secret,
     isActive: parsed.data.isActive ?? true,
   });
+
+  recordAuditForAccess({ access: auth, request, action: "integration.secret_updated", targetType: "Integration", summary: `Updated ${parsed.data.type} webhook secret${generatedSecret ? " (rotated)" : ""}` }).catch(() => {});
 
   return NextResponse.json({
     success: true,

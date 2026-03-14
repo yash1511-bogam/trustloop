@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, WorkflowType } from "@prisma/client";
 import { z } from "zod";
+import { recordAuditForAccess } from "@/lib/audit";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { badRequest } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       model: parsed.data.model.trim(),
     },
   });
+
+  recordAuditForAccess({ access: auth, request, action: "workflow.updated", targetType: "WorkflowSetting", summary: `Updated ${parsed.data.workflowType} workflow to ${parsed.data.provider}/${parsed.data.model}` }).catch(() => {});
 
   return NextResponse.json({ workflow: saved }, { status: 201 });
 }

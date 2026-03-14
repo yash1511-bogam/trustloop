@@ -128,6 +128,51 @@ async function seed(): Promise<void> {
       },
     });
 
+    await tx.incident.create({
+      data: {
+        workspaceId: workspace.id,
+        title: "Inference API returning 503 for 12% of requests",
+        description: "Monitoring detected elevated 503 error rate on the inference endpoint. Latency p99 spiked to 8s. Affects production model serving.",
+        customerName: "Vertex Health",
+        customerEmail: "sre@vertexhealth.example",
+        channel: IncidentChannel.API,
+        status: IncidentStatus.NEW,
+        severity: IncidentSeverity.P1,
+        category: AIIncidentCategory.AVAILABILITY,
+        ownerUserId: user.id,
+        sourceTicketRef: "DD-78421",
+      },
+    });
+
+    await tx.incident.create({
+      data: {
+        workspaceId: workspace.id,
+        title: "Bias detected in loan approval model outputs",
+        description: "Fairness audit flagged statistically significant disparate impact in approval rates across demographic groups for the Q1 model release.",
+        channel: IncidentChannel.EMAIL,
+        status: IncidentStatus.INVESTIGATING,
+        severity: IncidentSeverity.P1,
+        category: AIIncidentCategory.BIAS,
+        ownerUserId: user.id,
+      },
+    });
+
+    await tx.incident.create({
+      data: {
+        workspaceId: workspace.id,
+        title: "Customer PII leaked in chatbot response",
+        description: "A user reported seeing another customer's order details in a chatbot response. Likely context window contamination.",
+        customerName: "SafeGuard Inc",
+        customerEmail: "security@safeguard.example",
+        channel: IncidentChannel.CHAT,
+        status: IncidentStatus.MITIGATED,
+        severity: IncidentSeverity.P1,
+        category: AIIncidentCategory.DATA_PRIVACY,
+        ownerUserId: user.id,
+        sourceTicketRef: "SEC-2291",
+      },
+    });
+
     return { workspace, user };
   });
 

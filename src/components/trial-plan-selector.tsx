@@ -10,11 +10,12 @@ const plans: { id: PlanTier; name: string; price: string; period: string; featur
   {
     id: "starter",
     name: "Starter",
-    price: "$199",
+    price: "$49",
     period: "/mo",
     features: [
       "50 incidents/day",
       "100 AI triage runs/day",
+      "BYOK provider keys",
       "Email reminders",
       "Public status page",
       "Webhook integrations",
@@ -22,15 +23,16 @@ const plans: { id: PlanTier; name: string; price: string; period: string; featur
   },
   {
     id: "pro",
-    name: "Scale",
-    price: "$649",
+    name: "Pro",
+    price: "$149",
     period: "/mo",
     popular: true,
     features: [
       "200 incidents/day",
       "300 AI triage runs/day",
       "Compliance mode",
-      "On-call SMS rotation",
+      "On-call rotation",
+      "Incident PDF export",
       "Workspace API keys",
     ],
   },
@@ -42,7 +44,7 @@ const plans: { id: PlanTier; name: string; price: string; period: string; featur
     features: [
       "Unlimited quotas",
       "SAML SSO",
-      "Everything in Scale",
+      "Everything in Pro",
       "Dedicated onboarding",
       "Private networking",
     ],
@@ -135,7 +137,7 @@ export function TrialPlanSelector() {
       </button>
 
       <p className="mt-4 text-xs text-neutral-500">
-        You won't be charged during the trial. Subscribe before it ends to keep your plan.
+        You won&apos;t be charged during the trial. Subscribe before it ends to keep your plan.
       </p>
     </div>
   );

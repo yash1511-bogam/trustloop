@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Clock3, FileText } from "lucide-react";
 import { CreateIncidentForm } from "@/components/create-incident-form";
 import { DashboardIncidentQueue } from "@/components/dashboard-incident-queue";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getExecutiveDashboard } from "@/lib/read-models";
@@ -28,6 +29,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-16 pt-8">
+      <OnboardingChecklist />
+
       <section className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="kicker">Incident operations</p>

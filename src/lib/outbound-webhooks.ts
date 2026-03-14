@@ -2,6 +2,56 @@ import { createHmac, randomBytes } from "crypto";
 import { decryptSecret, encryptSecret, last4 } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 
+const BLOCKED_HOSTS = new Set([
+  "localhost",
+  "127.0.0.1",
+  "0.0.0.0",
+  "[::1]",
+  "metadata.google.internal",
+]);
+
+const BLOCKED_IP_PREFIXES = [
+  "10.",
+  "172.16.", "172.17.", "172.18.", "172.19.",
+  "172.20.", "172.21.", "172.22.", "172.23.",
+  "172.24.", "172.25.", "172.26.", "172.27.",
+  "172.28.", "172.29.", "172.30.", "172.31.",
+  "192.168.",
+  "169.254.",
+  "0.",
+  "fd",
+  "fe80:",
+];
+
+export function validateWebhookUrl(url: string): { valid: boolean; reason?: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { valid: false, reason: "Invalid URL." };
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return { valid: false, reason: "Only HTTP(S) URLs are allowed." };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+
+  if (BLOCKED_HOSTS.has(hostname)) {
+    return { valid: false, reason: "Localhost and loopback addresses are not allowed." };
+  }
+
+  if (BLOCKED_IP_PREFIXES.some((prefix) => hostname.startsWith(prefix))) {
+    return { valid: false, reason: "Private and link-local IP addresses are not allowed." };
+  }
+
+  if (hostname.endsWith(".internal") || hostname.endsWith(".local")) {
+    return { valid: false, reason: "Internal hostnames are not allowed." };
+  }
+
+  return { valid: true };
+}
+
 export const OUTBOUND_WEBHOOK_EVENTS = [
   "incident.created",
   "incident.updated",
@@ -50,6 +100,11 @@ export async function upsertOutboundWebhook(input: {
   subscribedEvents?: string[] | null;
   isActive?: boolean;
 }) {
+  const urlCheck = validateWebhookUrl(input.url);
+  if (!urlCheck.valid) {
+    throw new Error(`Invalid webhook URL: ${urlCheck.reason}`);
+  }
+
   const data = {
     workspaceId: input.workspaceId,
     name: input.name.trim(),

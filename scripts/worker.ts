@@ -11,10 +11,35 @@ import log from "../src/lib/logger";
 
 const BILLING_SWEEP_INTERVAL_MS = 15 * 60 * 1000;
 
+let shuttingDown = false;
+
+function setupGracefulShutdown(): void {
+  const shutdown = async (signal: string) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    log.worker.info("Graceful shutdown initiated", { signal });
+    await prisma.$disconnect();
+    process.exit(0);
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("unhandledRejection", (reason) => {
+    log.worker.error("Unhandled rejection in worker", {
+      error: reason instanceof Error ? reason.message : String(reason),
+    });
+  });
+  process.on("uncaughtException", async (error) => {
+    log.worker.fatal("Uncaught exception in worker", { error: error.message });
+    await prisma.$disconnect();
+    process.exit(1);
+  });
+}
+
 async function run(): Promise<void> {
   const once = process.argv.includes("--once");
   let lastBillingSweepAt = 0;
 
+  setupGracefulShutdown();
   await ensureReminderQueue();
   log.worker.info("Worker started", { once });
 
@@ -64,7 +89,7 @@ async function run(): Promise<void> {
         }
       });
     }
-  } while (!once);
+  } while (!once && !shuttingDown);
 
   await prisma.$disconnect();
   log.worker.info("Worker stopped");

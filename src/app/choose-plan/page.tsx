@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { BillingSubscriptionStatus } from "@prisma/client";
 import { TrialPlanSelector } from "@/components/trial-plan-selector";
 import { requireAuth } from "@/lib/auth";
+import { isTrialActive, resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { prisma } from "@/lib/prisma";
 
 export default async function ChoosePlanPage() {
@@ -9,14 +10,21 @@ export default async function ChoosePlanPage() {
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: auth.user.workspaceId },
-    select: { trialEndsAt: true, billing: { select: { status: true } } },
+    select: { planTier: true, trialEndsAt: true, billing: { select: { status: true } } },
   });
 
   const status = workspace?.billing?.status;
+  const effectivePlan = resolveEffectivePlanTier({
+    planTier: workspace?.planTier,
+    billingStatus: status,
+    trialEndsAt: workspace?.trialEndsAt,
+  });
   if (
-    workspace?.trialEndsAt ||
+    effectivePlan !== "free" ||
+    isTrialActive(workspace?.trialEndsAt) ||
     status === BillingSubscriptionStatus.ACTIVE ||
-    status === BillingSubscriptionStatus.TRIALING
+    status === BillingSubscriptionStatus.TRIALING ||
+    status === BillingSubscriptionStatus.PENDING
   ) {
     redirect("/dashboard");
   }

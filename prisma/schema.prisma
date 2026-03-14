@@ -112,6 +112,8 @@ enum WebhookIntegrationType {
   GENERIC
   LANGFUSE
   HELICONE
+  ARIZE_PHOENIX
+  BRAINTRUST
 }
 
 enum AiKeyHealthStatus {
@@ -159,7 +161,7 @@ model Workspace {
   name                            String
   slug                            String?                       @unique
   statusPageEnabled               Boolean                       @default(false)
-  planTier                        String                        @default("pro")
+  planTier                        String                        @default("free")
   timezone                        String                        @default("UTC")
   customerUpdateApprovalsRequired Int                           @default(1)
   slackBotToken                   String?
@@ -199,6 +201,8 @@ model Workspace {
   billing                         WorkspaceBilling?
   billingEvents                   BillingEventLog[]
   pushSubscriptions               PushSubscription[]
+  statusSubscribers               StatusPageSubscriber[]
+  scheduledDeletionAt             DateTime?
 }
 
 model User {
@@ -221,6 +225,7 @@ model User {
   auditLogs                    AuditLog[]               @relation("AuditActorUser")
   sentInvites                  WorkspaceInvite[]        @relation("InviteSender")
   pushSubscriptions            PushSubscription[]
+  authoredPostMortems          PostMortem[]             @relation("PostMortemAuthor")
   createdAt                    DateTime                 @default(now())
   updatedAt                    DateTime                 @updatedAt
 
@@ -272,6 +277,7 @@ model Incident {
   customerUpdateDrafts       CustomerUpdateDraft[]
   tagAssignments             IncidentTagAssignment[]
   outboundWebhookDeliveries  OutboundWebhookDelivery[]
+  postMortem                 PostMortem?
 
   @@index([workspaceId, status])
   @@index([workspaceId, severity])
@@ -349,11 +355,11 @@ model WorkspaceQuota {
   id                          String    @id @default(cuid())
   workspaceId                 String    @unique
   workspace                   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  apiRequestsPerMinute        Int       @default(120)
-  incidentsPerDay             Int       @default(200)
-  triageRunsPerDay            Int       @default(300)
-  customerUpdatesPerDay       Int       @default(300)
-  reminderEmailsPerDay        Int       @default(500)
+  apiRequestsPerMinute        Int       @default(60)
+  incidentsPerDay             Int       @default(5)
+  triageRunsPerDay            Int       @default(10)
+  customerUpdatesPerDay       Int       @default(5)
+  reminderEmailsPerDay        Int       @default(10)
   reminderIntervalHoursP1     Int       @default(4)
   reminderIntervalHoursP2     Int       @default(24)
   onCallRotationEnabled       Boolean   @default(false)
@@ -442,6 +448,7 @@ model EmailNotificationLog {
   createdAt         DateTime              @default(now())
 
   @@index([workspaceId, createdAt])
+  @@index([workspaceId, type, createdAt])
   @@index([incidentId])
 }
 
@@ -758,6 +765,28 @@ model WorkspaceOutboundWebhook {
   @@index([workspaceId, isActive])
 }
 
+enum PostMortemStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model PostMortem {
+  id            String           @id @default(cuid())
+  incidentId    String           @unique
+  incident      Incident         @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  title         String
+  body          String
+  status        PostMortemStatus @default(DRAFT)
+  authorUserId  String?
+  author        User?            @relation("PostMortemAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  generatedAt   DateTime         @default(now())
+  publishedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([incidentId])
+}
+
 model OutboundWebhookDelivery {
   id           String                   @id @default(cuid())
   workspaceId  String
@@ -777,4 +806,15 @@ model OutboundWebhookDelivery {
   @@index([workspaceId, deliveredAt])
   @@index([webhookId, deliveredAt])
   @@index([incidentId, deliveredAt])
+}
+
+model StatusPageSubscriber {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email       String
+  createdAt   DateTime  @default(now())
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId])
 }

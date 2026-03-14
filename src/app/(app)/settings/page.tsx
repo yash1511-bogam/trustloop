@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/auth";
+import { planDefinitionFor, resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { prisma } from "@/lib/prisma";
 import { listWebhookIntegrations } from "@/lib/webhook-integration";
 
@@ -33,6 +34,7 @@ export default async function SettingsOverviewPage() {
       where: { id: auth.user.workspaceId },
       select: {
         planTier: true,
+        trialEndsAt: true,
         billing: {
           select: {
             status: true,
@@ -44,6 +46,11 @@ export default async function SettingsOverviewPage() {
   ]);
 
   const activeIntegrations = integrations.filter((item) => item.isActive).length;
+  const effectivePlanTier = resolveEffectivePlanTier({
+    planTier: workspace.planTier,
+    billingStatus: workspace.billing?.status,
+    trialEndsAt: workspace.trialEndsAt,
+  });
 
   return (
     <div className="space-y-16 pt-8">
@@ -89,7 +96,7 @@ export default async function SettingsOverviewPage() {
         <h2 className="text-xl font-medium text-slate-100">Navigation</h2>
         <p className="mt-2 text-sm text-neutral-500 max-w-2xl">
           Use the left menu bar to open AI & API Keys, Workspace, Team, and Billing pages. 
-          Your current active plan tier is <strong className="text-slate-200 font-medium">{workspace.planTier}</strong>.
+          Your current active plan tier is <strong className="text-slate-200 font-medium">{planDefinitionFor(effectivePlanTier).label}</strong>.
         </p>
       </section>
     </div>

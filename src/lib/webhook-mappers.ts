@@ -127,6 +127,21 @@ export function mapSentryWebhook(payload: Record<string, unknown>): WebhookIncid
   };
 }
 
+function inferLangfuseCategory(payload: Record<string, unknown>): AIIncidentCategory {
+  const eventType = String(payload.eventType ?? payload.event ?? payload.type ?? "").toLowerCase();
+  const title = String(payload.title ?? "").toLowerCase();
+  const desc = String(payload.description ?? payload.message ?? "").toLowerCase();
+  const combined = `${eventType} ${title} ${desc}`;
+
+  if (combined.includes("hallucin")) return AIIncidentCategory.HALLUCINATION;
+  if (combined.includes("latency") || combined.includes("slow") || combined.includes("timeout")) return AIIncidentCategory.LATENCY;
+  if (combined.includes("drift") || combined.includes("data")) return AIIncidentCategory.DATA_DRIFT;
+  if (combined.includes("bias") || combined.includes("fairness")) return AIIncidentCategory.BIAS;
+  if (combined.includes("injection") || combined.includes("prompt")) return AIIncidentCategory.PROMPT_INJECTION;
+  if (combined.includes("error") || combined.includes("degrad") || combined.includes("quality")) return AIIncidentCategory.MODEL_DEGRADATION;
+  return AIIncidentCategory.MODEL_DEGRADATION;
+}
+
 export function mapLangfuseWebhook(payload: Record<string, unknown>): WebhookIncidentInput {
   return {
     title: clamp(String(payload.title ?? payload.event ?? ""), "Langfuse anomaly"),
@@ -135,11 +150,24 @@ export function mapLangfuseWebhook(payload: Record<string, unknown>): WebhookInc
       "Langfuse flagged anomalous trace activity.",
     ),
     severity: parseSeverity(payload.severity ?? "P2"),
-    category: AIIncidentCategory.MODEL_DEGRADATION,
+    category: inferLangfuseCategory(payload),
     sourceTicketRef:
       typeof payload.traceId === "string" ? payload.traceId.slice(0, 120) : null,
     channel: IncidentChannel.API,
   };
+}
+
+function inferHeliconeCategory(payload: Record<string, unknown>): AIIncidentCategory {
+  const alertType = String(payload.alertType ?? payload.alert ?? payload.type ?? "").toLowerCase();
+  const title = String(payload.title ?? "").toLowerCase();
+  const desc = String(payload.description ?? payload.message ?? "").toLowerCase();
+  const combined = `${alertType} ${title} ${desc}`;
+
+  if (combined.includes("cost") || combined.includes("spend") || combined.includes("budget")) return AIIncidentCategory.OTHER;
+  if (combined.includes("error") || combined.includes("rate") || combined.includes("fail")) return AIIncidentCategory.MODEL_DEGRADATION;
+  if (combined.includes("latency") || combined.includes("slow") || combined.includes("timeout")) return AIIncidentCategory.LATENCY;
+  if (combined.includes("availability") || combined.includes("down")) return AIIncidentCategory.AVAILABILITY;
+  return AIIncidentCategory.LATENCY;
 }
 
 export function mapHeliconeWebhook(payload: Record<string, unknown>): WebhookIncidentInput {
@@ -150,9 +178,50 @@ export function mapHeliconeWebhook(payload: Record<string, unknown>): WebhookInc
       "Helicone cost/latency alert.",
     ),
     severity: parseSeverity(payload.severity ?? "P2"),
-    category: AIIncidentCategory.LATENCY,
+    category: inferHeliconeCategory(payload),
     sourceTicketRef:
       typeof payload.requestId === "string" ? payload.requestId.slice(0, 120) : null,
+    channel: IncidentChannel.API,
+  };
+}
+
+function inferArizeCategory(payload: Record<string, unknown>): AIIncidentCategory {
+  const combined = `${String(payload.type ?? "")} ${String(payload.title ?? "")} ${String(payload.description ?? payload.message ?? "")}`.toLowerCase();
+  if (combined.includes("hallucin")) return AIIncidentCategory.HALLUCINATION;
+  if (combined.includes("drift")) return AIIncidentCategory.DATA_DRIFT;
+  if (combined.includes("latency") || combined.includes("slow")) return AIIncidentCategory.LATENCY;
+  if (combined.includes("bias")) return AIIncidentCategory.BIAS;
+  if (combined.includes("toxicity") || combined.includes("safety")) return AIIncidentCategory.OUTPUT_FILTER_FAILURE;
+  return AIIncidentCategory.MODEL_DEGRADATION;
+}
+
+export function mapArizePhoenixWebhook(payload: Record<string, unknown>): WebhookIncidentInput {
+  return {
+    title: clamp(String(payload.title ?? payload.alert_name ?? ""), "Arize Phoenix alert"),
+    description: long(String(payload.description ?? payload.message ?? ""), "Arize Phoenix model observability alert."),
+    severity: parseSeverity(payload.severity ?? payload.priority ?? "P2"),
+    category: inferArizeCategory(payload),
+    sourceTicketRef: typeof payload.id === "string" ? payload.id.slice(0, 120) : null,
+    channel: IncidentChannel.API,
+  };
+}
+
+function inferBraintrustCategory(payload: Record<string, unknown>): AIIncidentCategory {
+  const combined = `${String(payload.type ?? "")} ${String(payload.title ?? "")} ${String(payload.description ?? "")}`.toLowerCase();
+  if (combined.includes("hallucin")) return AIIncidentCategory.HALLUCINATION;
+  if (combined.includes("regression") || combined.includes("score")) return AIIncidentCategory.MODEL_DEGRADATION;
+  if (combined.includes("latency")) return AIIncidentCategory.LATENCY;
+  if (combined.includes("safety") || combined.includes("toxicity")) return AIIncidentCategory.OUTPUT_FILTER_FAILURE;
+  return AIIncidentCategory.MODEL_DEGRADATION;
+}
+
+export function mapBraintrustWebhook(payload: Record<string, unknown>): WebhookIncidentInput {
+  return {
+    title: clamp(String(payload.title ?? payload.experiment_name ?? ""), "Braintrust eval alert"),
+    description: long(String(payload.description ?? payload.message ?? ""), "Braintrust evaluation alert."),
+    severity: parseSeverity(payload.severity ?? "P2"),
+    category: inferBraintrustCategory(payload),
+    sourceTicketRef: typeof payload.experiment_id === "string" ? payload.experiment_id.slice(0, 120) : null,
     channel: IncidentChannel.API,
   };
 }

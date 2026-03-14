@@ -1,12 +1,13 @@
 import { ProfileSettingsPanel } from "@/components/profile-settings-panel";
 import { TeamManagementPanel } from "@/components/team-management-panel";
 import { requireAuth } from "@/lib/auth";
+import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
 import { prisma } from "@/lib/prisma";
 
 export default async function SettingsTeamPage() {
   const auth = await requireAuth();
 
-  const [members, invites, profile, workspace] = await Promise.all([
+  const [members, invites, profile, planTier] = await Promise.all([
     prisma.workspaceMembership.findMany({
       where: { workspaceId: auth.user.workspaceId },
       include: {
@@ -48,10 +49,7 @@ export default async function SettingsTeamPage() {
         role: true,
       },
     }),
-    prisma.workspace.findUniqueOrThrow({
-      where: { id: auth.user.workspaceId },
-      select: { planTier: true },
-    }),
+    getWorkspacePlanTier(auth.user.workspaceId),
   ]);
 
   return (
@@ -94,7 +92,7 @@ export default async function SettingsTeamPage() {
           Keep personal contact details up to date for urgent P1 notifications.
         </p>
         <div className="mt-8">
-          <ProfileSettingsPanel profile={profile} planTier={workspace.planTier ?? "starter"} />
+          <ProfileSettingsPanel profile={profile} planTier={planTier} />
         </div>
       </section>
     </div>

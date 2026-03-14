@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Blocks, Bot, Building2, CreditCard, Users } from "lucide-react";
+import { Blocks, Bot, Building2, CreditCard, ScrollText, Users } from "lucide-react";
 
 const items = [
   { href: "/settings", label: "Overview", icon: Blocks },
@@ -10,6 +10,7 @@ const items = [
   { href: "/settings/workspace", label: "Workspace", icon: Building2 },
   { href: "/settings/team", label: "Team", icon: Users },
   { href: "/settings/billing", label: "Billing", icon: CreditCard },
+  { href: "/settings/audit", label: "Audit Log", icon: ScrollText },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

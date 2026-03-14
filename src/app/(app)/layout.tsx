@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import { BillingSubscriptionStatus } from "@prisma/client";
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -16,28 +14,14 @@ export default async function AppLayout({
       where: { id: auth.user.workspaceId },
       select: {
         complianceMode: true,
-        trialEndsAt: true,
-        billing: { select: { status: true } },
       },
     }),
     listUserWorkspaceMemberships(auth.user.id),
   ]);
 
-  const billingStatus = workspace?.billing?.status ?? BillingSubscriptionStatus.NONE;
-  const needsPlan =
-    !workspace?.trialEndsAt &&
-    billingStatus !== BillingSubscriptionStatus.ACTIVE &&
-    billingStatus !== BillingSubscriptionStatus.TRIALING &&
-    billingStatus !== BillingSubscriptionStatus.PENDING;
-
-  if (needsPlan) {
-    redirect("/choose-plan");
-  }
-
   return (
     <AppShellFrame
       complianceMode={workspace?.complianceMode ?? false}
-      userName={auth.user.name}
       currentWorkspaceId={auth.user.workspaceId}
       workspaceName={auth.user.workspaceName}
       workspaces={memberships.map((membership) => ({

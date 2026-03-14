@@ -1,5 +1,6 @@
 import { BillingSubscriptionStatus, Role } from "@prisma/client";
-import { applyWorkspacePlan, normalizePlanTier } from "@/lib/billing-plan";
+import { normalizePlanTier } from "@/lib/billing-plan";
+import { applyWorkspacePlan } from "@/lib/billing-plan-server";
 import { sendTrialExpiredEmail, sendTrialReminderEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -52,7 +53,13 @@ export async function processTrialAutomation(input?: { now?: Date }): Promise<{
 
     // Trial expired
     if (daysLeft <= 0) {
-      await applyWorkspacePlan({ prisma, workspaceId: ws.id, planTier: "starter" });
+      await prisma.workspace.update({
+        where: { id: ws.id },
+        data: {
+          trialEndsAt: null,
+        },
+      });
+      await applyWorkspacePlan({ prisma, workspaceId: ws.id, planTier: "free" });
       await prisma.workspaceBilling.update({
         where: { workspaceId: ws.id },
         data: { status: BillingSubscriptionStatus.CANCELED, canceledAt: now, cancelReason: "trial_expired" },

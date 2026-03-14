@@ -10,7 +10,6 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 type AppShellFrameProps = {
   workspaceName: string;
   currentWorkspaceId: string;
-  userName: string;
   complianceMode: boolean;
   workspaces: Array<{
     id: string;
@@ -24,7 +23,6 @@ type AppShellFrameProps = {
 export function AppShellFrame({
   workspaceName,
   currentWorkspaceId,
-  userName,
   complianceMode,
   workspaces,
   children,

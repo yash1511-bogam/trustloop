@@ -10,6 +10,8 @@ type AuthIntent = "login" | "register";
 export type StytchAuthMode = "b2c" | "b2b_discovery";
 const OTP_PENDING_STYTCH_ID_PREFIX = "pending_email:";
 const STYTCH_AUTH_OTP_TEMPLATE_ID = "initial_style_template";
+const STUB_METHOD_ID_PREFIX = "stub-email:";
+const STUB_SESSION_PREFIX = "stub-session:";
 
 function stytchEnvBaseUrl(): string {
   const env = (process.env.STYTCH_ENV ?? "test").toLowerCase();
@@ -41,6 +43,60 @@ function optionalValue(name: string): string | null {
 function oauthStartMode(): StytchAuthMode {
   const mode = (process.env.STYTCH_OAUTH_START_MODE ?? "b2c").toLowerCase().trim();
   return mode === "b2b_discovery" || mode === "b2b-discovery" ? "b2b_discovery" : "b2c";
+}
+
+function isStubAuthEnabled(): boolean {
+  return process.env.TRUSTLOOP_STUB_AUTH === "1";
+}
+
+function stubOtpCode(): string {
+  return process.env.TRUSTLOOP_STUB_OTP_CODE?.trim() || "000000";
+}
+
+function stubMethodIdForEmail(email: string): string {
+  return `${STUB_METHOD_ID_PREFIX}${email.toLowerCase().trim()}`;
+}
+
+function stubEmailForMethodId(methodId: string): string | null {
+  if (!methodId.startsWith(STUB_METHOD_ID_PREFIX)) {
+    return null;
+  }
+  const email = methodId.slice(STUB_METHOD_ID_PREFIX.length).trim().toLowerCase();
+  return email.includes("@") ? email : null;
+}
+
+function stubStytchUserIdForEmail(email: string): string {
+  return `stub-user:${Buffer.from(email.toLowerCase().trim()).toString("hex")}`;
+}
+
+function stubSessionTokenForUserId(userId: string, expiresAt: Date): string {
+  return `${STUB_SESSION_PREFIX}${userId}:${expiresAt.getTime()}`;
+}
+
+function parseStubSessionToken(sessionToken: string): {
+  stytchUserId: string;
+  expiresAt: Date;
+} | null {
+  if (!sessionToken.startsWith(STUB_SESSION_PREFIX)) {
+    return null;
+  }
+
+  const raw = sessionToken.slice(STUB_SESSION_PREFIX.length);
+  const separator = raw.lastIndexOf(":");
+  if (separator === -1) {
+    return null;
+  }
+
+  const stytchUserId = raw.slice(0, separator);
+  const expiresAtMs = Number(raw.slice(separator + 1));
+  if (!stytchUserId || !Number.isFinite(expiresAtMs)) {
+    return null;
+  }
+
+  return {
+    stytchUserId,
+    expiresAt: new Date(expiresAtMs),
+  };
 }
 
 export function stytchAuthMode(): StytchAuthMode {
@@ -120,6 +176,14 @@ export type OtpAuthResult = {
 export async function sendEmailOtpLoginOrCreate(email: string): Promise<OtpStartResult> {
   const normalizedEmail = email.toLowerCase().trim();
 
+  if (isStubAuthEnabled()) {
+    return {
+      methodId: stubMethodIdForEmail(normalizedEmail),
+      stytchUserId: pendingStytchIdForEmail(normalizedEmail),
+      userCreated: false,
+    };
+  }
+
   if (oauthStartMode() === "b2b_discovery") {
     await stytchB2BClient.otps.email.discovery.send({
       email_address: normalizedEmail,
@@ -155,6 +219,25 @@ export async function authenticateEmailOtp(input: {
   intent?: AuthIntent;
   organizationName?: string;
 }): Promise<OtpAuthResult> {
+  if (isStubAuthEnabled()) {
+    const emailAddress = stubEmailForMethodId(input.methodId);
+    if (!emailAddress || input.code.trim() !== stubOtpCode()) {
+      throw new Error("otp_invalid");
+    }
+
+    const expiresAt = new Date(
+      Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000,
+    );
+    const stytchUserId = stubStytchUserIdForEmail(emailAddress);
+
+    return {
+      stytchUserId,
+      sessionToken: stubSessionTokenForUserId(stytchUserId, expiresAt),
+      sessionJwt: "stub-session-jwt",
+      expiresAt,
+    };
+  }
+
   if (oauthStartMode() === "b2b_discovery") {
     const emailAddress = parseEmailChallengeMethodId(input.methodId);
     if (!emailAddress) {
@@ -201,6 +284,14 @@ export async function authenticateSessionToken(sessionToken: string): Promise<{
   stytchUserId: string;
   expiresAt: Date;
 }> {
+  if (isStubAuthEnabled()) {
+    const parsed = parseStubSessionToken(sessionToken);
+    if (!parsed) {
+      throw new Error("session_invalid");
+    }
+    return parsed;
+  }
+
   if (oauthStartMode() === "b2b_discovery") {
     const response = await stytchB2BClient.sessions.authenticate({
       session_token: sessionToken,
@@ -227,6 +318,11 @@ export async function authenticateSessionToken(sessionToken: string): Promise<{
 }
 
 export async function revokeSessionToken(sessionToken: string): Promise<void> {
+  if (isStubAuthEnabled()) {
+    void sessionToken;
+    return;
+  }
+
   if (oauthStartMode() === "b2b_discovery") {
     await stytchB2BClient.sessions.revoke({
       session_token: sessionToken,

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
+import { recordAuditLog } from "@/lib/audit";
+import { requestIpAddress } from "@/lib/api-key-scopes";
+import { quotasForPlan } from "@/lib/billing-plan";
 import { setSessionCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
@@ -8,6 +11,7 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { authenticateEmailOtp } from "@/lib/stytch";
+import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
 import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
@@ -137,7 +141,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return { user: createdUser, workspace: invite.workspace };
       }
 
-      const workspace = await createWorkspaceWithGeneratedSlug(tx, pending.workspaceName);
+      const workspace = await createWorkspaceWithGeneratedSlug(tx, pending.workspaceName, {
+        planTier: "free",
+      });
+      const freeQuota = quotasForPlan("free");
 
       const createdUser = existing
         ? await tx.user.update({
@@ -181,6 +188,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await tx.workspaceQuota.create({
         data: {
           workspaceId: workspace.id,
+          ...freeQuota,
         },
       });
 
@@ -202,6 +210,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         workspaceId: workspace.id,
         userId: createdUser.id,
         role: Role.OWNER,
+      });
+
+      await createSampleIncidentsForWorkspace(tx, {
+        workspaceId: workspace.id,
+        ownerUserId: createdUser.id,
       });
 
       return { user: createdUser, workspace };
@@ -248,6 +261,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+
+    recordAuditLog({
+      workspaceId: created.workspace.id,
+      action: "auth.register",
+      targetType: "User",
+      targetId: created.user.id,
+      summary: `User ${created.user.email} registered${pending.inviteToken ? " via invite" : ""}`,
+      actorUserId: created.user.id,
+      ipAddress: requestIpAddress(request),
+    }).catch(() => {});
 
     return response;
   } catch (error) {

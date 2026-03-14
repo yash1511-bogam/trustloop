@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react";
 import { UpgradeGate } from "@/components/upgrade-gate";
+import { isFeatureAllowed } from "@/lib/feature-gate";
 
 type Quota = {
   apiRequestsPerMinute: number;
@@ -88,8 +89,8 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
-            min={10}
-            max={5000}
+            min={1}
+            max={1000000}
             value={quota.apiRequestsPerMinute}
             onChange={(event) => updateField("apiRequestsPerMinute", event.target.value)}
             disabled={loading}
@@ -101,8 +102,8 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
-            min={10}
-            max={100000}
+            min={1}
+            max={1000000}
             value={quota.incidentsPerDay}
             onChange={(event) => updateField("incidentsPerDay", event.target.value)}
             disabled={loading}
@@ -114,8 +115,8 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
-            min={10}
-            max={100000}
+            min={1}
+            max={1000000}
             value={quota.triageRunsPerDay}
             onChange={(event) => updateField("triageRunsPerDay", event.target.value)}
             disabled={loading}
@@ -127,8 +128,8 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
-            min={10}
-            max={100000}
+            min={1}
+            max={1000000}
             value={quota.customerUpdatesPerDay}
             onChange={(event) => updateField("customerUpdatesPerDay", event.target.value)}
             disabled={loading}
@@ -140,8 +141,8 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
-            min={10}
-            max={100000}
+            min={1}
+            max={1000000}
             value={quota.reminderEmailsPerDay}
             onChange={(event) => updateField("reminderEmailsPerDay", event.target.value)}
             disabled={loading}
@@ -176,7 +177,7 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
       </div>
 
       <div className="py-6 border-y border-white/5 space-y-8">
-        <UpgradeGate allowed={planTier === "pro" || planTier === "enterprise"} planLabel="Scale">
+        <UpgradeGate allowed={isFeatureAllowed(planTier, "on_call")} planLabel="Pro">
           <div className="space-y-8">
             <label className="flex items-center gap-3 cursor-pointer group">
               <input

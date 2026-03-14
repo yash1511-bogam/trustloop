@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appUrl } from "@/lib/app-url";
+import { isFeatureAllowed } from "@/lib/feature-gate";
+import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { setSessionCookie } from "@/lib/cookies";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -102,11 +104,26 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       select: {
         id: true,
         name: true,
+        planTier: true,
+        trialEndsAt: true,
+        billing: {
+          select: {
+            status: true,
+          },
+        },
       },
     });
 
     if (!workspace) {
       return redirectWithError(request, "saml_workspace_not_ready", intent);
+    }
+    const effectivePlanTier = resolveEffectivePlanTier({
+      planTier: workspace.planTier,
+      billingStatus: workspace.billing?.status,
+      trialEndsAt: workspace.trialEndsAt,
+    });
+    if (!isFeatureAllowed(effectivePlanTier, "saml")) {
+      return redirectWithError(request, "saml_plan_required", intent);
     }
 
     const existing = await prisma.user.findFirst({

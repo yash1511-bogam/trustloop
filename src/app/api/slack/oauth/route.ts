@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { recordAuditLog } from "@/lib/audit";
 import { encryptSecret } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 import { exchangeSlackOAuthCode } from "@/lib/slack";
@@ -79,6 +80,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         slackTeamId: oauth.teamId,
       },
     });
+
+    recordAuditLog({ workspaceId: workspace.id, action: "slack.connected", targetType: "Workspace", summary: `Slack workspace ${oauth.teamId} connected` }).catch(() => {});
 
     return NextResponse.redirect(`${appBaseUrl()}/settings?slack=connected`);
   } catch {

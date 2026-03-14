@@ -44,9 +44,16 @@ const globalForRedis = globalThis as unknown as {
   redis?: Redis;
 };
 
+function allowMemoryFallback(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
+
 function makeClient(): Redis | undefined {
   const url = redisUrl();
   if (!url) {
+    if (!allowMemoryFallback()) {
+      throw new Error("REDIS_URL is required in production.");
+    }
     return undefined;
   }
 
@@ -72,6 +79,9 @@ if (process.env.NODE_ENV !== "production" && redis) {
 
 async function withRedis<T>(work: (client: Redis) => Promise<T>): Promise<T | null> {
   if (!redis) {
+    if (!allowMemoryFallback()) {
+      throw new Error("Redis client is unavailable in production.");
+    }
     return null;
   }
 
@@ -80,7 +90,10 @@ async function withRedis<T>(work: (client: Redis) => Promise<T>): Promise<T | nu
       await redis.connect();
     }
     return await work(redis);
-  } catch {
+  } catch (error) {
+    if (!allowMemoryFallback()) {
+      throw error;
+    }
     return null;
   }
 }

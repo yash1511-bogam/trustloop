@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient, Workspace } from "@prisma/client";
+import { type PlanTier } from "@/lib/billing-plan";
 
 const MAX_SLUG_LENGTH = 60;
 
@@ -40,6 +41,9 @@ function isUniqueConstraintError(error: unknown): boolean {
 export async function createWorkspaceWithGeneratedSlug(
   db: WorkspaceDbClient,
   name: string,
+  options?: {
+    planTier?: PlanTier;
+  },
 ): Promise<Workspace> {
   const base = slugBaseFromName(name);
 
@@ -51,6 +55,7 @@ export async function createWorkspaceWithGeneratedSlug(
         data: {
           name,
           slug,
+          planTier: options?.planTier,
         },
       });
     } catch (error) {

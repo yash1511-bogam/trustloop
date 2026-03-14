@@ -23,6 +23,8 @@ const oauthErrorMessages: Record<string, string> = {
     "Workspace not found. Enter the workspace slug configured by your TrustLoop admin.",
   saml_workspace_not_ready:
     "SAML is not fully configured for that workspace yet. Contact your workspace owner.",
+  saml_plan_required:
+    "SAML SSO is only available on the Enterprise plan for that workspace.",
   saml_callback_invalid: "SAML callback was invalid. Start sign-in again.",
   saml_email_missing:
     "SAML response did not include an email address. Contact your identity provider admin.",

@@ -63,7 +63,8 @@ function extractJsonCandidate(text: string): string {
   return text.slice(start, end + 1);
 }
 
-function parseTriageResult(rawText: string): TriageResult {
+/** @internal Exported for unit testing only. */
+export function parseTriageResult(rawText: string): TriageResult {
   const jsonText = extractJsonCandidate(rawText);
   const parsed = JSON.parse(jsonText) as {
     severity?: string;

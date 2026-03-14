@@ -214,7 +214,7 @@ export function PushNotificationPanel() {
         <div className="space-y-6">
           <p className="text-sm text-neutral-400 leading-relaxed">
             Configure browser push notifications for reminder escalations and operational alerts. 
-            This allows TrustLoop to reach you even when the dashboard isn't active.
+            This allows TrustLoop to reach you even when the dashboard isn&apos;t active.
           </p>
 
           <div className="flex flex-col gap-4">

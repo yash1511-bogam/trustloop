@@ -116,7 +116,7 @@ const steps: Step[] = [
 const plans: Plan[] = [
   {
     name: "Starter",
-    price: "$199",
+    price: "$49",
     period: "/workspace/mo",
     description: "For early-stage AI product teams handling customer incidents weekly.",
     bullets: [
@@ -128,8 +128,8 @@ const plans: Plan[] = [
     cta: "Start Starter",
   },
   {
-    name: "Scale",
-    price: "$649",
+    name: "Pro",
+    price: "$149",
     period: "/workspace/mo",
     description: "For multi-team SaaS organizations with daily AI incident operations.",
     bullets: [
@@ -138,7 +138,7 @@ const plans: Plan[] = [
       "On-call rotation and compliance mode",
       "Advanced analytics, PDF export, and API keys",
     ],
-    cta: "Start Scale",
+    cta: "Start Pro",
     featured: true,
   },
   {
@@ -186,28 +186,28 @@ const navLinks = [
   { href: "#faq", label: "FAQ" },
 ];
 
-type ComparisonRow = { feature: string; starter: string; scale: string; enterprise: string };
+type ComparisonRow = { feature: string; starter: string; pro: string; enterprise: string };
 
 const comparisonRows: ComparisonRow[] = [
-  { feature: "Price", starter: "$199/mo", scale: "$649/mo", enterprise: "Custom" },
-  { feature: "Incidents per day", starter: "50", scale: "200", enterprise: "Unlimited" },
-  { feature: "AI triage runs per day", starter: "100", scale: "300", enterprise: "Unlimited" },
-  { feature: "Customer updates per day", starter: "100", scale: "300", enterprise: "Unlimited" },
-  { feature: "Reminder emails per day", starter: "120", scale: "500", enterprise: "Unlimited" },
-  { feature: "BYOK (OpenAI, Gemini, Anthropic)", starter: "✓", scale: "✓", enterprise: "✓" },
-  { feature: "Webhook integrations", starter: "✓", scale: "✓", enterprise: "✓" },
-  { feature: "Slack integration", starter: "✓", scale: "✓", enterprise: "✓" },
-  { feature: "Public status page", starter: "✓", scale: "✓", enterprise: "✓" },
-  { feature: "Executive analytics", starter: "✓", scale: "✓", enterprise: "✓" },
-  { feature: "On-call rotation", starter: "—", scale: "✓", enterprise: "✓" },
-  { feature: "Compliance mode", starter: "—", scale: "✓", enterprise: "✓" },
-  { feature: "Incident PDF export", starter: "—", scale: "✓", enterprise: "✓" },
-  { feature: "Workspace API keys", starter: "—", scale: "✓", enterprise: "✓" },
-  { feature: "On-call phone escalation", starter: "—", scale: "✓", enterprise: "✓" },
-  { feature: "SAML SSO", starter: "—", scale: "—", enterprise: "✓" },
-  { feature: "Custom data retention", starter: "—", scale: "—", enterprise: "✓" },
-  { feature: "Dedicated onboarding", starter: "—", scale: "—", enterprise: "✓" },
-  { feature: "14-day free trial", starter: "✓", scale: "✓", enterprise: "✓" },
+  { feature: "Price", starter: "$49/mo", pro: "$149/mo", enterprise: "Custom" },
+  { feature: "Incidents per day", starter: "50", pro: "200", enterprise: "Unlimited" },
+  { feature: "AI triage runs per day", starter: "100", pro: "300", enterprise: "Unlimited" },
+  { feature: "Customer updates per day", starter: "100", pro: "300", enterprise: "Unlimited" },
+  { feature: "Reminder emails per day", starter: "120", pro: "500", enterprise: "Unlimited" },
+  { feature: "BYOK (OpenAI, Gemini, Anthropic)", starter: "✓", pro: "✓", enterprise: "✓" },
+  { feature: "Webhook integrations", starter: "✓", pro: "✓", enterprise: "✓" },
+  { feature: "Slack integration", starter: "✓", pro: "✓", enterprise: "✓" },
+  { feature: "Public status page", starter: "✓", pro: "✓", enterprise: "✓" },
+  { feature: "Executive analytics", starter: "✓", pro: "✓", enterprise: "✓" },
+  { feature: "On-call rotation", starter: "—", pro: "✓", enterprise: "✓" },
+  { feature: "Compliance mode", starter: "—", pro: "✓", enterprise: "✓" },
+  { feature: "Incident PDF export", starter: "—", pro: "✓", enterprise: "✓" },
+  { feature: "Workspace API keys", starter: "—", pro: "✓", enterprise: "✓" },
+  { feature: "On-call phone escalation", starter: "—", pro: "✓", enterprise: "✓" },
+  { feature: "SAML SSO", starter: "—", pro: "—", enterprise: "✓" },
+  { feature: "Custom data retention", starter: "—", pro: "—", enterprise: "✓" },
+  { feature: "Dedicated onboarding", starter: "—", pro: "—", enterprise: "✓" },
+  { feature: "14-day free trial", starter: "✓", pro: "✓", enterprise: "✓" },
 ];
 
 export function MarketingLanding() {
@@ -629,7 +629,7 @@ export function MarketingLanding() {
                   <tr className="border-b border-neutral-800 bg-neutral-900">
                     <th className="px-6 py-4 text-left font-semibold text-white">Feature</th>
                     <th className="px-6 py-4 text-center font-semibold text-white">Starter</th>
-                    <th className="px-6 py-4 text-center font-semibold text-cyan-400">Scale</th>
+                    <th className="px-6 py-4 text-center font-semibold text-cyan-400">Pro</th>
                     <th className="px-6 py-4 text-center font-semibold text-white">Enterprise</th>
                   </tr>
                 </thead>
@@ -637,7 +637,7 @@ export function MarketingLanding() {
                   {comparisonRows.map((row) => (
                     <tr key={row.feature} className="border-b border-neutral-800/50 last:border-0">
                       <td className="px-6 py-3 text-neutral-300">{row.feature}</td>
-                      {[row.starter, row.scale, row.enterprise].map((val, i) => (
+                      {[row.starter, row.pro, row.enterprise].map((val, i) => (
                         <td key={i} className="px-6 py-3 text-center">
                           {val === "✓" ? <Check className="mx-auto h-4 w-4 text-emerald-400" /> : val === "—" ? <Minus className="mx-auto h-4 w-4 text-neutral-600" /> : <span className="text-neutral-300">{val}</span>}
                         </td>

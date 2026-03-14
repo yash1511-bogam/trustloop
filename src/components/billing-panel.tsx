@@ -2,13 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertCircle,
-  CheckCircle2,
-  CreditCard,
   ExternalLink,
   Loader2,
-  Receipt,
-  RefreshCcw,
   ShieldCheck,
   ArrowRight,
 } from "lucide-react";
@@ -334,7 +329,9 @@ export function BillingPanel({
   quota,
   usage,
 }: Props) {
-  const [selectedPlan, setSelectedPlan] = useState<PlanTier>(planTier);
+  const [selectedPlan, setSelectedPlan] = useState<PlanTier>(
+    planTier === "free" ? "starter" : planTier,
+  );
   const [couponCode, setCouponCode] = useState(billing?.discountCode ?? "");
   const [previewCouponCode, setPreviewCouponCode] = useState<string | null>(
     normalizeCoupon(billing?.discountCode),
@@ -347,18 +344,17 @@ export function BillingPanel({
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [checkoutHint, setCheckoutHint] = useState<string | null>(null);
   const [checkoutFrameReady, setCheckoutFrameReady] = useState(false);
-  const [gatewayOpen, setGatewayOpen] = useState(false);
+  const [, setGatewayOpen] = useState(false);
   const [checkoutLaunchNonce, setCheckoutLaunchNonce] = useState(0);
   const [liveBreakdown, setLiveBreakdown] = useState<LiveBreakdown | null>(null);
   const [sessionStatus, setSessionStatus] = useState<CheckoutStatusPayload | null>(null);
-  const [sessionStatusLoading, setSessionStatusLoading] = useState(false);
+  const [, setSessionStatusLoading] = useState(false);
   const previewRequestId = useRef(0);
   const previewCouponCodeRef = useRef<string | null>(previewCouponCode);
   const dodoRef = useRef<DodoSdk | null>(null);
 
   const normalizedCouponInput = normalizeCoupon(couponCode);
   const previewDirty = normalizedCouponInput !== previewCouponCode;
-  const selectedPlanDefinition = useMemo(() => planDefinitionFor(selectedPlan), [selectedPlan]);
   const availablePlans = useMemo(
     () => (["starter", "pro", "enterprise"] as PlanTier[]).map((plan) => planDefinitionFor(plan)),
     [],
@@ -759,16 +755,6 @@ export function BillingPanel({
     await loadPreview(selectedPlan, null);
   }
 
-  function resumeCheckout() {
-    if (!checkoutSession) {
-      return;
-    }
-
-    setCheckoutError(null);
-    setCheckoutHint("Loading payment form…");
-    setCheckoutLaunchNonce((current) => current + 1);
-  }
-
   async function startCheckout() {
     if (!canManageBilling) {
       return;
@@ -1090,7 +1076,7 @@ export function BillingPanel({
           </div>
 
           <div className="space-y-8">
-            <h3 className="text-sm tracking-wide text-neutral-500 mb-6 uppercase">Today's Usage</h3>
+            <h3 className="text-sm tracking-wide text-neutral-500 mb-6 uppercase">Today&apos;s Usage</h3>
             {[
               { label: "Incidents", used: usage.incidentsCreated, limit: quota.incidentsPerDay },
               { label: "Triage runs", used: usage.triageRuns, limit: quota.triageRunsPerDay },

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { IncidentSeverity } from "@prisma/client";
 import { IncidentActions } from "@/components/incident-actions";
 import { requireAuth } from "@/lib/auth";
+import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
 import { prisma } from "@/lib/prisma";
 
 function severityBadgeClass(severity: IncidentSeverity): string {
@@ -36,6 +37,9 @@ export default async function IncidentDetailPage({
         },
         orderBy: { createdAt: "desc" },
       },
+      postMortem: {
+        include: { author: { select: { id: true, name: true } } },
+      },
     },
   });
 
@@ -53,10 +57,7 @@ export default async function IncidentDetailPage({
     orderBy: [{ role: "asc" }, { name: "asc" }],
   });
 
-  const workspace = await prisma.workspace.findUniqueOrThrow({
-    where: { id: auth.user.workspaceId },
-    select: { planTier: true },
-  });
+  const planTier = await getWorkspacePlanTier(auth.user.workspaceId);
 
   return (
     <>
@@ -120,8 +121,32 @@ export default async function IncidentDetailPage({
               category={incident.category}
               ownerUserId={incident.ownerUserId}
               owners={owners}
-              planTier={workspace.planTier ?? "starter"}
+              planTier={planTier}
             />
+          </section>
+
+          <section className="surface p-6">
+            <h3 className="mb-4 text-lg font-semibold text-slate-100">Post-Mortem</h3>
+            {incident.postMortem ? (
+              <div>
+                <div className="mb-2 flex items-center gap-2">
+                  <span className={`badge ${incident.postMortem.status === "PUBLISHED" ? "badge-p3" : ""}`}>
+                    {incident.postMortem.status}
+                  </span>
+                  {incident.postMortem.author ? (
+                    <span className="text-xs text-neutral-500">by {incident.postMortem.author.name}</span>
+                  ) : null}
+                </div>
+                <h4 className="mb-2 text-sm font-semibold text-slate-200">{incident.postMortem.title}</h4>
+                <div className="max-h-80 overflow-y-auto whitespace-pre-wrap text-sm text-neutral-400">
+                  {incident.postMortem.body}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-neutral-500">
+                No post-mortem yet. Use the &quot;Generate Post-Mortem&quot; action to create one with AI.
+              </p>
+            )}
           </section>
 
           <Link className="btn btn-ghost" href="/dashboard">

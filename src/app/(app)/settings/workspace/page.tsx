@@ -5,6 +5,11 @@ import { QuotaSettingsPanel } from "@/components/quota-settings-panel";
 import { UpgradeGate } from "@/components/upgrade-gate";
 import { WorkspaceSettingsPanel } from "@/components/workspace-settings-panel";
 import { requireAuth } from "@/lib/auth";
+import {
+  clampQuotaToPlan,
+  quotasForPlan,
+  resolveEffectivePlanTier,
+} from "@/lib/billing-plan";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 import { prisma } from "@/lib/prisma";
 import { slackInstallUrl } from "@/lib/slack";
@@ -12,39 +17,48 @@ import { listWebhookIntegrations } from "@/lib/webhook-integration";
 
 export default async function SettingsWorkspacePage() {
   const auth = await requireAuth();
-
-  const [quota, workspace, integrations] = await Promise.all([
-    prisma.workspaceQuota.upsert({
-      where: { workspaceId: auth.user.workspaceId },
-      create: { workspaceId: auth.user.workspaceId },
-      update: {},
-    }),
-    prisma.workspace.findUniqueOrThrow({
-      where: { id: auth.user.workspaceId },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        statusPageEnabled: true,
-        planTier: true,
-        slackChannelId: true,
-        slackTeamId: true,
-        samlEnabled: true,
-        samlMetadataUrl: true,
-        samlOrganizationId: true,
-        samlConnectionId: true,
-        complianceMode: true,
-        billing: {
-          select: {
-            dodoCustomerId: true,
-            dodoSubscriptionId: true,
-            status: true,
-          },
+  const workspace = await prisma.workspace.findUniqueOrThrow({
+    where: { id: auth.user.workspaceId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      statusPageEnabled: true,
+      planTier: true,
+      slackChannelId: true,
+      slackTeamId: true,
+      samlEnabled: true,
+      samlMetadataUrl: true,
+      samlOrganizationId: true,
+      samlConnectionId: true,
+      complianceMode: true,
+      trialEndsAt: true,
+      billing: {
+        select: {
+          dodoCustomerId: true,
+          dodoSubscriptionId: true,
+          status: true,
         },
       },
+    },
+  });
+  const effectivePlanTier = resolveEffectivePlanTier({
+    planTier: workspace.planTier,
+    billingStatus: workspace.billing?.status,
+    trialEndsAt: workspace.trialEndsAt,
+  });
+  const [quota, integrations] = await Promise.all([
+    prisma.workspaceQuota.upsert({
+      where: { workspaceId: auth.user.workspaceId },
+      create: {
+        workspaceId: auth.user.workspaceId,
+        ...quotasForPlan(effectivePlanTier),
+      },
+      update: {},
     }),
     listWebhookIntegrations(auth.user.workspaceId),
   ]);
+  const clampedQuota = clampQuotaToPlan(quota, effectivePlanTier);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const endpoints = {
@@ -54,6 +68,8 @@ export default async function SettingsWorkspacePage() {
     GENERIC: `${appUrl}/api/webhooks/generic`,
     LANGFUSE: `${appUrl}/api/webhooks/langfuse`,
     HELICONE: `${appUrl}/api/webhooks/helicone`,
+    ARIZE_PHOENIX: `${appUrl}/api/webhooks/arize-phoenix`,
+    BRAINTRUST: `${appUrl}/api/webhooks/braintrust`,
   } as const;
 
   return (
@@ -72,18 +88,19 @@ export default async function SettingsWorkspacePage() {
         <div className="mt-8">
           <QuotaSettingsPanel
             initialQuota={{
-              apiRequestsPerMinute: quota.apiRequestsPerMinute,
-              incidentsPerDay: quota.incidentsPerDay,
-              triageRunsPerDay: quota.triageRunsPerDay,
-              customerUpdatesPerDay: quota.customerUpdatesPerDay,
-              reminderEmailsPerDay: quota.reminderEmailsPerDay,
+              apiRequestsPerMinute: clampedQuota.apiRequestsPerMinute,
+              incidentsPerDay: clampedQuota.incidentsPerDay,
+              triageRunsPerDay: clampedQuota.triageRunsPerDay,
+              customerUpdatesPerDay: clampedQuota.customerUpdatesPerDay,
+              reminderEmailsPerDay: clampedQuota.reminderEmailsPerDay,
               reminderIntervalHoursP1: quota.reminderIntervalHoursP1,
               reminderIntervalHoursP2: quota.reminderIntervalHoursP2,
-              onCallRotationEnabled: quota.onCallRotationEnabled,
+              onCallRotationEnabled:
+                isFeatureAllowed(effectivePlanTier, "on_call") && quota.onCallRotationEnabled,
               onCallRotationIntervalHours: quota.onCallRotationIntervalHours,
               onCallRotationAnchorAt: quota.onCallRotationAnchorAt.toISOString(),
             }}
-            planTier={workspace.planTier ?? "starter"}
+            planTier={effectivePlanTier}
           />
         </div>
       </section>
@@ -92,7 +109,7 @@ export default async function SettingsWorkspacePage() {
         <h2 className="text-xl font-medium text-slate-100">On-call rotation</h2>
         <p className="mt-1 text-sm text-neutral-500">View the current on-call schedule and rotation status for P1 escalations.</p>
         <div className="mt-8">
-          <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "on_call")} planLabel="Scale">
+          <UpgradeGate allowed={isFeatureAllowed(effectivePlanTier, "on_call")} planLabel="Pro">
             <OnCallPanel />
           </UpgradeGate>
         </div>
@@ -103,7 +120,10 @@ export default async function SettingsWorkspacePage() {
         <p className="mt-1 text-sm text-neutral-500">Control public status page, Slack connect/channel, and enterprise SSO metadata.</p>
         <div className="mt-8">
           <WorkspaceSettingsPanel
-            workspace={workspace}
+            workspace={{
+              ...workspace,
+              planTier: effectivePlanTier,
+            }}
             slackInstallUrl={slackInstallUrl(auth.user.workspaceId)}
           />
         </div>
@@ -115,10 +135,12 @@ export default async function SettingsWorkspacePage() {
           Configure signed inbound webhook secrets for Datadog, PagerDuty, Sentry, and AI observability tools.
         </p>
         <div className="mt-8">
-          <IntegrationsPanel
-            endpoints={endpoints}
-            initialIntegrations={integrations}
-          />
+          <UpgradeGate allowed={isFeatureAllowed(effectivePlanTier, "webhooks")} planLabel="Starter">
+            <IntegrationsPanel
+              endpoints={endpoints}
+              initialIntegrations={integrations}
+            />
+          </UpgradeGate>
         </div>
       </section>
 

@@ -1,6 +1,12 @@
-import { PrismaClient } from "@prisma/client";
+export type PlanTier = "free" | "starter" | "pro" | "enterprise";
 
-export type PlanTier = "starter" | "pro" | "enterprise";
+export type PlanQuota = {
+  apiRequestsPerMinute: number;
+  incidentsPerDay: number;
+  triageRunsPerDay: number;
+  customerUpdatesPerDay: number;
+  reminderEmailsPerDay: number;
+};
 
 export type PlanDefinition = {
   id: PlanTier;
@@ -11,20 +17,27 @@ export type PlanDefinition = {
 };
 
 export function normalizePlanTier(value: string | null | undefined): PlanTier {
-  if (value === "starter" || value === "enterprise") {
+  if (value === "free") return "free";
+  if (value === "starter" || value === "pro" || value === "enterprise") {
     return value;
   }
-  return "pro";
+  return "free";
 }
 
-export function quotasForPlan(planTier: PlanTier): {
-  incidentsPerDay: number;
-  triageRunsPerDay: number;
-  customerUpdatesPerDay: number;
-  reminderEmailsPerDay: number;
-} {
+export function quotasForPlan(planTier: PlanTier): PlanQuota {
+  if (planTier === "free") {
+    return {
+      apiRequestsPerMinute: 60,
+      incidentsPerDay: 5,
+      triageRunsPerDay: 10,
+      customerUpdatesPerDay: 5,
+      reminderEmailsPerDay: 10,
+    };
+  }
+
   if (planTier === "starter") {
     return {
+      apiRequestsPerMinute: 120,
       incidentsPerDay: 50,
       triageRunsPerDay: 100,
       customerUpdatesPerDay: 100,
@@ -34,6 +47,7 @@ export function quotasForPlan(planTier: PlanTier): {
 
   if (planTier === "enterprise") {
     return {
+      apiRequestsPerMinute: 1_000,
       incidentsPerDay: 1_000_000,
       triageRunsPerDay: 1_000_000,
       customerUpdatesPerDay: 1_000_000,
@@ -42,6 +56,7 @@ export function quotasForPlan(planTier: PlanTier): {
   }
 
   return {
+    apiRequestsPerMinute: 240,
     incidentsPerDay: 200,
     triageRunsPerDay: 300,
     customerUpdatesPerDay: 300,
@@ -49,8 +64,72 @@ export function quotasForPlan(planTier: PlanTier): {
   };
 }
 
+export function clampQuotaToPlan<T extends PlanQuota>(quota: T, planTier: PlanTier): T {
+  const limit = quotasForPlan(planTier);
+  return {
+    ...quota,
+    apiRequestsPerMinute: Math.min(quota.apiRequestsPerMinute, limit.apiRequestsPerMinute),
+    incidentsPerDay: Math.min(quota.incidentsPerDay, limit.incidentsPerDay),
+    triageRunsPerDay: Math.min(quota.triageRunsPerDay, limit.triageRunsPerDay),
+    customerUpdatesPerDay: Math.min(quota.customerUpdatesPerDay, limit.customerUpdatesPerDay),
+    reminderEmailsPerDay: Math.min(quota.reminderEmailsPerDay, limit.reminderEmailsPerDay),
+  };
+}
+
+export function isTrialActive(
+  trialEndsAt: Date | string | null | undefined,
+  now = new Date(),
+): boolean {
+  if (!trialEndsAt) {
+    return false;
+  }
+
+  const parsed = trialEndsAt instanceof Date ? trialEndsAt : new Date(trialEndsAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+
+  return parsed.getTime() > now.getTime();
+}
+
+export function resolveEffectivePlanTier(input: {
+  planTier: string | null | undefined;
+  billingStatus?: string | null | undefined;
+  trialEndsAt?: Date | string | null | undefined;
+}, now = new Date()): PlanTier {
+  const normalized = normalizePlanTier(input.planTier);
+  if (normalized === "free") {
+    return "free";
+  }
+
+  if (isTrialActive(input.trialEndsAt, now)) {
+    return normalized;
+  }
+
+  if (input.billingStatus === "ACTIVE") {
+    return normalized;
+  }
+
+  return "free";
+}
+
 export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
   const quota = quotasForPlan(planTier);
+
+  if (planTier === "free") {
+    return {
+      id: "free",
+      label: "Free",
+      headline: "Get started",
+      description: "Explore TrustLoop with basic incident management. No credit card required.",
+      bullets: [
+        `${quota.incidentsPerDay} incidents per day`,
+        `${quota.triageRunsPerDay} triage runs per day`,
+        `${quota.customerUpdatesPerDay} customer updates per day`,
+        "Community support",
+      ],
+    };
+  }
 
   if (planTier === "starter") {
     return {
@@ -96,28 +175,3 @@ export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
   };
 }
 
-export async function applyWorkspacePlan(input: {
-  prisma: PrismaClient;
-  workspaceId: string;
-  planTier: PlanTier;
-}): Promise<void> {
-  const quota = quotasForPlan(input.planTier);
-
-  await input.prisma.$transaction(async (tx) => {
-    await tx.workspace.update({
-      where: { id: input.workspaceId },
-      data: { planTier: input.planTier },
-    });
-
-    await tx.workspaceQuota.upsert({
-      where: { workspaceId: input.workspaceId },
-      create: {
-        workspaceId: input.workspaceId,
-        ...quota,
-      },
-      update: {
-        ...quota,
-      },
-    });
-  });
-}

@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
 import { appUrl } from "@/lib/app-url";
+import { quotasForPlan } from "@/lib/billing-plan";
 import { setSessionCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateOAuthToken } from "@/lib/stytch";
+import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
 import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
@@ -259,7 +261,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const workspace = await createWorkspaceWithGeneratedSlug(
         tx,
         workspaceName?.trim() || defaultWorkspaceName(authResult.name, email),
+        {
+          planTier: "free",
+        },
       );
+      const freeQuota = quotasForPlan("free");
 
       const user = existing
         ? await tx.user.update({
@@ -303,6 +309,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       await tx.workspaceQuota.create({
         data: {
           workspaceId: workspace.id,
+          ...freeQuota,
         },
       });
 
@@ -324,6 +331,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         workspaceId: workspace.id,
         userId: user.id,
         role: Role.OWNER,
+      });
+
+      await createSampleIncidentsForWorkspace(tx, {
+        workspaceId: workspace.id,
+        ownerUserId: user.id,
       });
 
       return { user, workspace };

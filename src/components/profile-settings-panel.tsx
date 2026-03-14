@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { UpgradeGate } from "@/components/upgrade-gate";
+import { isFeatureAllowed } from "@/lib/feature-gate";
 
 type Profile = {
   id: string;
@@ -80,7 +81,7 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
           />
         </label>
 
-        <UpgradeGate allowed={planTier === "pro" || planTier === "enterprise"} planLabel="Scale">
+        <UpgradeGate allowed={isFeatureAllowed(planTier, "on_call")} planLabel="Pro">
           <label className="block space-y-3 md:col-span-2">
             <span className="text-sm font-medium text-slate-300 flex items-center justify-between">
               On-call phone

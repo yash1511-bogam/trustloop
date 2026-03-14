@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { buildEventHashChain } from "@/lib/compliance-hash";
+import { featureGateError } from "@/lib/feature-gate";
+import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
 import { forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -12,6 +14,9 @@ export async function GET(
   if (access.response) return access.response;
   const auth = access.auth;
   const { id } = await params;
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "compliance"))) {
+    return NextResponse.json({ error: featureGateError("compliance") }, { status: 403 });
+  }
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: auth.workspaceId },

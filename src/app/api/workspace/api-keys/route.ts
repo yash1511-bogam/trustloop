@@ -13,6 +13,8 @@ import {
   resolveApiKeyExpiryDate,
   scopesForApiKeyUsagePreset,
 } from "@/lib/api-key-scopes";
+import { featureGateError } from "@/lib/feature-gate";
+import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
 import { badRequest, forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { verifyTurnstileToken } from "@/lib/turnstile";
@@ -38,6 +40,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (auth.kind !== "session") {
     return forbidden();
+  }
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "api_keys"))) {
+    return NextResponse.json({ error: featureGateError("api_keys") }, { status: 403 });
   }
 
   const keys = await prisma.workspaceApiKey.findMany({
@@ -77,6 +82,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = access.auth;
   if (auth.kind !== "session") {
     return forbidden();
+  }
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "api_keys"))) {
+    return NextResponse.json({ error: featureGateError("api_keys") }, { status: 403 });
   }
 
   if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
@@ -154,6 +162,9 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
   const auth = access.auth;
   if (auth.kind !== "session") {
     return forbidden();
+  }
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "api_keys"))) {
+    return NextResponse.json({ error: featureGateError("api_keys") }, { status: 403 });
   }
 
   if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {

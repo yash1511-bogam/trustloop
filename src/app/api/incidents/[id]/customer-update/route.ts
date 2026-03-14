@@ -26,6 +26,14 @@ import { dispatchOutboundWebhookEvent } from "@/lib/outbound-webhooks";
 import { prisma } from "@/lib/prisma";
 import { notifyIncidentPush } from "@/lib/incident-push";
 import { postSlackMessage } from "@/lib/slack";
+import {
+  buildMockCustomerUpdateDraft,
+  demoSharedAiConfig,
+} from "@/lib/demo-ai";
+import {
+  DEMO_TRIAGE_LIMIT,
+  countWorkspaceTriageRuns,
+} from "@/lib/onboarding-demo";
 
 const patchSchema = z.object({
   draftId: z.string().min(10).max(64).optional(),
@@ -226,25 +234,62 @@ export async function POST(
     },
   });
 
-  if (!key || !key.isActive) {
-    return badRequest(
-      `No active ${provider} API key configured. Add one in Settings before drafting updates.`,
-    );
-  }
-
   let draftBody: string;
+  let draftSource = "workspace_key";
+  let draftProvider: string = provider;
+  let draftModel: string | null = workflow?.model ?? null;
   try {
-    draftBody = await generateCustomerUpdateDraft({
-      provider,
-      apiKey: decryptSecret(key.encryptedKey),
-      model: workflow?.model,
-      incidentTitle: incident.title,
-      incidentStatus: incident.status,
-      incidentSummary: incident.summary ?? undefined,
-      recentTimeline: incident.events
-        .map((event) => `${event.eventType}: ${event.body}`)
-        .reverse(),
-    });
+    if (key?.isActive) {
+      draftBody = await generateCustomerUpdateDraft({
+        provider,
+        apiKey: decryptSecret(key.encryptedKey),
+        model: workflow?.model,
+        incidentTitle: incident.title,
+        incidentStatus: incident.status,
+        incidentSummary: incident.summary ?? undefined,
+        recentTimeline: incident.events
+          .map((event) => `${event.eventType}: ${event.body}`)
+          .reverse(),
+      });
+    } else {
+      const priorTriageRuns = await countWorkspaceTriageRuns(
+        prisma,
+        auth.workspaceId,
+      );
+
+      if (priorTriageRuns >= DEMO_TRIAGE_LIMIT) {
+        return badRequest(
+          `No active ${provider} API key configured. Add one in Settings before drafting updates.`,
+        );
+      }
+
+      const sharedDemo = demoSharedAiConfig();
+      if (sharedDemo) {
+        draftBody = await generateCustomerUpdateDraft({
+          provider: sharedDemo.provider,
+          apiKey: sharedDemo.apiKey,
+          model: sharedDemo.model,
+          incidentTitle: incident.title,
+          incidentStatus: incident.status,
+          incidentSummary: incident.summary ?? undefined,
+          recentTimeline: incident.events
+            .map((event) => `${event.eventType}: ${event.body}`)
+            .reverse(),
+        });
+        draftSource = "shared_demo_key";
+        draftProvider = sharedDemo.provider;
+        draftModel = sharedDemo.model ?? null;
+      } else {
+        draftBody = buildMockCustomerUpdateDraft({
+          incidentTitle: incident.title,
+          incidentStatus: incident.status,
+          incidentSummary: incident.summary ?? undefined,
+        });
+        draftSource = "mock_demo";
+        draftProvider = "DEMO_MOCK";
+        draftModel = null;
+      }
+    }
   } catch (error) {
     if (error instanceof AiProviderError) {
       return NextResponse.json(
@@ -304,8 +349,9 @@ export async function POST(
     summary: `Generated customer update draft for ${incident.title}.`,
     metadata: {
       draftId: draft.id,
-      provider,
-      model: workflow?.model ?? null,
+      provider: draftProvider,
+      model: draftModel,
+      draftSource,
     },
   });
 

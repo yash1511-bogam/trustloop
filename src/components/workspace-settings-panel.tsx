@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldCheck, Slack } from "lucide-react";
 import { UpgradeGate } from "@/components/upgrade-gate";
+import { isFeatureAllowed } from "@/lib/feature-gate";
 
 type WorkspaceSettings = {
   id: string;
@@ -46,14 +47,23 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
 
   useEffect(() => {
     if (!workspace.slackTeamId) return;
-    setChannelsLoading(true);
-    fetch("/api/slack/channels")
-      .then((res) => res.json())
-      .then((data: { channels?: Array<{ id: string; name: string; isMember: boolean }> }) => {
+
+    async function loadSlackChannels() {
+      setChannelsLoading(true);
+      try {
+        const res = await fetch("/api/slack/channels");
+        const data = (await res.json()) as {
+          channels?: Array<{ id: string; name: string; isMember: boolean }>;
+        };
         setSlackChannels(data.channels ?? []);
-      })
-      .catch(() => setSlackChannels([]))
-      .finally(() => setChannelsLoading(false));
+      } catch {
+        setSlackChannels([]);
+      } finally {
+        setChannelsLoading(false);
+      }
+    }
+
+    void loadSlackChannels();
   }, [workspace.slackTeamId]);
 
   const hasChanges = 
@@ -171,7 +181,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           )}
         </label>
 
-        <UpgradeGate allowed={workspace.planTier === "enterprise"} planLabel="Enterprise">
+        <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise">
           <label className="block space-y-3 md:col-span-2">
             <span className="text-sm font-medium text-slate-300">SAML metadata URL (enterprise)</span>
             <input
@@ -206,7 +216,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable status page</span>
         </label>
 
-        <UpgradeGate allowed={workspace.planTier === "enterprise"} planLabel="Enterprise">
+        <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise">
           <label className="flex items-center gap-3 cursor-pointer group">
             <input
               className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
@@ -223,7 +233,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           </label>
         </UpgradeGate>
 
-        <UpgradeGate allowed={workspace.planTier === "pro" || workspace.planTier === "enterprise"} planLabel="Scale">
+        <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "compliance")} planLabel="Pro">
           <label className="flex items-center gap-3 cursor-pointer group">
             <input
               className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0 disabled:opacity-50"

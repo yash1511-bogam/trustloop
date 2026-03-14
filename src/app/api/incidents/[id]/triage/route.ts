@@ -5,6 +5,14 @@ import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guar
 import { decryptSecret } from "@/lib/encryption";
 import { badRequest, notFound, quotaExceeded } from "@/lib/http";
 import { AiProviderError, generateIncidentTriage } from "@/lib/ai/service";
+import {
+  buildMockIncidentTriage,
+  demoSharedAiConfig,
+} from "@/lib/demo-ai";
+import {
+  DEMO_TRIAGE_LIMIT,
+  countWorkspaceTriageRuns,
+} from "@/lib/onboarding-demo";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { enqueueReminder } from "@/lib/queue";
 import { log } from "@/lib/logger";
@@ -62,26 +70,60 @@ export async function POST(
     },
   });
 
-  if (!key || !key.isActive) {
-    return badRequest(
-      `No active ${provider} API key configured. Add one in Settings before running triage.`,
-    );
-  }
-
-  const apiKey = decryptSecret(key.encryptedKey);
-
   let triage: Awaited<ReturnType<typeof generateIncidentTriage>>;
+  let triageProvider: string = provider;
+  let triageModel: string | null = workflow?.model ?? null;
+  let triageSource = "workspace_key";
   try {
-    triage = await generateIncidentTriage({
-      provider,
-      apiKey,
-      model: workflow?.model,
-      incidentTitle: incident.title,
-      incidentDescription: incident.description,
-      customerContext: [incident.customerName, incident.customerEmail]
-        .filter(Boolean)
-        .join(" | "),
-    });
+    const customerContext = [incident.customerName, incident.customerEmail]
+      .filter(Boolean)
+      .join(" | ");
+
+    if (key?.isActive) {
+      triage = await generateIncidentTriage({
+        provider,
+        apiKey: decryptSecret(key.encryptedKey),
+        model: workflow?.model,
+        incidentTitle: incident.title,
+        incidentDescription: incident.description,
+        customerContext,
+      });
+    } else {
+      const priorTriageRuns = await countWorkspaceTriageRuns(
+        prisma,
+        auth.workspaceId,
+      );
+
+      if (priorTriageRuns >= DEMO_TRIAGE_LIMIT) {
+        return badRequest(
+          `No active ${provider} API key configured. Add one in Settings before running triage.`,
+        );
+      }
+
+      const sharedDemo = demoSharedAiConfig();
+      if (sharedDemo) {
+        triage = await generateIncidentTriage({
+          provider: sharedDemo.provider,
+          apiKey: sharedDemo.apiKey,
+          model: sharedDemo.model,
+          incidentTitle: incident.title,
+          incidentDescription: incident.description,
+          customerContext,
+        });
+        triageProvider = sharedDemo.provider;
+        triageModel = sharedDemo.model ?? null;
+        triageSource = "shared_demo_key";
+      } else {
+        triage = buildMockIncidentTriage({
+          incidentTitle: incident.title,
+          incidentDescription: incident.description,
+          customerContext,
+        });
+        triageProvider = "DEMO_MOCK";
+        triageModel = null;
+        triageSource = "mock_demo";
+      }
+    }
   } catch (error) {
     if (error instanceof AiProviderError) {
       return NextResponse.json(
@@ -217,8 +259,9 @@ export async function POST(
     metadata: {
       severity: triage.severity,
       category: triage.category,
-      provider,
-      model: workflow?.model ?? null,
+      provider: triageProvider,
+      model: triageModel,
+      triageSource,
     },
   });
 
@@ -244,6 +287,7 @@ export async function POST(
     NextResponse.json({
       incident: updated,
       triage,
+      demoMode: triageSource !== "workspace_key",
     }),
     access.rateLimit,
   );

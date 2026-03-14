@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processDodoWebhookEvent } from "@/lib/billing";
+import { recordAuditLog } from "@/lib/audit";
 import { dodoClient } from "@/lib/dodo";
 import { log } from "@/lib/logger";
 
@@ -58,6 +59,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       workspaceId: processed.workspaceId ?? null,
       reason: processed.reason ?? null,
     });
+
+    if (processed.workspaceId) {
+      recordAuditLog({
+        workspaceId: processed.workspaceId,
+        action: `billing.${event.type}`,
+        targetType: "Billing",
+        summary: `Billing event ${event.type} processed: ${processed.status}`,
+      }).catch(() => {});
+    }
+
     return NextResponse.json({
       received: true,
       status: processed.status,

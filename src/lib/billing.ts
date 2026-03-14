@@ -1,6 +1,7 @@
 import { BillingEventProcessStatus, BillingSubscriptionStatus, Prisma, Role } from "@prisma/client";
 import DodoPayments from "dodopayments";
-import { applyWorkspacePlan, normalizePlanTier } from "@/lib/billing-plan";
+import { normalizePlanTier } from "@/lib/billing-plan";
+import { applyWorkspacePlan } from "@/lib/billing-plan-server";
 import { dodoClient, planForDodoProductId } from "@/lib/dodo";
 import {
   sendPaymentConfirmationEmail,
@@ -401,11 +402,11 @@ export async function processDodoWebhookEvent(input: {
       },
     });
 
-    if (currentPlanTier !== "starter") {
+    if (currentPlanTier !== "free") {
       await applyWorkspacePlan({
         prisma,
         workspaceId,
-        planTier: "starter",
+        planTier: "free",
       });
       shouldSendPlanCanceled = true;
     }
@@ -579,7 +580,7 @@ export async function processPastDueBillingAutomation(input?: {
       await applyWorkspacePlan({
         prisma,
         workspaceId: row.workspaceId,
-        planTier: "starter",
+        planTier: "free",
       });
 
       await prisma.workspaceBilling.update({

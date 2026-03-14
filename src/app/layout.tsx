@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
+import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { THEME_COOKIE_NAME, normalizeTheme } from "@/lib/theme";
 import "./globals.css";
 
@@ -93,6 +94,7 @@ export default async function RootLayout({
     <html lang="en" data-theme={theme}>
       <body className={`${display.variable} ${mono.variable} antialiased selection:bg-cyan-500/30`}>
         {children}
+        <CookieConsentBanner />
         <Script id="sw-register" strategy="afterInteractive">
           {`if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => null)); }`}
         </Script>

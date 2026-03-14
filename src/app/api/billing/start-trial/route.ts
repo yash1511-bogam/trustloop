@@ -3,7 +3,7 @@ import { BillingSubscriptionStatus, Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
-import { applyWorkspacePlan } from "@/lib/billing-plan";
+import { applyWorkspacePlan } from "@/lib/billing-plan-server";
 import { sendTrialStartedEmail } from "@/lib/email";
 import { badRequest, forbidden } from "@/lib/http";
 import { log } from "@/lib/logger";
@@ -29,13 +29,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: auth.workspaceId },
-    select: { id: true, name: true, trialEndsAt: true, billing: { select: { status: true } } },
+    select: {
+      id: true,
+      name: true,
+      trialEndsAt: true,
+      billing: {
+        select: {
+          status: true,
+          cancelReason: true,
+        },
+      },
+    },
   });
 
   if (!workspace) return forbidden();
 
   // Block if already trialed or has active billing
-  if (workspace.trialEndsAt) {
+  if (workspace.trialEndsAt || workspace.billing?.cancelReason === "trial_expired") {
     return NextResponse.json({ error: "Trial already used for this workspace." }, { status: 409 });
   }
   if (

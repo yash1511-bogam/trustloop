@@ -1,21 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
-import { hasRole, invalidateSessionAuthCache } from "@/lib/auth";
+import { hasRole } from "@/lib/auth";
 import { recordAuditForAccess } from "@/lib/audit";
-import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
+import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { SESSION_COOKIE_NAME } from "@/lib/constants";
 import { badRequest, forbidden } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { slackInstallUrl } from "@/lib/slack";
-import { isFeatureAllowed, featureGateError } from "@/lib/feature-gate";
+import { featureGateError, isFeatureAllowed } from "@/lib/feature-gate";
 import {
   authenticateB2BMemberSession,
   isSamlSsoSupported,
   syncWorkspaceSamlConnection,
 } from "@/lib/stytch";
-import { deleteWorkspaceAndRehomeUsers } from "@/lib/workspace-admin";
 
 const statusSlugPattern = /^[a-z0-9-]{3,60}$/;
 
@@ -75,6 +75,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       samlOrganizationId: true,
       samlConnectionId: true,
       complianceMode: true,
+      trialEndsAt: true,
       billing: {
         select: {
           dodoCustomerId: true,
@@ -84,9 +85,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     },
   });
+  const effectivePlanTier = resolveEffectivePlanTier({
+    planTier: workspace?.planTier,
+    billingStatus: workspace?.billing?.status,
+    trialEndsAt: workspace?.trialEndsAt,
+  });
 
   return NextResponse.json({
-    workspace,
+    workspace: workspace
+      ? {
+          ...workspace,
+          planTier: effectivePlanTier,
+        }
+      : null,
     slackInstallUrl: slackInstallUrl(auth.workspaceId),
   });
 }
@@ -122,17 +133,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       samlMetadataUrl: true,
       samlOrganizationId: true,
       samlConnectionId: true,
+      trialEndsAt: true,
+      billing: {
+        select: {
+          status: true,
+        },
+      },
     },
   });
   if (!current) {
     return forbidden();
   }
+  const effectivePlanTier = resolveEffectivePlanTier({
+    planTier: current.planTier,
+    billingStatus: current.billing?.status,
+    trialEndsAt: current.trialEndsAt,
+  });
 
-  if (parsed.data.samlEnabled && !isFeatureAllowed(current.planTier, "saml")) {
+  if (parsed.data.samlEnabled && !isFeatureAllowed(effectivePlanTier, "saml")) {
     return badRequest(featureGateError("saml"));
   }
 
-  if (parsed.data.complianceMode && !current.complianceMode && !isFeatureAllowed(current.planTier, "compliance")) {
+  if (
+    parsed.data.complianceMode &&
+    !current.complianceMode &&
+    !isFeatureAllowed(effectivePlanTier, "compliance")
+  ) {
     return badRequest(featureGateError("compliance"));
   }
 
@@ -225,10 +251,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         id: auth.workspaceId,
       },
       data: {
+        name: parsed.data.name,
         slug: providedSlug === undefined ? undefined : normalizedSlug,
         statusPageEnabled: parsed.data.statusPageEnabled,
         complianceMode: parsed.data.complianceMode,
-        slackChannelId: parsed.data.slackChannelId?.trim() || null,
+        slackChannelId: parsed.data.disconnectSlack
+          ? null
+          : (parsed.data.slackChannelId?.trim() || null),
+        slackBotToken: parsed.data.disconnectSlack ? null : undefined,
+        slackTeamId: parsed.data.disconnectSlack ? null : undefined,
         samlEnabled: nextSamlEnabled,
         samlMetadataUrl: nextSamlMetadataUrl,
         samlOrganizationId: nextSamlOrganizationId,
@@ -247,6 +278,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         samlOrganizationId: true,
         samlConnectionId: true,
         complianceMode: true,
+        trialEndsAt: true,
         billing: {
           select: {
             dodoCustomerId: true,
@@ -266,5 +298,56 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     throw error;
   }
 
-  return NextResponse.json({ workspace: updated });
+  const updatedEffectivePlanTier = resolveEffectivePlanTier({
+    planTier: updated.planTier,
+    billingStatus: updated.billing?.status,
+    trialEndsAt: updated.trialEndsAt,
+  });
+
+  return NextResponse.json({
+    workspace: {
+      ...updated,
+      planTier: updatedEffectivePlanTier,
+    },
+  });
+}
+
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  const access = await requireApiAuthAndRateLimit(request);
+  if (access.response) return access.response;
+  const auth = access.auth;
+  if (auth.kind !== "session") return forbidden();
+  if (!hasRole({ user: auth.user }, [Role.OWNER])) return forbidden();
+
+  const body = await request.json().catch(() => null);
+  const parsed = deleteSchema.safeParse(body);
+  if (!parsed.success) return badRequest("Confirm workspace name to delete.");
+
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: auth.workspaceId },
+    select: { name: true, scheduledDeletionAt: true },
+  });
+  if (!workspace) return forbidden();
+
+  if (parsed.data.confirmName !== workspace.name) {
+    return badRequest("Workspace name does not match.");
+  }
+
+  // Schedule deletion with 24h grace period
+  const deletionAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await prisma.workspace.update({
+    where: { id: auth.workspaceId },
+    data: { scheduledDeletionAt: deletionAt },
+  });
+
+  await recordAuditForAccess({
+    access: auth,
+    request,
+    action: "workspace.deletion_scheduled",
+    targetType: "Workspace",
+    targetId: auth.workspaceId,
+    summary: `Workspace deletion scheduled for ${deletionAt.toISOString()}`,
+  }).catch(() => {});
+
+  return NextResponse.json({ scheduledDeletionAt: deletionAt });
 }

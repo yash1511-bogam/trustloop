@@ -7,6 +7,8 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateEmailOtp } from "@/lib/stytch";
 import { ensureWorkspaceSlug } from "@/lib/workspace-slug";
+import { recordAuditLog } from "@/lib/audit";
+import { requestIpAddress } from "@/lib/api-key-scopes";
 
 const loginVerifySchema = z.object({
   methodId: z.string().min(6).max(200),
@@ -82,6 +84,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       user,
     });
 
+    recordAuditLog({
+      workspaceId: user.workspaceId,
+      action: "auth.login",
+      targetType: "User",
+      targetId: user.id,
+      summary: `User ${user.email} logged in via OTP`,
+      actorUserId: user.id,
+      ipAddress: requestIpAddress(request),
+    }).catch(() => {});
+
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
     return response;
   } catch (error) {
@@ -89,6 +101,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       methodId: parsed.data.methodId,
       error: error instanceof Error ? error.message : String(error),
     });
+
     return NextResponse.json({ error: "Invalid or expired verification code." }, { status: 401 });
   }
 }

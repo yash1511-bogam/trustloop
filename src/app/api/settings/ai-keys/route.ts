@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider } from "@prisma/client";
 import { z } from "zod";
+import { recordAuditForAccess } from "@/lib/audit";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { encryptSecret, last4 } from "@/lib/encryption";
+import { featureGateError } from "@/lib/feature-gate";
+import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
 import { badRequest } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -20,6 +23,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = access.auth;
   if (auth.kind !== "session") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "ai_keys"))) {
+    return NextResponse.json({ error: featureGateError("ai_keys") }, { status: 403 });
   }
 
   const keys = await prisma.aiProviderKey.findMany({
@@ -47,6 +53,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = access.auth;
   if (auth.kind !== "session") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "ai_keys"))) {
+    return NextResponse.json({ error: featureGateError("ai_keys") }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null);
@@ -93,6 +102,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       updatedAt: true,
     },
   });
+
+  recordAuditForAccess({
+    access: auth,
+    request,
+    action: "ai_key.saved",
+    targetType: "AiProviderKey",
+    summary: `AI key saved for ${parsed.data.provider} (****${last4(parsed.data.apiKey)})`,
+  }).catch(() => {});
 
   return NextResponse.json({ key }, { status: 201 });
 }

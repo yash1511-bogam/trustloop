@@ -4,6 +4,7 @@ import { AIIncidentCategory, IncidentSeverity, IncidentStatus } from "@prisma/cl
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { UpgradeGate } from "@/components/upgrade-gate";
+import { isFeatureAllowed } from "@/lib/feature-gate";
 
 type Props = {
   incidentId: string;
@@ -140,8 +141,14 @@ export function IncidentActions({
       return;
     }
 
-    const payload = (await response.json()) as { draft: string };
-    setDraft(payload.draft);
+    const payload = (await response.json()) as {
+      draft?: { body?: string | null } | string | null;
+    };
+    setDraft(
+      typeof payload.draft === "string"
+        ? payload.draft
+        : payload.draft?.body?.trim() ?? "",
+    );
     setMessage("Customer update draft generated.");
     router.refresh();
   }
@@ -271,35 +278,34 @@ export function IncidentActions({
         </button>
       </div>
 
-      {draft ? (
-        <div className="space-y-1">
-          <p className="kicker">Draft customer update</p>
-          <textarea
-            className="textarea min-h-[120px]"
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="btn btn-primary"
-              disabled={publishing}
-              onClick={publishDraft}
-              type="button"
+      <div className="space-y-1">
+        <p className="kicker">Customer update</p>
+        <textarea
+          className="textarea min-h-[120px]"
+          placeholder="Write or generate a customer-facing update before publishing."
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+        />
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="btn btn-primary"
+            disabled={publishing || !draft.trim()}
+            onClick={publishDraft}
+            type="button"
+          >
+            {publishing ? "Publishing..." : "Publish to status page"}
+          </button>
+          <UpgradeGate allowed={isFeatureAllowed(planTier, "compliance")} planLabel="Pro">
+            <a
+              className="btn btn-ghost"
+              href={`/api/incidents/${incidentId}/export?format=pdf`}
+              target="_blank"
             >
-              {publishing ? "Publishing..." : "Publish to status page"}
-            </button>
-            <UpgradeGate allowed={planTier === "pro" || planTier === "enterprise"} planLabel="Scale">
-              <a
-                className="btn btn-ghost"
-                href={`/api/incidents/${incidentId}/export?format=pdf`}
-                target="_blank"
-              >
-                Download incident PDF
-              </a>
-            </UpgradeGate>
-          </div>
+              Download incident PDF
+            </a>
+          </UpgradeGate>
         </div>
-      ) : null}
+      </div>
 
       {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}

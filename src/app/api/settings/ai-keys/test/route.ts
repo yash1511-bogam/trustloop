@@ -3,6 +3,8 @@ import { AiProvider } from "@prisma/client";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { last4 } from "@/lib/encryption";
+import { featureGateError } from "@/lib/feature-gate";
+import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
 import { badRequest } from "@/lib/http";
 import { testProviderKey } from "@/lib/ai/service";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +23,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const auth = access.auth;
+  if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "ai_keys"))) {
+    return NextResponse.json({ error: featureGateError("ai_keys") }, { status: 403 });
+  }
 
   const body = await request.json().catch(() => null);
   const parsed = testSchema.safeParse(body);

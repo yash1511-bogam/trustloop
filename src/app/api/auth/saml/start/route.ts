@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appOrigin, appUrl } from "@/lib/app-url";
+import { isFeatureAllowed } from "@/lib/feature-gate";
+import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { prisma } from "@/lib/prisma";
 import { buildSamlStartUrl, isSamlSsoSupported } from "@/lib/stytch";
 import { verifyTurnstileToken } from "@/lib/turnstile";
@@ -91,15 +93,30 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     where: { slug: parsedSlug.data },
     select: {
       id: true,
+      planTier: true,
       samlEnabled: true,
       samlMetadataUrl: true,
       samlOrganizationId: true,
       samlConnectionId: true,
+      trialEndsAt: true,
+      billing: {
+        select: {
+          status: true,
+        },
+      },
     },
   });
 
   if (!workspace) {
     return redirectWithError(request, "saml_workspace_not_found", intent);
+  }
+  const effectivePlanTier = resolveEffectivePlanTier({
+    planTier: workspace.planTier,
+    billingStatus: workspace.billing?.status,
+    trialEndsAt: workspace.trialEndsAt,
+  });
+  if (!isFeatureAllowed(effectivePlanTier, "saml")) {
+    return redirectWithError(request, "saml_plan_required", intent);
   }
 
   if (

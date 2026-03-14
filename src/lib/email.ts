@@ -47,6 +47,10 @@ function appBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
+function isStubEmailDeliveryEnabled(): boolean {
+  return process.env.TRUSTLOOP_STUB_EMAIL_DELIVERY === "1";
+}
+
 async function createEmailLog(
   input: Pick<LoggedEmailInput, "workspaceId" | "incidentId" | "type" | "toEmail"> & {
     status: EmailDeliveryStatus;
@@ -68,6 +72,22 @@ async function createEmailLog(
 }
 
 async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResult> {
+  if (isStubEmailDeliveryEnabled()) {
+    const providerMessageId = `stub-${Date.now()}`;
+    await createEmailLog({
+      workspaceId: input.workspaceId,
+      incidentId: input.incidentId,
+      type: input.type,
+      toEmail: input.toEmail,
+      status: EmailDeliveryStatus.SENT,
+      providerMessageId,
+    });
+    return {
+      success: true,
+      providerMessageId,
+    };
+  }
+
   const client = getResendClient();
 
   if (!client) {
@@ -472,13 +492,13 @@ export async function sendPaymentFailureReminderEmail(input: {
     subject: `Payment failed for ${input.workspaceName} (${input.planTier})`,
     html: [
       `<p>We couldn't process the latest payment for <strong>${input.workspaceName}</strong> on plan <strong>${input.planTier}</strong>.</p>`,
-      `<p>If billing is not fixed within ${input.cancelAfterHours} hours of failure, TrustLoop will downgrade this workspace to Starter automatically.</p>`,
+      `<p>If billing is not fixed within ${input.cancelAfterHours} hours of failure, TrustLoop will downgrade this workspace to Free automatically.</p>`,
       `<p><strong>Time remaining:</strong> approximately ${remaining} hours.</p>`,
       `<p><a href="${settingsUrl}">Open billing settings</a></p>`,
     ].join(""),
     text: [
       `We couldn't process the latest payment for ${input.workspaceName} on ${input.planTier}.`,
-      `If billing is not fixed within ${input.cancelAfterHours} hours, the workspace will downgrade to Starter automatically.`,
+      `If billing is not fixed within ${input.cancelAfterHours} hours, the workspace will downgrade to Free automatically.`,
       `Time remaining: approximately ${remaining} hours.`,
       `Open billing settings: ${settingsUrl}`,
     ].join("\n"),
@@ -498,14 +518,14 @@ export async function sendPlanCanceledEmail(input: {
     workspaceId: input.workspaceId,
     type: EmailNotificationType.PLAN_CANCELED,
     toEmail: input.toEmail,
-    subject: `TrustLoop plan downgraded to Starter`,
+    subject: `TrustLoop plan downgraded to Free`,
     html: [
-      `<p><strong>${input.workspaceName}</strong> has been downgraded from <strong>${input.previousPlanTier}</strong> to <strong>starter</strong>.</p>`,
+      `<p><strong>${input.workspaceName}</strong> has been downgraded from <strong>${input.previousPlanTier}</strong> to <strong>free</strong>.</p>`,
       `<p><strong>Reason:</strong> ${input.reason}</p>`,
       `<p><a href="${settingsUrl}">Open billing settings</a></p>`,
     ].join(""),
     text: [
-      `${input.workspaceName} has been downgraded from ${input.previousPlanTier} to starter.`,
+      `${input.workspaceName} has been downgraded from ${input.previousPlanTier} to free.`,
       `Reason: ${input.reason}`,
       `Open billing settings: ${settingsUrl}`,
     ].join("\n"),
@@ -566,12 +586,12 @@ export async function sendTrialReminderEmail(input: {
     subject: `Your TrustLoop trial ${urgency}`,
     html: [
       `<p>Your <strong>${input.planTier}</strong> trial for <strong>${input.workspaceName}</strong> ${urgency}.</p>`,
-      "<p>Subscribe now to keep your current plan features and quotas. Without a subscription, your workspace will be downgraded to Starter.</p>",
+      "<p>Subscribe now to keep your current plan features and quotas. Without a subscription, your workspace will be downgraded to Free.</p>",
       `<p><a href="${baseUrl}/settings/billing">Subscribe now</a></p>`,
     ].join(""),
     text: [
       `Your ${input.planTier} trial for ${input.workspaceName} ${urgency}.`,
-      "Subscribe now to keep your plan features. Without a subscription, you'll be downgraded to Starter.",
+      "Subscribe now to keep your plan features. Without a subscription, you'll be downgraded to Free.",
       `Subscribe: ${baseUrl}/settings/billing`,
     ].join("\n"),
   });
@@ -592,12 +612,12 @@ export async function sendTrialExpiredEmail(input: {
     subject: "Your TrustLoop trial has ended",
     html: [
       `<p>The <strong>${input.previousPlanTier}</strong> trial for <strong>${input.workspaceName}</strong> has expired.</p>`,
-      "<p>Your workspace has been downgraded to the <strong>Starter</strong> plan. Subscribe anytime to restore your previous plan and quotas.</p>",
+      "<p>Your workspace has been downgraded to the <strong>Free</strong> plan. Subscribe anytime to restore your previous plan and quotas.</p>",
       `<p><a href="${baseUrl}/settings/billing">Choose a plan</a></p>`,
     ].join(""),
     text: [
       `The ${input.previousPlanTier} trial for ${input.workspaceName} has expired.`,
-      "Your workspace has been downgraded to Starter. Subscribe anytime to restore your plan.",
+      "Your workspace has been downgraded to Free. Subscribe anytime to restore your plan.",
       `Choose a plan: ${baseUrl}/settings/billing`,
     ].join("\n"),
   });

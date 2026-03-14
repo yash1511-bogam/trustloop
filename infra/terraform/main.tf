@@ -1,106 +1,66 @@
+data "aws_caller_identity" "current" {}
+data "aws_availability_zones" "available" {}
+
+data "aws_secretsmanager_secret" "app" {
+  name = "${var.project_name}/production"
+}
+
+data "aws_secretsmanager_secret_version" "app" {
+  secret_id = data.aws_secretsmanager_secret.app.id
+}
+
 locals {
-  name = var.project_name
+  name        = var.project_name
+  app_secrets = jsondecode(data.aws_secretsmanager_secret_version.app.secret_string)
 
   app_url = var.public_app_url_override != "" ? var.public_app_url_override : (
     var.acm_certificate_arn != "" ? "https://${aws_lb.app.dns_name}" : "http://${aws_lb.app.dns_name}"
   )
 
+  # Plain env vars — these override any same-named key from Secrets Manager
   common_env = [
-    {
-      name  = "NODE_ENV"
-      value = var.node_env
-    },
-    {
-      name  = "NEXT_PUBLIC_APP_URL"
-      value = local.app_url
-    },
-    {
-      name  = "DATABASE_URL"
-      value = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.address}:${aws_db_instance.postgres.port}/${var.db_name}?schema=public"
-    },
-    {
-      name  = "REDIS_URL"
-      value = "rediss://:${var.redis_auth_token}@${aws_elasticache_replication_group.redis.primary_endpoint_address}:6379"
-    },
-    {
-      name  = "STYTCH_PROJECT_ID"
-      value = var.stytch_project_id
-    },
-    {
-      name  = "STYTCH_SECRET"
-      value = var.stytch_secret
-    },
-    {
-      name  = "STYTCH_ENV"
-      value = var.stytch_env
-    },
-    {
-      name  = "KEY_ENCRYPTION_SECRET"
-      value = var.key_encryption_secret
-    },
-    {
-      name  = "RESEND_API_KEY"
-      value = var.resend_api_key
-    },
-    {
-      name  = "RESEND_FROM_EMAIL"
-      value = var.resend_from_email
-    },
-    {
-      name  = "DODO_PAYMENTS_API_KEY"
-      value = var.dodo_payments_api_key
-    },
-    {
-      name  = "DODO_PAYMENTS_WEBHOOK_KEY"
-      value = var.dodo_payments_webhook_key
-    },
-    {
-      name  = "DODO_PAYMENTS_ENV"
-      value = var.dodo_payments_env
-    },
-    {
-      name  = "DODO_PRODUCT_ID_STARTER"
-      value = var.dodo_product_id_starter
-    },
-    {
-      name  = "DODO_PRODUCT_ID_PRO"
-      value = var.dodo_product_id_pro
-    },
-    {
-      name  = "DODO_PRODUCT_ID_ENTERPRISE"
-      value = var.dodo_product_id_enterprise
-    },
-    {
-      name  = "BILLING_AUTOMATION_CRON_SECRET"
-      value = var.billing_automation_cron_secret
-    },
-    {
-      name  = "REMINDER_ENQUEUE_CRON_SECRET"
-      value = var.reminder_enqueue_cron_secret
-    },
-    {
-      name  = "AI_KEY_HEALTH_CRON_SECRET"
-      value = var.ai_key_health_cron_secret
-    },
-    {
-      name  = "AWS_REGION"
-      value = var.aws_region
-    },
-    {
-      name  = "AWS_ACCOUNT_ID"
-      value = data.aws_caller_identity.current.account_id
-    },
-    {
-      name  = "REMINDER_QUEUE_NAME"
-      value = aws_sqs_queue.reminder.name
-    },
-    {
-      name  = "REMINDER_QUEUE_URL"
-      value = aws_sqs_queue.reminder.url
-    },
-    {
-      name  = "REMINDER_STALE_MINUTES"
-      value = tostring(var.reminder_stale_minutes)
+    { name = "NODE_ENV", value = "production" },
+    { name = "LOG_MODE", value = "console" },
+    { name = "NEXT_PUBLIC_APP_URL", value = local.app_url },
+    { name = "AWS_REGION", value = var.aws_region },
+    { name = "AWS_ACCOUNT_ID", value = data.aws_caller_identity.current.account_id },
+    { name = "REMINDER_QUEUE_NAME", value = aws_sqs_queue.reminder.name },
+    { name = "REMINDER_QUEUE_URL", value = aws_sqs_queue.reminder.url },
+    { name = "REMINDER_STALE_MINUTES", value = "240" },
+  ]
+
+  # Keys to pull from trustloop/production secret
+  secret_keys = [
+    "AI_KEY_HEALTH_CRON_SECRET",
+    "BILLING_AUTOMATION_CRON_SECRET",
+    "DATABASE_URL",
+    "DODO_PAYMENTS_API_KEY",
+    "DODO_PAYMENTS_ENV",
+    "DODO_PAYMENTS_WEBHOOK_KEY",
+    "DODO_PRODUCT_ID_ENTERPRISE",
+    "DODO_PRODUCT_ID_PRO",
+    "DODO_PRODUCT_ID_STARTER",
+    "KEY_ENCRYPTION_SECRET",
+    "REDIS_URL",
+    "RESEND_API_KEY",
+    "RESEND_FROM_EMAIL",
+    "STYTCH_ENV",
+    "STYTCH_OTP_EXPIRATION_MINUTES",
+    "STYTCH_PROJECT_DOMAIN",
+    "STYTCH_PROJECT_ID",
+    "STYTCH_PROJECT_SLUG",
+    "STYTCH_PUBLIC_TOKEN",
+    "STYTCH_SECRET",
+    "STYTCH_SESSION_DURATION_MINUTES",
+    "STYTCH_OAUTH_START_MODE",
+    "TURNSTILE_SITE_KEY",
+    "TURNSTILE_SECRET_KEY",
+  ]
+
+  secret_env = [
+    for key in local.secret_keys : {
+      name      = key
+      valueFrom = "${data.aws_secretsmanager_secret.app.arn}:${key}::"
     }
   ]
 
@@ -108,22 +68,18 @@ locals {
   worker_image_uri = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
 }
 
+# ─── VPC ──────────────────────────────────────────────────────────────────────
+
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-
-  tags = {
-    Name = "${local.name}-vpc"
-  }
+  tags = { Name = "${local.name}-vpc" }
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "${local.name}-igw"
-  }
+  tags   = { Name = "${local.name}-igw" }
 }
 
 resource "aws_subnet" "public_a" {
@@ -131,10 +87,7 @@ resource "aws_subnet" "public_a" {
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, 1)
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "${local.name}-public-a"
-  }
+  tags = { Name = "${local.name}-public-a" }
 }
 
 resource "aws_subnet" "public_b" {
@@ -142,43 +95,30 @@ resource "aws_subnet" "public_b" {
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, 2)
   availability_zone       = data.aws_availability_zones.available.names[1]
   map_public_ip_on_launch = true
-
-  tags = {
-    Name = "${local.name}-public-b"
-  }
+  tags = { Name = "${local.name}-public-b" }
 }
 
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, 11)
   availability_zone = data.aws_availability_zones.available.names[0]
-
-  tags = {
-    Name = "${local.name}-private-a"
-  }
+  tags = { Name = "${local.name}-private-a" }
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, 12)
   availability_zone = data.aws_availability_zones.available.names[1]
-
-  tags = {
-    Name = "${local.name}-private-b"
-  }
+  tags = { Name = "${local.name}-private-b" }
 }
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
-
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
   }
-
-  tags = {
-    Name = "${local.name}-public-rt"
-  }
+  tags = { Name = "${local.name}-public-rt" }
 }
 
 resource "aws_route_table_association" "public_a" {
@@ -191,12 +131,27 @@ resource "aws_route_table_association" "public_b" {
   route_table_id = aws_route_table.public.id
 }
 
+resource "aws_eip" "nat" {
+  domain = "vpc"
+  tags   = { Name = "${local.name}-nat-eip" }
+}
+
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public_a.id
+  depends_on    = [aws_internet_gateway.igw]
+  tags          = { Name = "${local.name}-nat" }
+}
+
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
+  tags   = { Name = "${local.name}-private-rt" }
+}
 
-  tags = {
-    Name = "${local.name}-private-rt"
-  }
+resource "aws_route" "private_default" {
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.main.id
 }
 
 resource "aws_route_table_association" "private_a" {
@@ -209,141 +164,28 @@ resource "aws_route_table_association" "private_b" {
   route_table_id = aws_route_table.private.id
 }
 
+# ─── Security Groups ─────────────────────────────────────────────────────────
+
 resource "aws_security_group" "alb" {
   name        = "${local.name}-alb-sg"
   description = "ALB ingress"
   vpc_id      = aws_vpc.main.id
 
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  ingress { from_port = 80;  to_port = 80;  protocol = "tcp"; cidr_blocks = ["0.0.0.0/0"] }
+  ingress { from_port = 443; to_port = 443; protocol = "tcp"; cidr_blocks = ["0.0.0.0/0"] }
+  egress  { from_port = 0;   to_port = 0;   protocol = "-1";  cidr_blocks = ["0.0.0.0/0"] }
 }
 
 resource "aws_security_group" "ecs" {
   name        = "${local.name}-ecs-sg"
-  description = "ECS app and worker traffic"
+  description = "ECS tasks"
   vpc_id      = aws_vpc.main.id
 
-  ingress {
-    from_port       = 3000
-    to_port         = 3000
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  ingress { from_port = 3000; to_port = 3000; protocol = "tcp"; security_groups = [aws_security_group.alb.id] }
+  egress  { from_port = 0;    to_port = 0;    protocol = "-1";  cidr_blocks = ["0.0.0.0/0"] }
 }
 
-resource "aws_security_group" "db" {
-  name        = "${local.name}-db-sg"
-  description = "RDS access from ECS"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "redis" {
-  name        = "${local.name}-redis-sg"
-  description = "Redis access from ECS"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ecs.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_db_subnet_group" "main" {
-  name       = "${local.name}-db-subnets"
-  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
-}
-
-resource "aws_db_instance" "postgres" {
-  identifier             = "${local.name}-postgres"
-  allocated_storage      = 20
-  max_allocated_storage  = 100
-  storage_type           = "gp3"
-  storage_encrypted      = true
-  engine                 = "postgres"
-  engine_version         = "16.4"
-  instance_class         = var.db_instance_class
-  db_name                = var.db_name
-  username               = var.db_username
-  password               = var.db_password
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-  vpc_security_group_ids = [aws_security_group.db.id]
-  publicly_accessible    = false
-  backup_retention_period = 7
-  deletion_protection    = true
-  skip_final_snapshot    = false
-  final_snapshot_identifier = "${local.name}-postgres-final"
-  apply_immediately      = true
-}
-
-resource "aws_elasticache_subnet_group" "main" {
-  name       = "${local.name}-redis-subnets"
-  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
-}
-
-resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id = "${local.name}-redis"
-  description          = "${local.name} Redis replication group"
-  engine               = "redis"
-  engine_version       = "7.1"
-  node_type            = var.redis_node_type
-  num_cache_clusters   = 1
-  parameter_group_name = "default.redis7"
-  port                 = 6379
-  subnet_group_name    = aws_elasticache_subnet_group.main.name
-  security_group_ids   = [aws_security_group.redis.id]
-
-  transit_encryption_enabled = true
-  auth_token                 = var.redis_auth_token
-  at_rest_encryption_enabled = true
-}
+# ─── SQS ──────────────────────────────────────────────────────────────────────
 
 resource "aws_sqs_queue" "reminder" {
   name                       = "${local.name}-incident-reminders"
@@ -351,34 +193,28 @@ resource "aws_sqs_queue" "reminder" {
   message_retention_seconds  = 1209600
 }
 
+# ─── ECR ──────────────────────────────────────────────────────────────────────
+
+resource "aws_ecr_repository" "app" {
+  name                 = local.name
+  image_tag_mutability = "MUTABLE"
+  image_scanning_configuration { scan_on_push = true }
+}
+
+# ─── CloudWatch ───────────────────────────────────────────────────────────────
+
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/ecs/${local.name}"
   retention_in_days = 30
 }
 
-resource "aws_ecr_repository" "app" {
-  name                 = local.name
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-}
+# ─── IAM ──────────────────────────────────────────────────────────────────────
 
 resource "aws_iam_role" "ecs_execution" {
   name = "${local.name}-ecs-execution-role"
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
+    Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "ecs-tasks.amazonaws.com" } }]
   })
 }
 
@@ -387,207 +223,37 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_default" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy" "ecs_execution_secrets" {
+  name = "${local.name}-ecs-execution-secrets"
+  role = aws_iam_role.ecs_execution.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{ Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = [data.aws_secretsmanager_secret.app.arn] }]
+  })
+}
+
 resource "aws_iam_role" "ecs_task" {
   name = "${local.name}-ecs-task-role"
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
+    Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "ecs-tasks.amazonaws.com" } }]
   })
 }
 
 resource "aws_iam_role_policy" "task_queue_access" {
   name = "${local.name}-task-queue-policy"
   role = aws_iam_role.ecs_task.id
-
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "sqs:ReceiveMessage",
-          "sqs:DeleteMessage",
-          "sqs:GetQueueAttributes",
-          "sqs:GetQueueUrl",
-          "sqs:SendMessage"
-        ]
-        Resource = aws_sqs_queue.reminder.arn
-      }
-    ]
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl", "sqs:SendMessage"]
+      Resource = aws_sqs_queue.reminder.arn
+    }]
   })
 }
 
-resource "aws_iam_role" "eventbridge_api_destination" {
-  name = "${local.name}-eventbridge-api-destination-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "events.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_cloudwatch_event_connection" "automation_ai_key_health" {
-  name               = "${local.name}-automation-ai-key-health"
-  authorization_type = "API_KEY"
-
-  auth_parameters {
-    api_key {
-      key   = "x-cron-secret"
-      value = var.ai_key_health_cron_secret
-    }
-
-    invocation_http_parameters {
-      header {
-        key   = "Content-Type"
-        value = "application/json"
-      }
-    }
-  }
-}
-
-resource "aws_cloudwatch_event_connection" "automation_billing_grace" {
-  name               = "${local.name}-automation-billing-grace"
-  authorization_type = "API_KEY"
-
-  auth_parameters {
-    api_key {
-      key   = "x-cron-secret"
-      value = var.billing_automation_cron_secret
-    }
-
-    invocation_http_parameters {
-      header {
-        key   = "Content-Type"
-        value = "application/json"
-      }
-    }
-  }
-}
-
-resource "aws_cloudwatch_event_connection" "automation_enqueue_reminders" {
-  name               = "${local.name}-automation-enqueue-reminders"
-  authorization_type = "API_KEY"
-
-  auth_parameters {
-    api_key {
-      key   = "x-cron-secret"
-      value = var.reminder_enqueue_cron_secret
-    }
-
-    invocation_http_parameters {
-      header {
-        key   = "Content-Type"
-        value = "application/json"
-      }
-    }
-  }
-}
-
-resource "aws_cloudwatch_event_api_destination" "automation_ai_key_health" {
-  name                             = "${local.name}-automation-ai-key-health"
-  connection_arn                   = aws_cloudwatch_event_connection.automation_ai_key_health.arn
-  invocation_endpoint              = "${local.app_url}/api/automation/verify-ai-keys"
-  http_method                      = "POST"
-  invocation_rate_limit_per_second = 1
-}
-
-resource "aws_cloudwatch_event_api_destination" "automation_billing_grace" {
-  name                             = "${local.name}-automation-billing-grace"
-  connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace.arn
-  invocation_endpoint              = "${local.app_url}/api/automation/process-billing-grace"
-  http_method                      = "POST"
-  invocation_rate_limit_per_second = 1
-}
-
-resource "aws_cloudwatch_event_api_destination" "automation_enqueue_reminders" {
-  name                             = "${local.name}-automation-enqueue-reminders"
-  connection_arn                   = aws_cloudwatch_event_connection.automation_enqueue_reminders.arn
-  invocation_endpoint              = "${local.app_url}/api/automation/enqueue-reminders"
-  http_method                      = "POST"
-  invocation_rate_limit_per_second = 1
-}
-
-resource "aws_iam_role_policy" "eventbridge_api_destination_invoke" {
-  name = "${local.name}-eventbridge-api-destination-invoke"
-  role = aws_iam_role.eventbridge_api_destination.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "events:InvokeApiDestination"
-        ]
-        Resource = [
-          aws_cloudwatch_event_api_destination.automation_ai_key_health.arn,
-          aws_cloudwatch_event_api_destination.automation_billing_grace.arn,
-          aws_cloudwatch_event_api_destination.automation_enqueue_reminders.arn
-        ]
-      }
-    ]
-  })
-}
-
-resource "aws_cloudwatch_event_rule" "automation_ai_key_health" {
-  name                = "${local.name}-automation-ai-key-health"
-  schedule_expression = "cron(0 2 * * ? *)"
-}
-
-resource "aws_cloudwatch_event_rule" "automation_billing_grace" {
-  name                = "${local.name}-automation-billing-grace"
-  schedule_expression = "cron(0 */6 * * ? *)"
-}
-
-resource "aws_cloudwatch_event_rule" "automation_enqueue_reminders" {
-  name                = "${local.name}-automation-enqueue-reminders"
-  schedule_expression = "cron(*/30 * * * ? *)"
-}
-
-resource "aws_cloudwatch_event_target" "automation_ai_key_health" {
-  rule           = aws_cloudwatch_event_rule.automation_ai_key_health.name
-  event_bus_name = "default"
-  arn            = aws_cloudwatch_event_api_destination.automation_ai_key_health.arn
-  role_arn       = aws_iam_role.eventbridge_api_destination.arn
-  input          = jsonencode({})
-}
-
-resource "aws_cloudwatch_event_target" "automation_billing_grace" {
-  rule           = aws_cloudwatch_event_rule.automation_billing_grace.name
-  event_bus_name = "default"
-  arn            = aws_cloudwatch_event_api_destination.automation_billing_grace.arn
-  role_arn       = aws_iam_role.eventbridge_api_destination.arn
-  input          = jsonencode({})
-}
-
-resource "aws_cloudwatch_event_target" "automation_enqueue_reminders" {
-  rule           = aws_cloudwatch_event_rule.automation_enqueue_reminders.name
-  event_bus_name = "default"
-  arn            = aws_cloudwatch_event_api_destination.automation_enqueue_reminders.arn
-  role_arn       = aws_iam_role.eventbridge_api_destination.arn
-  input          = jsonencode({})
-}
-
-resource "aws_ecs_cluster" "main" {
-  name = "${local.name}-cluster"
-}
+# ─── ALB ──────────────────────────────────────────────────────────────────────
 
 resource "aws_lb" "app" {
   name               = "${local.name}-alb"
@@ -620,11 +286,7 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.web.arn
-  }
+  default_action { type = "forward"; target_group_arn = aws_lb_target_group.web.arn }
 }
 
 resource "aws_lb_listener" "http_redirect" {
@@ -632,15 +294,9 @@ resource "aws_lb_listener" "http_redirect" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
-
   default_action {
     type = "redirect"
-
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
-    }
+    redirect { port = "443"; protocol = "HTTPS"; status_code = "HTTP_301" }
   }
 }
 
@@ -651,11 +307,13 @@ resource "aws_lb_listener" "https" {
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = var.acm_certificate_arn
+  default_action { type = "forward"; target_group_arn = aws_lb_target_group.web.arn }
+}
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.web.arn
-  }
+# ─── ECS ──────────────────────────────────────────────────────────────────────
+
+resource "aws_ecs_cluster" "main" {
+  name = "${local.name}-cluster"
 }
 
 resource "aws_ecs_task_definition" "web" {
@@ -667,29 +325,18 @@ resource "aws_ecs_task_definition" "web" {
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "trustloop-web"
-      image     = local.web_image_uri
-      essential = true
-      portMappings = [
-        {
-          containerPort = 3000
-          hostPort      = 3000
-          protocol      = "tcp"
-        }
-      ]
-      environment = local.common_env
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.app.name
-          awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "web"
-        }
-      }
+  container_definitions = jsonencode([{
+    name      = "trustloop-web"
+    image     = local.web_image_uri
+    essential = true
+    portMappings = [{ containerPort = 3000, hostPort = 3000, protocol = "tcp" }]
+    environment = local.common_env
+    secrets     = local.secret_env
+    logConfiguration = {
+      logDriver = "awslogs"
+      options   = { awslogs-group = aws_cloudwatch_log_group.app.name, awslogs-region = var.aws_region, awslogs-stream-prefix = "web" }
     }
-  ])
+  }])
 }
 
 resource "aws_ecs_task_definition" "worker" {
@@ -701,23 +348,18 @@ resource "aws_ecs_task_definition" "worker" {
   execution_role_arn       = aws_iam_role.ecs_execution.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "trustloop-worker"
-      image     = local.worker_image_uri
-      essential = true
-      command   = ["pnpm", "run", "worker"]
-      environment = local.common_env
-      logConfiguration = {
-        logDriver = "awslogs"
-        options = {
-          awslogs-group         = aws_cloudwatch_log_group.app.name
-          awslogs-region        = var.aws_region
-          awslogs-stream-prefix = "worker"
-        }
-      }
+  container_definitions = jsonencode([{
+    name      = "trustloop-worker"
+    image     = local.worker_image_uri
+    essential = true
+    command   = ["pnpm", "run", "worker"]
+    environment = local.common_env
+    secrets     = local.secret_env
+    logConfiguration = {
+      logDriver = "awslogs"
+      options   = { awslogs-group = aws_cloudwatch_log_group.app.name, awslogs-region = var.aws_region, awslogs-stream-prefix = "worker" }
     }
-  ])
+  }])
 }
 
 resource "aws_ecs_service" "web" {
@@ -728,9 +370,9 @@ resource "aws_ecs_service" "web" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    subnets          = [aws_subnet.private_a.id, aws_subnet.private_b.id]
     security_groups  = [aws_security_group.ecs.id]
-    assign_public_ip = true
+    assign_public_ip = false
   }
 
   load_balancer {
@@ -750,11 +392,13 @@ resource "aws_ecs_service" "worker" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    subnets          = [aws_subnet.private_a.id, aws_subnet.private_b.id]
     security_groups  = [aws_security_group.ecs.id]
-    assign_public_ip = true
+    assign_public_ip = false
   }
 }
+
+# ─── Worker Auto-Scaling ─────────────────────────────────────────────────────
 
 resource "aws_appautoscaling_target" "worker" {
   service_namespace  = "ecs"
@@ -770,16 +414,11 @@ resource "aws_appautoscaling_policy" "worker_scale_out" {
   service_namespace  = aws_appautoscaling_target.worker.service_namespace
   resource_id        = aws_appautoscaling_target.worker.resource_id
   scalable_dimension = aws_appautoscaling_target.worker.scalable_dimension
-
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
     cooldown                = 60
     metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_lower_bound = 0
-      scaling_adjustment          = 1
-    }
+    step_adjustment { metric_interval_lower_bound = 0; scaling_adjustment = 1 }
   }
 }
 
@@ -789,16 +428,11 @@ resource "aws_appautoscaling_policy" "worker_scale_in" {
   service_namespace  = aws_appautoscaling_target.worker.service_namespace
   resource_id        = aws_appautoscaling_target.worker.resource_id
   scalable_dimension = aws_appautoscaling_target.worker.scalable_dimension
-
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
     cooldown                = 120
     metric_aggregation_type = "Average"
-
-    step_adjustment {
-      metric_interval_upper_bound = 0
-      scaling_adjustment          = -1
-    }
+    step_adjustment { metric_interval_upper_bound = 0; scaling_adjustment = -1 }
   }
 }
 
@@ -811,12 +445,8 @@ resource "aws_cloudwatch_metric_alarm" "worker_scale_out" {
   period              = 60
   statistic           = "Average"
   threshold           = var.worker_scale_out_threshold
-
-  dimensions = {
-    QueueName = aws_sqs_queue.reminder.name
-  }
-
-  alarm_actions = [aws_appautoscaling_policy.worker_scale_out.arn]
+  dimensions          = { QueueName = aws_sqs_queue.reminder.name }
+  alarm_actions       = [aws_appautoscaling_policy.worker_scale_out.arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "worker_scale_in" {
@@ -828,94 +458,179 @@ resource "aws_cloudwatch_metric_alarm" "worker_scale_in" {
   period              = 60
   statistic           = "Average"
   threshold           = var.worker_scale_in_threshold
-
-  dimensions = {
-    QueueName = aws_sqs_queue.reminder.name
-  }
-
-  alarm_actions = [aws_appautoscaling_policy.worker_scale_in.arn]
+  dimensions          = { QueueName = aws_sqs_queue.reminder.name }
+  alarm_actions       = [aws_appautoscaling_policy.worker_scale_in.arn]
 }
+
+# ─── EventBridge Cron Automation ──────────────────────────────────────────────
+
+resource "aws_iam_role" "eventbridge_api_destination" {
+  name = "${local.name}-eventbridge-api-destination-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "events.amazonaws.com" } }]
+  })
+}
+
+resource "aws_cloudwatch_event_connection" "automation_ai_key_health" {
+  name               = "${local.name}-automation-ai-key-health"
+  authorization_type = "API_KEY"
+  auth_parameters {
+    api_key { key = "x-cron-secret"; value = local.app_secrets["AI_KEY_HEALTH_CRON_SECRET"] }
+    invocation_http_parameters { header { key = "Content-Type"; value = "application/json" } }
+  }
+}
+
+resource "aws_cloudwatch_event_connection" "automation_billing_grace" {
+  name               = "${local.name}-automation-billing-grace"
+  authorization_type = "API_KEY"
+  auth_parameters {
+    api_key { key = "x-cron-secret"; value = local.app_secrets["BILLING_AUTOMATION_CRON_SECRET"] }
+    invocation_http_parameters { header { key = "Content-Type"; value = "application/json" } }
+  }
+}
+
+resource "aws_cloudwatch_event_connection" "automation_enqueue_reminders" {
+  name               = "${local.name}-automation-enqueue-reminders"
+  authorization_type = "API_KEY"
+  auth_parameters {
+    api_key { key = "x-cron-secret"; value = local.app_secrets["REMINDER_ENQUEUE_CRON_SECRET"] }
+    invocation_http_parameters { header { key = "Content-Type"; value = "application/json" } }
+  }
+}
+
+resource "aws_cloudwatch_event_api_destination" "automation_ai_key_health" {
+  name               = "${local.name}-automation-ai-key-health"
+  connection_arn     = aws_cloudwatch_event_connection.automation_ai_key_health.arn
+  invocation_endpoint = "${local.app_url}/api/automation/verify-ai-keys"
+  http_method        = "POST"
+  invocation_rate_limit_per_second = 1
+}
+
+resource "aws_cloudwatch_event_api_destination" "automation_billing_grace" {
+  name               = "${local.name}-automation-billing-grace"
+  connection_arn     = aws_cloudwatch_event_connection.automation_billing_grace.arn
+  invocation_endpoint = "${local.app_url}/api/automation/process-billing-grace"
+  http_method        = "POST"
+  invocation_rate_limit_per_second = 1
+}
+
+resource "aws_cloudwatch_event_api_destination" "automation_process_trial" {
+  name               = "${local.name}-automation-process-trial"
+  connection_arn     = aws_cloudwatch_event_connection.automation_billing_grace.arn
+  invocation_endpoint = "${local.app_url}/api/automation/process-trial"
+  http_method        = "POST"
+  invocation_rate_limit_per_second = 1
+}
+
+resource "aws_cloudwatch_event_api_destination" "automation_enqueue_reminders" {
+  name               = "${local.name}-automation-enqueue-reminders"
+  connection_arn     = aws_cloudwatch_event_connection.automation_enqueue_reminders.arn
+  invocation_endpoint = "${local.app_url}/api/automation/enqueue-reminders"
+  http_method        = "POST"
+  invocation_rate_limit_per_second = 1
+}
+
+resource "aws_iam_role_policy" "eventbridge_api_destination_invoke" {
+  name = "${local.name}-eventbridge-api-destination-invoke"
+  role = aws_iam_role.eventbridge_api_destination.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["events:InvokeApiDestination"]
+      Resource = [
+        aws_cloudwatch_event_api_destination.automation_ai_key_health.arn,
+        aws_cloudwatch_event_api_destination.automation_billing_grace.arn,
+        aws_cloudwatch_event_api_destination.automation_process_trial.arn,
+        aws_cloudwatch_event_api_destination.automation_enqueue_reminders.arn,
+      ]
+    }]
+  })
+}
+
+resource "aws_cloudwatch_event_rule" "automation_ai_key_health" {
+  name                = "${local.name}-automation-ai-key-health"
+  schedule_expression = "cron(0 2 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_rule" "automation_billing_grace" {
+  name                = "${local.name}-automation-billing-grace"
+  schedule_expression = "cron(0 */6 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_rule" "automation_process_trial" {
+  name                = "${local.name}-automation-process-trial"
+  schedule_expression = "cron(0 1 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_rule" "automation_enqueue_reminders" {
+  name                = "${local.name}-automation-enqueue-reminders"
+  schedule_expression = "cron(*/30 * * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "automation_ai_key_health" {
+  rule     = aws_cloudwatch_event_rule.automation_ai_key_health.name
+  arn      = aws_cloudwatch_event_api_destination.automation_ai_key_health.arn
+  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  input    = jsonencode({})
+}
+
+resource "aws_cloudwatch_event_target" "automation_billing_grace" {
+  rule     = aws_cloudwatch_event_rule.automation_billing_grace.name
+  arn      = aws_cloudwatch_event_api_destination.automation_billing_grace.arn
+  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  input    = jsonencode({})
+}
+
+resource "aws_cloudwatch_event_target" "automation_process_trial" {
+  rule     = aws_cloudwatch_event_rule.automation_process_trial.name
+  arn      = aws_cloudwatch_event_api_destination.automation_process_trial.arn
+  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  input    = jsonencode({})
+}
+
+resource "aws_cloudwatch_event_target" "automation_enqueue_reminders" {
+  rule     = aws_cloudwatch_event_rule.automation_enqueue_reminders.name
+  arn      = aws_cloudwatch_event_api_destination.automation_enqueue_reminders.arn
+  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  input    = jsonencode({})
+}
+
+# ─── WAF ──────────────────────────────────────────────────────────────────────
 
 resource "aws_wafv2_web_acl" "app" {
   name        = "${local.name}-waf"
   scope       = "REGIONAL"
   description = "WAF for ${local.name} ALB"
 
-  default_action {
-    allow {}
-  }
+  default_action { allow {} }
 
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 1
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesCommonRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${local.name}-common-rules"
-      sampled_requests_enabled   = true
-    }
+    override_action { none {} }
+    statement { managed_rule_group_statement { name = "AWSManagedRulesCommonRuleSet"; vendor_name = "AWS" } }
+    visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-common-rules"; sampled_requests_enabled = true }
   }
 
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
     priority = 2
-
-    override_action {
-      none {}
-    }
-
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${local.name}-bad-inputs"
-      sampled_requests_enabled   = true
-    }
+    override_action { none {} }
+    statement { managed_rule_group_statement { name = "AWSManagedRulesKnownBadInputsRuleSet"; vendor_name = "AWS" } }
+    visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-bad-inputs"; sampled_requests_enabled = true }
   }
 
   rule {
     name     = "RateLimitRule"
     priority = 3
-
-    action {
-      block {}
-    }
-
-    statement {
-      rate_based_statement {
-        limit              = 2000
-        aggregate_key_type = "IP"
-      }
-    }
-
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "${local.name}-rate-limit"
-      sampled_requests_enabled   = true
-    }
+    action { block {} }
+    statement { rate_based_statement { limit = 2000; aggregate_key_type = "IP" } }
+    visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-rate-limit"; sampled_requests_enabled = true }
   }
 
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${local.name}-waf"
-    sampled_requests_enabled   = true
-  }
+  visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-waf"; sampled_requests_enabled = true }
 }
 
 resource "aws_wafv2_web_acl_association" "app" {

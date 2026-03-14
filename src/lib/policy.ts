@@ -1,5 +1,5 @@
-
 import { prisma } from "@/lib/prisma";
+import { clampQuotaToPlan, quotasForPlan, resolveEffectivePlanTier } from "@/lib/billing-plan";
 import {
   redisGetJson,
   redisIncrementWithExpiry,
@@ -72,9 +72,31 @@ async function ensureQuotaPolicy(workspaceId: string): Promise<QuotaPolicy> {
     return cached;
   }
 
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
+    select: {
+      planTier: true,
+      trialEndsAt: true,
+      billing: {
+        select: {
+          status: true,
+        },
+      },
+    },
+  });
+  const effectivePlan = resolveEffectivePlanTier({
+    planTier: workspace?.planTier,
+    billingStatus: workspace?.billing?.status,
+    trialEndsAt: workspace?.trialEndsAt,
+  });
+  const defaultQuota = quotasForPlan(effectivePlan);
+
   const row = await prisma.workspaceQuota.upsert({
     where: { workspaceId },
-    create: { workspaceId },
+    create: {
+      workspaceId,
+      ...defaultQuota,
+    },
     update: {},
     select: {
       apiRequestsPerMinute: true,
@@ -85,8 +107,10 @@ async function ensureQuotaPolicy(workspaceId: string): Promise<QuotaPolicy> {
     },
   });
 
-  await redisSetJson<QuotaPolicy>(quotaCacheKey(workspaceId), row, QUOTA_CACHE_SECONDS);
-  return row;
+  const capped = clampQuotaToPlan(row, effectivePlan);
+
+  await redisSetJson<QuotaPolicy>(quotaCacheKey(workspaceId), capped, QUOTA_CACHE_SECONDS);
+  return capped;
 }
 
 async function loadDailyUsage(workspaceId: string): Promise<DailyUsage> {

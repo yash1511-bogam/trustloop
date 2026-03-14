@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
@@ -25,6 +26,12 @@ export function proxy(request: NextRequest): NextResponse {
 
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);
+  }
+
+  // X-Request-ID on all API responses
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    const requestId = request.headers.get("x-request-id") || randomUUID();
+    response.headers.set("X-Request-ID", requestId);
   }
 
   if (process.env.NODE_ENV === "production") {
