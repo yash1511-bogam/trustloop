@@ -5,6 +5,12 @@ function secureCookie(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
+function cookieDomain(): string | undefined {
+  const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  if (!root || root.startsWith("localhost")) return undefined;
+  return `.${root}`;
+}
+
 export function setSessionCookie(
   response: NextResponse,
   sessionToken: string,
@@ -18,6 +24,7 @@ export function setSessionCookie(
     secure: secureCookie(),
     expires: expiresAt,
     path: "/",
+    domain: cookieDomain(),
   });
 }
 
@@ -30,5 +37,6 @@ export function clearSessionCookie(response: NextResponse): void {
     secure: secureCookie(),
     expires: new Date(0),
     path: "/",
+    domain: cookieDomain(),
   });
 }
