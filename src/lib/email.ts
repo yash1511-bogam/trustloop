@@ -622,3 +622,70 @@ export async function sendTrialExpiredEmail(input: {
     ].join("\n"),
   });
 }
+
+/**
+ * Send an early access invite email with the user's invite code.
+ * This is NOT auto-sent — call it manually via the seed script or admin action.
+ */
+export async function sendEarlyAccessInviteEmail(input: {
+  toEmail: string;
+  userName: string;
+  inviteCode: string;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+  const registerLink = `${baseUrl}/register?invite_code=${encodeURIComponent(input.inviteCode)}`;
+
+  return sendLoggedEmail({
+    workspaceId: "system",
+    type: EmailNotificationType.EARLY_ACCESS_INVITE,
+    toEmail: input.toEmail,
+    subject: "Your TrustLoop invite code is ready",
+    html: [
+      `<p>Hi ${input.userName},</p>`,
+      "<p>Your early access request has been approved! Use the link below to create your TrustLoop workspace — your invite code will be filled in automatically.</p>",
+      `<p style="text-align:center;margin:24px 0;"><a href="${registerLink}" style="display:inline-block;padding:12px 32px;background:#06b6d4;color:#fff;font-weight:bold;border-radius:8px;text-decoration:none;">Create your workspace</a></p>`,
+      `<p>Or enter this invite code manually on the <a href="${baseUrl}/register">registration page</a>:</p>`,
+      `<p style="font-size:24px;font-weight:bold;letter-spacing:2px;padding:16px;background:#111;border-radius:8px;text-align:center;color:#fff;">${input.inviteCode}</p>`,
+      "<p>This code is single-use and tied to your email. Once you register, it cannot be reused.</p>",
+    ].join(""),
+    text: [
+      `Hi ${input.userName},`,
+      "Your early access request has been approved!",
+      `Register here (invite code auto-filled): ${registerLink}`,
+      "",
+      `Or enter this code manually: ${input.inviteCode}`,
+      `Registration page: ${baseUrl}/register`,
+      "This code is single-use and tied to your email.",
+    ].join("\n"),
+  });
+}
+
+export async function sendEarlyAccessConfirmationEmail(input: {
+  toEmail: string;
+  userName: string;
+}): Promise<LoggedEmailResult> {
+  return sendLoggedEmail({
+    workspaceId: "system",
+    type: EmailNotificationType.EARLY_ACCESS_CONFIRMATION,
+    toEmail: input.toEmail,
+    subject: "Welcome to the TrustLoop waitlist",
+    html: [
+      `<p>Hi ${input.userName},</p>`,
+      "<p>Thank you for signing up for early access to TrustLoop. Your spot on the waitlist is confirmed.</p>",
+      "<p>We're onboarding teams in small batches to ensure the best experience. When your invite is ready, we'll send you a personal invite code to create your workspace.</p>",
+      "<p>In the meantime, feel free to reply to this email if you have any questions.</p>",
+      "<p>— The TrustLoop Team</p>",
+    ].join(""),
+    text: [
+      `Hi ${input.userName},`,
+      "",
+      "Thank you for signing up for early access to TrustLoop. Your spot on the waitlist is confirmed.",
+      "",
+      "We're onboarding teams in small batches to ensure the best experience. When your invite is ready, we'll send you a personal invite code to create your workspace.",
+      "",
+      "In the meantime, feel free to reply to this email if you have any questions.",
+      "",
+      "— The TrustLoop Team",
+    ].join("\n"),
+  });
+}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { recordAuditLog } from "@/lib/audit";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { sendAuthOtpNoticeEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
@@ -56,6 +57,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (!account) {
       log.auth.warn("Login attempt for email with no workspace account", { email });
+    } else if (account.workspaceId) {
+      recordAuditLog({ workspaceId: account.workspaceId, actorUserId: account.id, action: "auth.login_start", targetType: "user", targetId: account.id, summary: `Login OTP requested for ${email}` }).catch(() => {});
     }
 
     if (account?.workspaceId) {

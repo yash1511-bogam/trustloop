@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -91,6 +92,8 @@ export async function GET(
   if (!incident) {
     return notFound("Incident not found.");
   }
+
+  recordAuditForAccess({ access: access.auth, request, action: "incident.export_pdf", targetType: "incident", targetId: id, summary: `Exported incident ${id} as PDF` }).catch(() => {});
 
   const format = request.nextUrl.searchParams.get("format") ?? "pdf";
   if (format !== "pdf") {

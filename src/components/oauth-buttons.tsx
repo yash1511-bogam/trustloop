@@ -9,6 +9,7 @@ type Props = {
   mode: Mode;
   workspaceName?: string;
   inviteToken?: string;
+  inviteCode?: string;
   turnstileToken?: string | null;
   disabled?: boolean;
 };
@@ -48,6 +49,7 @@ function oauthHref(input: {
   mode: Mode;
   workspaceName?: string;
   inviteToken?: string;
+  inviteCode?: string;
   turnstileToken?: string | null;
 }): string {
   const params = new URLSearchParams({
@@ -61,6 +63,9 @@ function oauthHref(input: {
   if (input.inviteToken) {
     params.set("inviteToken", input.inviteToken);
   }
+  if (input.inviteCode) {
+    params.set("inviteCode", input.inviteCode);
+  }
   if (input.turnstileToken) {
     params.set("turnstileToken", input.turnstileToken);
   }
@@ -72,6 +77,7 @@ export function OAuthButtons({
   mode,
   workspaceName,
   inviteToken,
+  inviteCode,
   turnstileToken,
   disabled,
 }: Props) {
@@ -83,10 +89,11 @@ export function OAuthButtons({
         mode,
         workspaceName,
         inviteToken,
+        inviteCode,
         turnstileToken,
       }),
     }));
-  }, [mode, workspaceName, inviteToken, turnstileToken]);
+  }, [mode, workspaceName, inviteToken, inviteCode, turnstileToken]);
 
   return (
     <div className="space-y-3">

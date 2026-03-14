@@ -98,6 +98,8 @@ enum EmailNotificationType {
   TRIAL_STARTED
   TRIAL_REMINDER
   TRIAL_EXPIRED
+  EARLY_ACCESS_INVITE
+  EARLY_ACCESS_CONFIRMATION
 }
 
 enum EmailDeliveryStatus {
@@ -224,6 +226,8 @@ model User {
   incidentTagAssignments       IncidentTagAssignment[]  @relation("IncidentTagAssigner")
   auditLogs                    AuditLog[]               @relation("AuditActorUser")
   sentInvites                  WorkspaceInvite[]        @relation("InviteSender")
+  createdInviteCodes           InviteCode[]             @relation("InviteCodeCreator")
+  usedInviteCode               InviteCode[]             @relation("InviteCodeRecipient")
   pushSubscriptions            PushSubscription[]
   authoredPostMortems          PostMortem[]             @relation("PostMortemAuthor")
   createdAt                    DateTime                 @default(now())
@@ -817,4 +821,28 @@ model StatusPageSubscriber {
 
   @@unique([workspaceId, email])
   @@index([workspaceId])
+}
+
+model EarlyAccessRequest {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  companyName   String?
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+model InviteCode {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  email           String
+  used            Boolean   @default(false)
+  usedAt          DateTime?
+  createdByUserId String?
+  createdByUser   User?     @relation("InviteCodeCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  usedByUserId    String?
+  usedByUser      User?     @relation("InviteCodeRecipient", fields: [usedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+
+  @@index([email])
 }

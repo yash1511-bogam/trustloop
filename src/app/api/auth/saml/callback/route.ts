@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appUrl } from "@/lib/app-url";
+import { recordAuditLog } from "@/lib/audit";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { setSessionCookie } from "@/lib/cookies";
@@ -247,6 +248,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     await ensureWorkspaceSlug(prisma, workspace.id, workspace.name);
+
+    recordAuditLog({ workspaceId: workspace.id, actorUserId: userId, action: "auth.saml_callback", targetType: "user", targetId: userId, summary: `SAML sign-in completed for ${normalizedEmail}` }).catch(() => {});
 
     const response = NextResponse.redirect(appUrl("/dashboard", request));
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { badRequest, forbidden } from "@/lib/http";
 import { sendWorkspaceUserPushNotifications } from "@/lib/push";
 
@@ -41,6 +42,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     },
   });
+
+  recordAuditForAccess({ access: access.auth, request, action: "notifications.push_test", targetType: "push", summary: "Sent test push notification" }).catch(() => {});
 
   return NextResponse.json({
     ok: true,

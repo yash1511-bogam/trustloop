@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { dodoClient } from "@/lib/dodo";
 import { forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
@@ -42,6 +43,8 @@ export async function GET(
   if (!workspaceBilling || workspaceBilling.dodoCheckoutSessionId !== sessionId) {
     return notFound("Billing session not found.");
   }
+
+  recordAuditForAccess({ access: access.auth, request, action: "billing.session_view", targetType: "billing", targetId: sessionId, summary: `Viewed billing session ${sessionId}` }).catch(() => {});
 
   try {
     const session = await dodoClient().checkoutSessions.retrieve(sessionId);

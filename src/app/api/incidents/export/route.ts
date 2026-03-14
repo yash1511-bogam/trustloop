@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -37,6 +38,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
     return forbidden();
   }
+
+  recordAuditForAccess({ access: access.auth, request, action: "incidents.export", targetType: "incident", summary: "Exported incidents CSV" }).catch(() => {});
 
   const format = request.nextUrl.searchParams.get("format") ?? "csv";
   if (format !== "csv") {

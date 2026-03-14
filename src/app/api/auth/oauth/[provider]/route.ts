@@ -15,6 +15,7 @@ const querySchema = z.object({
   intent: z.enum(["login", "register"]).optional(),
   workspaceName: z.string().min(2).max(80).optional(),
   inviteToken: z.string().uuid().optional(),
+  inviteCode: z.string().min(1).max(40).optional(),
   turnstileToken: z.string().min(1).optional(),
 });
 
@@ -31,6 +32,7 @@ function setOAuthContextCookie(
     intent: "login" | "register";
     workspaceName?: string;
     inviteToken?: string;
+    inviteCode?: string;
     nonce: string;
   },
 ): void {
@@ -106,6 +108,7 @@ export async function GET(
       intent,
       workspaceName: parsedQuery.data.workspaceName?.trim(),
       inviteToken: parsedQuery.data.inviteToken,
+      inviteCode: parsedQuery.data.inviteCode?.trim(),
       nonce: randomBytes(16).toString("hex"),
     });
     return response;
@@ -134,6 +137,7 @@ export async function GET(
       intent,
       workspaceName: parsedQuery.data.workspaceName?.trim(),
       inviteToken: parsedQuery.data.inviteToken,
+      inviteCode: parsedQuery.data.inviteCode?.trim(),
       nonce: randomBytes(16).toString("hex"),
     });
     return response;

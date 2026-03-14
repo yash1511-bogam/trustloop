@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { recordAuditLog } from "@/lib/audit";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { sendRecoveryInstructionsEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
@@ -56,6 +57,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   try {
     const otp = await sendEmailOtpLoginOrCreate(email);
+
+    recordAuditLog({ workspaceId: user.workspaceId, actorUserId: user.id, action: "auth.forgot_start", targetType: "user", targetId: user.id, summary: `Recovery OTP requested for ${email}` }).catch(() => {});
 
     sendRecoveryInstructionsEmail({
       workspaceId: user.workspaceId,

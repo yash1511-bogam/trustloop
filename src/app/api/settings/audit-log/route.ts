@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -8,6 +9,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (access.response) return access.response;
   const auth = access.auth;
   if (auth.kind !== "session") return forbidden();
+
+  recordAuditForAccess({ access: access.auth, request, action: "settings.audit_log_view", targetType: "audit_log", summary: "Viewed audit log" }).catch(() => {});
 
   const url = new URL(request.url);
   const cursor = url.searchParams.get("cursor");

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { recordAuditLog } from "@/lib/audit";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
@@ -15,6 +16,7 @@ const registerStartSchema = z.object({
   email: z.email().max(160),
   workspaceName: z.string().min(2).max(80),
   inviteToken: z.string().uuid().optional(),
+  inviteCode: z.string().min(1).max(40).optional(),
   turnstileToken: z.string().min(1).optional().nullable(),
 });
 
@@ -24,6 +26,7 @@ type PendingRegisterPayload = {
   workspaceName: string;
   expectedStytchUserId?: string;
   inviteToken?: string;
+  inviteCode?: string;
 };
 
 function pendingRegisterKey(methodId: string): string {
@@ -55,6 +58,26 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let workspaceName = parsed.data.workspaceName.trim();
   let inviteToken: string | undefined;
 
+  // Validate invite code from InviteCode table (early access gating)
+  if (!parsed.data.inviteToken) {
+    const inviteCodeValue = parsed.data.inviteCode?.trim();
+    if (!inviteCodeValue) {
+      return NextResponse.json({ error: "An invite code is required to register." }, { status: 400 });
+    }
+    const inviteCodeRecord = await prisma.inviteCode.findUnique({
+      where: { code: inviteCodeValue },
+    });
+    if (!inviteCodeRecord) {
+      return NextResponse.json({ error: "Invalid invite code." }, { status: 400 });
+    }
+    if (inviteCodeRecord.used) {
+      return NextResponse.json({ error: "This invite code has already been used." }, { status: 400 });
+    }
+    if (inviteCodeRecord.email.toLowerCase() !== email) {
+      return NextResponse.json({ error: "This invite code is not associated with your email." }, { status: 400 });
+    }
+  }
+
   if (parsed.data.inviteToken) {
     const invite = await prisma.workspaceInvite.findFirst({
       where: {
@@ -84,6 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     workspaceName = invite.workspace.name;
     inviteToken = invite.token;
+    recordAuditLog({ workspaceId: invite.workspaceId, action: "auth.register_start", targetType: "invite", targetId: invite.token, summary: `Registration via invite for ${email}` }).catch(() => {});
   }
 
   const existing = await prisma.user.findFirst({
@@ -122,6 +146,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         ? undefined
         : otp.stytchUserId,
       inviteToken,
+      inviteCode: parsed.data.inviteCode?.trim(),
     };
 
     await redisSetJson<PendingRegisterPayload>(

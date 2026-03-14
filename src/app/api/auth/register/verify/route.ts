@@ -27,6 +27,7 @@ type PendingRegisterPayload = {
   workspaceName: string;
   expectedStytchUserId?: string;
   inviteToken?: string;
+  inviteCode?: string;
 };
 
 function pendingRegisterKey(methodId: string): string {
@@ -222,6 +223,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     await redisDelete(pendingRegisterKey(parsed.data.methodId));
+
+    // Mark invite code as used
+    if (pending.inviteCode) {
+      await prisma.inviteCode.update({
+        where: { code: pending.inviteCode },
+        data: { used: true, usedAt: new Date(), usedByUserId: created.user.id },
+      });
+    }
 
     try {
       await sendWelcomeEmail({

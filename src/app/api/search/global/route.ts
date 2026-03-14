@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { badRequest } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -26,6 +27,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
   const parsed = searchSchema.safeParse(params);
   if (!parsed.success) return badRequest("Invalid search query.");
+
+  recordAuditForAccess({ access: access.auth, request, action: "search.global", targetType: "search", summary: `Global search: "${parsed.data.q}"` }).catch(() => {});
 
   const query = parsed.data.q.trim();
   const limit = parsed.data.limit;

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import { IncidentSeverity } from "@prisma/client";
 import { IncidentActions } from "@/components/incident-actions";
 import { requireAuth } from "@/lib/auth";
@@ -143,8 +144,8 @@ export default async function IncidentDetailPage({
                   ) : null}
                 </div>
                 <h4 className="mb-2 text-sm font-semibold text-slate-200">{incident.postMortem.title}</h4>
-                <div className="max-h-80 overflow-y-auto whitespace-pre-wrap text-sm text-neutral-400">
-                  {incident.postMortem.body}
+                <div className="prose prose-invert prose-sm max-h-80 overflow-y-auto text-neutral-400">
+                  <ReactMarkdown>{incident.postMortem.body}</ReactMarkdown>
                 </div>
               </div>
             ) : (

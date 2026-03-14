@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decryptSecret } from "@/lib/encryption";
+import { recordAuditLog } from "@/lib/audit";
 import { unauthorized } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       slackTeamId: teamId,
     },
     select: {
+      id: true,
       slackBotToken: true,
     },
   });
@@ -46,6 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       botToken: decryptSecret(workspace.slackBotToken),
       triggerId,
     });
+    recordAuditLog({ workspaceId: workspace.id, action: "slack.incident_command", targetType: "slack", summary: `Slack /incident command from team ${teamId}` }).catch(() => {});
   } catch (error) {
     log.app.error("Failed to open Slack incident modal", {
       teamId,

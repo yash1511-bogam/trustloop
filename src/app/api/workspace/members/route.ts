@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -12,6 +13,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (auth.kind !== "session") {
     return forbidden();
   }
+
+  recordAuditForAccess({ access: access.auth, request, action: "workspace.members_list", targetType: "workspace", summary: "Listed workspace members" }).catch(() => {});
 
   const members = await prisma.workspaceMembership.findMany({
     where: { workspaceId: auth.workspaceId },

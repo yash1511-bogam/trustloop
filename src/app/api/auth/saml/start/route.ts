@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appOrigin, appUrl } from "@/lib/app-url";
+import { recordAuditLog } from "@/lib/audit";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { prisma } from "@/lib/prisma";
@@ -134,6 +135,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       loginRedirectUrl: callbackUrl(request),
       signupRedirectUrl: callbackUrl(request),
     });
+    recordAuditLog({ workspaceId: workspace.id, action: "auth.saml_start", targetType: "workspace", targetId: workspace.id, summary: `SAML SSO initiated for ${parsedSlug.data}` }).catch(() => {});
     const response = NextResponse.redirect(startUrl);
     setSamlContextCookie(response, { intent });
     return response;

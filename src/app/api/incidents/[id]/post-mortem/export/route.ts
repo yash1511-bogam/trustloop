@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,8 @@ export async function GET(
   });
 
   if (!postMortem) return notFound("Post-mortem not found.");
+
+  recordAuditForAccess({ access: access.auth, request, action: "post_mortem.export_pdf", targetType: "post_mortem", targetId: id, summary: `Exported post-mortem for incident ${id}` }).catch(() => {});
 
   const doc = new PDFDocument({ margin: 48, size: "A4" });
   const chunks: Buffer[] = [];

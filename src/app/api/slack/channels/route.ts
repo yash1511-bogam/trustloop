@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { decryptSecret } from "@/lib/encryption";
 import { forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (auth.kind !== "session") {
     return forbidden();
   }
+
+  recordAuditForAccess({ access: access.auth, request, action: "slack.channels_list", targetType: "slack", summary: "Listed Slack channels" }).catch(() => {});
 
   const workspace = await prisma.workspace.findUnique({
     where: { id: auth.workspaceId },

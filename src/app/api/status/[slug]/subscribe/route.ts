@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
@@ -40,6 +41,8 @@ export async function POST(
     create: { workspaceId: workspace.id, email: parsed.data.email },
     update: {},
   });
+
+  recordAuditLog({ workspaceId: workspace.id, action: "status.subscribe", targetType: "status_page", summary: `Status page subscription for ${parsed.data.email}` }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

@@ -1,17 +1,16 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
 import { appUrl } from "@/lib/app-url";
-import { quotasForPlan } from "@/lib/billing-plan";
+import { recordAuditLog } from "@/lib/audit";
 import { setSessionCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { redisSetJson } from "@/lib/redis";
 import { workspaceUrl } from "@/lib/workspace-url";
 import { authenticateOAuthToken } from "@/lib/stytch";
-import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
-import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
+import { ensureWorkspaceSlug } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
@@ -30,13 +29,9 @@ const oauthContextSchema = z.object({
   intent: z.enum(["login", "register"]).optional(),
   workspaceName: z.string().min(2).max(80).optional(),
   inviteToken: z.string().uuid().optional(),
+  inviteCode: z.string().min(1).max(40).optional(),
   nonce: z.string().min(16),
 });
-
-function startOfUtcDay(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-}
 
 function buildRedirect(
   request: NextRequest,
@@ -100,14 +95,6 @@ function readOAuthContextCookie(request: NextRequest): z.infer<typeof oauthConte
   } catch {
     return null;
   }
-}
-
-function defaultWorkspaceName(name: string | null, email: string): string {
-  if (name?.trim()) {
-    return `${name.trim().slice(0, 48)} Workspace`;
-  }
-  const local = email.split("@")[0] ?? "Team";
-  return `${local.slice(0, 40)} Workspace`;
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
@@ -184,6 +171,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       await ensureWorkspaceSlug(prisma, existing.workspace.id, existing.workspace.name);
 
+      recordAuditLog({ workspaceId: existing.workspace.id, actorUserId: existing.id, action: "auth.oauth_login", targetType: "user", targetId: existing.id, summary: `OAuth sign-in for ${email}` }).catch(() => {});
+
       const slug = existing.workspace.slug ?? (await ensureWorkspaceSlug(prisma, existing.workspace.id, existing.workspace.name));
       const dashboardUrl = slug
         ? workspaceUrl("/dashboard", slug, existing.role)
@@ -201,83 +190,67 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    const created = await prisma.$transaction(async (tx) => {
-      if (inviteToken) {
-        const invite = await tx.workspaceInvite.findFirst({
-          where: {
-            token: inviteToken,
-            usedAt: null,
-            expiresAt: { gt: new Date() },
-          },
-          include: {
-            workspace: true,
-          },
+    // Validate invite code for new registrations (not workspace invites)
+    const inviteCodeValue = oauthContext?.inviteCode;
+    if (!inviteToken) {
+      if (!inviteCodeValue) {
+        return buildRedirectWithClear(request, "/register", {
+          email,
+          error: "invite_code_required",
         });
-
-        if (!invite) {
-          throw new Error("invite_invalid");
-        }
-        if (invite.email.toLowerCase() !== email) {
-          throw new Error("invite_email_mismatch");
-        }
-
-        const user = existing
-          ? await tx.user.update({
-              where: { id: existing.id },
-              data: {
-                workspaceId: invite.workspaceId,
-                role: invite.role,
-                stytchUserId:
-                  existing.stytchUserId !== authResult.stytchUserId
-                    ? authResult.stytchUserId
-                    : undefined,
-              },
-            })
-          : await tx.user.create({
-              data: {
-                workspaceId: invite.workspaceId,
-                email,
-                name: authResult.name?.trim() || "Team Member",
-                role: invite.role,
-                stytchUserId: authResult.stytchUserId,
-              },
-            });
-
-        await ensureWorkspaceMembership(tx, {
-          workspaceId: invite.workspaceId,
-          userId: user.id,
-          role: invite.role,
-        });
-
-        await tx.workspaceInvite.update({
-          where: {
-            id: invite.id,
-          },
-          data: {
-            usedAt: new Date(),
-          },
-        });
-
-        await ensureWorkspaceSlug(tx, invite.workspace.id, invite.workspace.name);
-
-        return { user, workspace: invite.workspace };
       }
+      const inviteCodeRecord = await prisma.inviteCode.findUnique({
+        where: { code: inviteCodeValue },
+      });
+      if (!inviteCodeRecord || inviteCodeRecord.used || inviteCodeRecord.email.toLowerCase() !== email) {
+        return buildRedirectWithClear(request, "/register", {
+          email,
+          error: "invite_code_invalid",
+        });
+      }
+    }
 
-      const workspace = await createWorkspaceWithGeneratedSlug(
-        tx,
-        workspaceName?.trim() || defaultWorkspaceName(authResult.name, email),
-        {
-          planTier: "starter",
+    // For new registrations without a workspace invite, redirect to collect company name
+    if (!inviteToken) {
+      const sessionKey = `auth:oauth-pending:${crypto.randomUUID()}`;
+      await redisSetJson(sessionKey, {
+        sessionToken: authResult.sessionToken,
+        expiresAt: authResult.expiresAt.toISOString(),
+        stytchUserId: authResult.stytchUserId,
+        email,
+        name: authResult.name?.trim() || "",
+        inviteCode: inviteCodeValue,
+        existingUserId: existing?.id,
+      }, 15 * 60);
+      const key = sessionKey.replace("auth:oauth-pending:", "");
+      return buildRedirectWithClear(request, "/register/complete", { session: key });
+    }
+
+    const created = await prisma.$transaction(async (tx) => {
+      const invite = await tx.workspaceInvite.findFirst({
+        where: {
+          token: inviteToken,
+          usedAt: null,
+          expiresAt: { gt: new Date() },
         },
-      );
-      const starterQuota = quotasForPlan("starter");
+        include: {
+          workspace: true,
+        },
+      });
+
+      if (!invite) {
+        throw new Error("invite_invalid");
+      }
+      if (invite.email.toLowerCase() !== email) {
+        throw new Error("invite_email_mismatch");
+      }
 
       const user = existing
         ? await tx.user.update({
             where: { id: existing.id },
             data: {
-              workspaceId: workspace.id,
-              role: Role.OWNER,
+              workspaceId: invite.workspaceId,
+              role: invite.role,
               stytchUserId:
                 existing.stytchUserId !== authResult.stytchUserId
                   ? authResult.stytchUserId
@@ -286,65 +259,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           })
         : await tx.user.create({
             data: {
-              workspaceId: workspace.id,
+              workspaceId: invite.workspaceId,
               email,
-              name: authResult.name?.trim() || "Workspace Owner",
-              role: Role.OWNER,
+              name: authResult.name?.trim() || "Team Member",
+              role: invite.role,
               stytchUserId: authResult.stytchUserId,
             },
           });
 
-      await tx.workflowSetting.createMany({
-        data: [
-          {
-            workspaceId: workspace.id,
-            workflowType: WorkflowType.INCIDENT_TRIAGE,
-            provider: AiProvider.OPENAI,
-            model: "gpt-4o-mini",
-          },
-          {
-            workspaceId: workspace.id,
-            workflowType: WorkflowType.CUSTOMER_UPDATE,
-            provider: AiProvider.OPENAI,
-            model: "gpt-4o-mini",
-          },
-        ],
-      });
-
-      await tx.workspaceQuota.create({
-        data: {
-          workspaceId: workspace.id,
-          ...starterQuota,
-        },
-      });
-
-      await tx.workspaceDailyUsage.upsert({
-        where: {
-          workspaceId_usageDate: {
-            workspaceId: workspace.id,
-            usageDate: startOfUtcDay(),
-          },
-        },
-        create: {
-          workspaceId: workspace.id,
-          usageDate: startOfUtcDay(),
-        },
-        update: {},
-      });
-
       await ensureWorkspaceMembership(tx, {
-        workspaceId: workspace.id,
+        workspaceId: invite.workspaceId,
         userId: user.id,
-        role: Role.OWNER,
+        role: invite.role,
       });
 
-      await createSampleIncidentsForWorkspace(tx, {
-        workspaceId: workspace.id,
-        ownerUserId: user.id,
+      await tx.workspaceInvite.update({
+        where: { id: invite.id },
+        data: { usedAt: new Date() },
       });
 
-      return { user, workspace };
+      await ensureWorkspaceSlug(tx, invite.workspace.id, invite.workspace.name);
+
+      return { user, workspace: invite.workspace };
     });
+
+    recordAuditLog({ workspaceId: created.workspace.id, actorUserId: created.user.id, action: "auth.oauth_register", targetType: "user", targetId: created.user.id, summary: `OAuth registration for ${created.user.email}` }).catch(() => {});
 
     try {
       await sendWelcomeEmail({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { featureGateError } from "@/lib/feature-gate";
 import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
 import { forbidden } from "@/lib/http";
@@ -21,6 +22,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "on_call"))) {
     return NextResponse.json({ error: featureGateError("on_call") }, { status: 403 });
   }
+
+  recordAuditForAccess({ access: access.auth, request, action: "settings.on_call_view", targetType: "workspace", targetId: auth.workspaceId, summary: "Viewed on-call schedule" }).catch(() => {});
 
   const [quota, managers] = await Promise.all([
     prisma.workspaceQuota.findUnique({

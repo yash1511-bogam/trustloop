@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { AiProvider } from "@prisma/client";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { last4 } from "@/lib/encryption";
 import { featureGateError } from "@/lib/feature-gate";
 import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     provider: parsed.data.provider,
     apiKey: parsed.data.apiKey.trim(),
   });
+
+  recordAuditForAccess({ access: access.auth, request, action: "settings.ai_key_test", targetType: "ai_key", summary: `Tested ${parsed.data.provider} key (${result.success ? "ok" : "failed"})` }).catch(() => {});
 
   await prisma.aiProviderKey.updateMany({
     where: {

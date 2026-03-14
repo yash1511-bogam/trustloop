@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { buildEventHashChain } from "@/lib/compliance-hash";
 import { featureGateError } from "@/lib/feature-gate";
 import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
@@ -35,6 +36,8 @@ export async function GET(
     },
   });
   if (!incident) return notFound("Incident not found.");
+
+  recordAuditForAccess({ access: access.auth, request, action: "incident.compliance_export", targetType: "incident", targetId: id, summary: `Compliance export for incident ${id}` }).catch(() => {});
 
   const hashChain = buildEventHashChain(incident.events);
   const hashMap = new Map(hashChain.map((h) => [h.eventId, h]));

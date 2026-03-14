@@ -22,6 +22,8 @@ const oauthErrorMessages: Record<string, string> = {
   invite_invalid: "Invite is invalid or expired.",
   invite_email_mismatch: "Invite email does not match the OAuth account.",
   oauth_failed: "OAuth registration failed. Try again or use email OTP.",
+  invite_code_required: "An invite code is required to register. Request early access first.",
+  invite_code_invalid: "Invalid or already used invite code.",
   saml_not_configured:
     "SAML SSO is not configured for this environment. Ask your admin to enable Stytch B2B SSO.",
   saml_workspace_not_found:
@@ -50,6 +52,7 @@ export default async function RegisterPage({
     token?: string;
     provider?: string;
     stytch_token_type?: string;
+    invite_code?: string;
   }>;
 }) {
   const params = await redirectToOAuthCallbackIfPresent(searchParams);
@@ -135,6 +138,7 @@ export default async function RegisterPage({
             initialEmail={inviteEmail}
             initialWorkspaceName={invite?.workspace.name}
             inviteToken={invite?.token}
+            initialInviteCode={params.invite_code}
             turnstileSiteKey={siteKey}
           />
 

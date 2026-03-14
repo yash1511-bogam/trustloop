@@ -13,6 +13,7 @@ import {
 type Props = {
   initialWorkspaceName?: string;
   initialEmail?: string;
+  initialInviteCode?: string;
   inviteToken?: string;
   turnstileSiteKey?: string | null;
 };
@@ -20,10 +21,11 @@ type Props = {
 export function RegisterForm({
   initialWorkspaceName,
   initialEmail,
+  initialInviteCode,
   inviteToken,
   turnstileSiteKey,
 }: Props) {
-  useCleanUrl(["error", "email", "token", "provider", "stytch_token_type"]);
+  useCleanUrl(["error", "email", "token", "provider", "stytch_token_type", "invite_code"]);
   const router = useRouter();
   const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [workspaceName, setWorkspaceName] = useState(initialWorkspaceName ?? "");
@@ -32,6 +34,7 @@ export function RegisterForm({
   const [methodId, setMethodId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState(initialInviteCode ?? "");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +58,7 @@ export function RegisterForm({
         name,
         email,
         inviteToken: inviteToken ?? undefined,
+        inviteCode: inviteCode || undefined,
         turnstileToken,
       }),
     });
@@ -119,6 +123,7 @@ export function RegisterForm({
         mode="register"
         workspaceName={workspaceName}
         inviteToken={inviteToken}
+        inviteCode={inviteCode || undefined}
         turnstileToken={turnstileToken}
         disabled={submitting || (requiresTurnstile && !turnstileToken)}
       />
@@ -178,6 +183,21 @@ export function RegisterForm({
             onChange={(event) => setEmail(event.target.value)}
             disabled={Boolean(initialEmail)}
             required
+          />
+        </div>
+
+        <div>
+          <label className="sr-only" htmlFor="invite-code">
+            Invite code
+          </label>
+          <input
+            id="invite-code"
+            className="input"
+            placeholder="Invite code"
+            value={inviteCode}
+            onChange={(event) => setInviteCode(event.target.value)}
+            disabled={Boolean(inviteToken)}
+            required={!inviteToken}
           />
         </div>
 

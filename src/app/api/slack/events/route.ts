@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { IncidentChannel, IncidentSeverity } from "@prisma/client";
 import { createIncidentRecord } from "@/lib/incident-service";
+import { recordAuditLog } from "@/lib/audit";
 import { unauthorized } from "@/lib/http";
 import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
@@ -118,6 +119,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   await consumeWorkspaceQuota(workspace.id, "incidents", 1);
   await refreshWorkspaceReadModels(workspace.id);
+
+  recordAuditLog({ workspaceId: workspace.id, action: "slack.incident_created", targetType: "incident", summary: `Incident created via Slack modal: "${title}"` }).catch(() => {});
 
   return NextResponse.json({ response_action: "clear" });
 }
