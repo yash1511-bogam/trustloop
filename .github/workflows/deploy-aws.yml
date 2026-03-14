@@ -107,7 +107,7 @@ jobs:
         run: |
           terraform plan \
             -var="image_tag=${{ github.sha }}" \
-            -var="acm_certificate_arn=arn:aws:acm:us-east-1:448049831890:certificate/24e48897-62c5-43e0-b079-f6b1d1cce9d2" \
+            -var="acm_certificate_arn=arn:aws:acm:us-east-1:448049831890:certificate/8d33e617-0870-42c9-912d-dd46490afdf3" \
             -var="public_app_url_override=https://trustloop.yashbogam.me" \
             -out=tfplan
 
