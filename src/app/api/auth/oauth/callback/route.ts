@@ -378,10 +378,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "oauth_failed";
+    const stack = error instanceof Error ? error.stack : undefined;
     log.auth.error("OAuth callback failed", {
       intent,
       inviteToken: inviteToken ?? null,
       error: message,
+      stack,
+      statusCode: (error as { status_code?: number }).status_code,
     });
     const errorCode =
       message === "invite_invalid" ||

@@ -45,7 +45,7 @@ function oauthStartMode(): StytchAuthMode {
   return mode === "b2b_discovery" || mode === "b2b-discovery" ? "b2b_discovery" : "b2c";
 }
 
-function isStubAuthEnabled(): boolean {
+export function isStubAuthEnabled(): boolean {
   return process.env.TRUSTLOOP_STUB_AUTH === "1";
 }
 
@@ -650,6 +650,8 @@ export async function authenticateSamlToken(token: string): Promise<SamlAuthResu
   };
 }
 
+export const STUB_OAUTH_TOKEN_PREFIX = "stub-oauth:";
+
 export async function authenticateOAuthToken(
   token: string,
   options?: {
@@ -657,6 +659,23 @@ export async function authenticateOAuthToken(
     organizationName?: string;
   },
 ): Promise<OAuthAuthResult> {
+  if (isStubAuthEnabled()) {
+    const provider = token.startsWith(STUB_OAUTH_TOKEN_PREFIX)
+      ? token.slice(STUB_OAUTH_TOKEN_PREFIX.length)
+      : "oauth";
+    const email = `${provider}-user@example.com`;
+    const stytchUserId = stubStytchUserIdForEmail(email);
+    const expiresAt = new Date(Date.now() + STYTCH_SESSION_DURATION_MINUTES * 60 * 1000);
+    return {
+      stytchUserId,
+      sessionToken: stubSessionTokenForUserId(stytchUserId, expiresAt),
+      sessionJwt: "stub-session-jwt",
+      expiresAt,
+      email,
+      name: `Stub ${provider.charAt(0).toUpperCase() + provider.slice(1)} User`,
+    };
+  }
+
   if (oauthStartMode() === "b2b_discovery") {
     return authenticateOAuthTokenB2BDiscovery({
       token,

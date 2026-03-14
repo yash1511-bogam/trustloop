@@ -268,7 +268,7 @@ resource "aws_iam_role_policy" "task_queue_access" {
     Version   = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl", "sqs:SendMessage"]
+      Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl", "sqs:SendMessage", "sqs:CreateQueue"]
       Resource = aws_sqs_queue.reminder.arn
     }]
   })

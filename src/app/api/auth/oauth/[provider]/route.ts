@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { appOrigin, appUrl } from "@/lib/app-url";
 import { badRequest } from "@/lib/http";
-import { buildOAuthStartUrl, OAuthProvider } from "@/lib/stytch";
+import { buildOAuthStartUrl, isStubAuthEnabled, OAuthProvider, STUB_OAUTH_TOKEN_PREFIX } from "@/lib/stytch";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
@@ -96,6 +96,20 @@ export async function GET(
   }
 
   const intent = parsedQuery.data.intent ?? "login";
+
+  if (isStubAuthEnabled()) {
+    const target = callbackUrl({ request });
+    const stubUrl = `${target}?token=${STUB_OAUTH_TOKEN_PREFIX}${parsedProvider.data}`;
+    const response = NextResponse.redirect(stubUrl);
+    setOAuthContextCookie(response, {
+      provider: parsedProvider.data,
+      intent,
+      workspaceName: parsedQuery.data.workspaceName?.trim(),
+      inviteToken: parsedQuery.data.inviteToken,
+      nonce: randomBytes(16).toString("hex"),
+    });
+    return response;
+  }
 
   const turnstile = await verifyTurnstileToken({
     request,

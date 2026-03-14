@@ -80,6 +80,11 @@ export function reminderQueueUrl(): string {
 }
 
 export async function ensureReminderQueue(): Promise<string> {
+  const existing = process.env.REMINDER_QUEUE_URL?.trim();
+  if (existing) {
+    return existing;
+  }
+
   const sqs = client();
   const response = await sqs.send(
     new CreateQueueCommand({
