@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { HoverLink } from "./hover-link";
 import { usePathname } from "next/navigation";
 import { Blocks, Bot, Building2, CreditCard, ScrollText, Users } from "lucide-react";
 
@@ -40,14 +40,14 @@ export function SettingsNav({ compact = false }: SettingsNavProps) {
             : "app-nav-link";
 
         return (
-          <Link
+          <HoverLink
             className={linkClass}
             href={item.href}
             key={item.href}
           >
             <item.icon className="h-4 w-4" />
             <span>{item.label}</span>
-          </Link>
+          </HoverLink>
         );
       })}
     </nav>

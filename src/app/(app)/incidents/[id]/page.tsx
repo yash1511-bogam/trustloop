@@ -59,6 +59,10 @@ export default async function IncidentDetailPage({
 
   const planTier = await getWorkspacePlanTier(auth.user.workspaceId);
 
+  const aiKeyCount = await prisma.aiProviderKey.count({
+    where: { workspaceId: auth.user.workspaceId, isActive: true },
+  });
+
   return (
     <>
       <section className="surface p-6">
@@ -122,6 +126,7 @@ export default async function IncidentDetailPage({
               ownerUserId={incident.ownerUserId}
               owners={owners}
               planTier={planTier}
+              hasAiKeys={aiKeyCount > 0}
             />
           </section>
 
@@ -144,7 +149,10 @@ export default async function IncidentDetailPage({
               </div>
             ) : (
               <p className="text-sm text-neutral-500">
-                No post-mortem yet. Use the &quot;Generate Post-Mortem&quot; action to create one with AI.
+                No post-mortem yet.{" "}
+                {aiKeyCount > 0
+                  ? "Use the \"Generate Post-Mortem\" action to create one with AI."
+                  : <Link className="text-amber-400 hover:underline" href="/settings/ai">Add an AI key</Link>}
               </p>
             )}
           </section>

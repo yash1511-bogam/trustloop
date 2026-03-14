@@ -3,6 +3,7 @@ import { BillingSubscriptionStatus, Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { buildBillingCheckoutPayload } from "@/lib/billing-checkout";
 import { badRequest, forbidden } from "@/lib/http";
 import { dodoClient, dodoProductIdForPlan } from "@/lib/dodo";
@@ -94,6 +95,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         status: BillingSubscriptionStatus.PENDING,
       },
     });
+
+    recordAuditForAccess({
+      access: auth,
+      request,
+      action: "billing.checkout_started",
+      targetType: "WorkspaceBilling",
+      targetId: workspace.id,
+      summary: `Checkout started for ${plan} plan`,
+    }).catch(() => {});
 
     return NextResponse.json({
       checkoutUrl: session.checkout_url,

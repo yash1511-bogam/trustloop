@@ -331,9 +331,7 @@ export function BillingPanel({
   usage,
 }: Props) {
   useCleanUrl(["billing"]);
-  const [selectedPlan, setSelectedPlan] = useState<PlanTier>(
-    planTier === "free" ? "starter" : planTier,
-  );
+  const [selectedPlan, setSelectedPlan] = useState<PlanTier>(planTier);
   const [couponCode, setCouponCode] = useState(billing?.discountCode ?? "");
   const [previewCouponCode, setPreviewCouponCode] = useState<string | null>(
     normalizeCoupon(billing?.discountCode),

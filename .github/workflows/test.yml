@@ -103,7 +103,8 @@ jobs:
           STYTCH_SECRET: secret-test-placeholder
           STYTCH_ENV: test
           KEY_ENCRYPTION_SECRET: placeholder-key-encryption-secret-123456789
-        run: pnpm run test
+          VITEST_STRICT_COVERAGE: "1"
+        run: pnpm run test:coverage
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium

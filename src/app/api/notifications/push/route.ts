@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { badRequest, forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import {
@@ -85,6 +86,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     userAgent: parsed.data.userAgent ?? request.headers.get("user-agent"),
   });
 
+  recordAuditForAccess({
+    access: auth,
+    request,
+    action: "push_subscription.created",
+    targetType: "PushSubscription",
+    summary: "Push notification subscription enabled",
+  }).catch(() => {});
+
   return NextResponse.json({ ok: true }, { status: 201 });
 }
 
@@ -110,6 +119,14 @@ export async function DELETE(request: NextRequest): Promise<NextResponse> {
     userId: auth.user.id,
     endpoint: parsed.data.endpoint,
   });
+
+  recordAuditForAccess({
+    access: auth,
+    request,
+    action: "push_subscription.deleted",
+    targetType: "PushSubscription",
+    summary: "Push notification subscription disabled",
+  }).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

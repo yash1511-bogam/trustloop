@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { BillingSubscriptionStatus } from "@prisma/client";
 import { TrialPlanSelector } from "@/components/trial-plan-selector";
 import { requireAuth } from "@/lib/auth";
-import { isTrialActive, resolveEffectivePlanTier } from "@/lib/billing-plan";
+import { isTrialActive } from "@/lib/billing-plan";
 import { prisma } from "@/lib/prisma";
 
 export default async function ChoosePlanPage() {
@@ -14,13 +14,9 @@ export default async function ChoosePlanPage() {
   });
 
   const status = workspace?.billing?.status;
-  const effectivePlan = resolveEffectivePlanTier({
-    planTier: workspace?.planTier,
-    billingStatus: status,
-    trialEndsAt: workspace?.trialEndsAt,
-  });
+
+  // Already has active billing or trial — go to dashboard
   if (
-    effectivePlan !== "free" ||
     isTrialActive(workspace?.trialEndsAt) ||
     status === BillingSubscriptionStatus.ACTIVE ||
     status === BillingSubscriptionStatus.TRIALING ||

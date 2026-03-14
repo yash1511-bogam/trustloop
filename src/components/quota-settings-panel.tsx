@@ -28,12 +28,21 @@ type NumericQuotaField =
   | "reminderIntervalHoursP2"
   | "onCallRotationIntervalHours";
 
+type PlanLimits = {
+  apiRequestsPerMinute: number;
+  incidentsPerDay: number;
+  triageRunsPerDay: number;
+  customerUpdatesPerDay: number;
+  reminderEmailsPerDay: number;
+};
+
 type Props = {
   initialQuota: Quota;
   planTier: string;
+  planLimits?: PlanLimits;
 };
 
-export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
+export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props) {
   const [quota, setQuota] = useState<Quota>(initialQuota);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -68,9 +77,10 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
 
   function updateField(field: NumericQuotaField, value: string) {
     const parsed = Number(value);
+    const max = (planLimits as Record<string, number> | undefined)?.[field] ?? 1000000;
     setQuota((prev) => ({
       ...prev,
-      [field]: Number.isFinite(parsed) ? Math.max(0, Math.floor(parsed)) : 0,
+      [field]: Number.isFinite(parsed) ? Math.max(0, Math.min(Math.floor(parsed), max)) : 0,
     }));
   }
 
@@ -85,12 +95,15 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
 
       <div className="grid gap-8 md:grid-cols-2">
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">API requests / minute</span>
+          <span className="text-sm font-medium text-slate-300">
+            API requests / minute
+            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.apiRequestsPerMinute.toLocaleString()})</span>}
+          </span>
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
             min={1}
-            max={1000000}
+            max={planLimits?.apiRequestsPerMinute ?? 1000000}
             value={quota.apiRequestsPerMinute}
             onChange={(event) => updateField("apiRequestsPerMinute", event.target.value)}
             disabled={loading}
@@ -98,12 +111,15 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">Incidents / day</span>
+          <span className="text-sm font-medium text-slate-300">
+            Incidents / day
+            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.incidentsPerDay.toLocaleString()})</span>}
+          </span>
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
             min={1}
-            max={1000000}
+            max={planLimits?.incidentsPerDay ?? 1000000}
             value={quota.incidentsPerDay}
             onChange={(event) => updateField("incidentsPerDay", event.target.value)}
             disabled={loading}
@@ -111,12 +127,15 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">AI triage runs / day</span>
+          <span className="text-sm font-medium text-slate-300">
+            AI triage runs / day
+            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.triageRunsPerDay.toLocaleString()})</span>}
+          </span>
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
             min={1}
-            max={1000000}
+            max={planLimits?.triageRunsPerDay ?? 1000000}
             value={quota.triageRunsPerDay}
             onChange={(event) => updateField("triageRunsPerDay", event.target.value)}
             disabled={loading}
@@ -124,12 +143,15 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">Customer update drafts / day</span>
+          <span className="text-sm font-medium text-slate-300">
+            Customer update drafts / day
+            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.customerUpdatesPerDay.toLocaleString()})</span>}
+          </span>
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
             min={1}
-            max={1000000}
+            max={planLimits?.customerUpdatesPerDay ?? 1000000}
             value={quota.customerUpdatesPerDay}
             onChange={(event) => updateField("customerUpdatesPerDay", event.target.value)}
             disabled={loading}
@@ -137,12 +159,15 @@ export function QuotaSettingsPanel({ initialQuota, planTier }: Props) {
         </label>
 
         <label className="block space-y-3 md:col-span-2">
-          <span className="text-sm font-medium text-slate-300">Reminder emails / day</span>
+          <span className="text-sm font-medium text-slate-300">
+            Reminder emails / day
+            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.reminderEmailsPerDay.toLocaleString()})</span>}
+          </span>
           <input
             className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
             type="number"
             min={1}
-            max={1000000}
+            max={planLimits?.reminderEmailsPerDay ?? 1000000}
             value={quota.reminderEmailsPerDay}
             onChange={(event) => updateField("reminderEmailsPerDay", event.target.value)}
             disabled={loading}

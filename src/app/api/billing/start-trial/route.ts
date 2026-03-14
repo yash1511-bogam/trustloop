@@ -3,6 +3,7 @@ import { BillingSubscriptionStatus, Role } from "@prisma/client";
 import { z } from "zod";
 import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { applyWorkspacePlan } from "@/lib/billing-plan-server";
 import { sendTrialStartedEmail } from "@/lib/email";
 import { badRequest, forbidden } from "@/lib/http";
@@ -72,6 +73,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   await applyWorkspacePlan({ prisma, workspaceId: workspace.id, planTier: plan });
+
+  recordAuditForAccess({
+    access: auth,
+    request,
+    action: "billing.trial_started",
+    targetType: "WorkspaceBilling",
+    targetId: workspace.id,
+    summary: `Trial started for ${plan} plan`,
+  }).catch(() => {});
 
   try {
     await sendTrialStartedEmail({

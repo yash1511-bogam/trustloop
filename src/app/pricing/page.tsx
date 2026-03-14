@@ -1,24 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Check, X } from "lucide-react";
 
 const plans = [
   {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Explore TrustLoop with basic incident management.",
-    cta: "Start Free",
-    ctaHref: "/register",
-    highlighted: false,
-    limits: ["5 incidents/day", "10 triage runs/day", "1 team member", "Community support"],
-    features: { aiKeys: false, webhooks: false, apiKeys: false, compliance: false, saml: false, onCall: false, postMortems: true, statusPage: true, slackIntegration: false },
-  },
-  {
     name: "Starter",
-    price: "$49",
-    period: "/month",
+    monthly: 49,
+    annual: 39,
     description: "For smaller teams that need dependable incident coordination.",
-    cta: "Start Trial",
+    cta: "Start 14-day trial",
     ctaHref: "/register",
     highlighted: false,
     limits: ["50 incidents/day", "100 triage runs/day", "Unlimited members", "Email support"],
@@ -26,10 +18,10 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$149",
-    period: "/month",
+    monthly: 149,
+    annual: 119,
     description: "Balanced limits for teams running incident ops daily.",
-    cta: "Start Trial",
+    cta: "Start 14-day trial",
     ctaHref: "/register",
     highlighted: true,
     limits: ["200 incidents/day", "300 triage runs/day", "Unlimited members", "Priority support"],
@@ -37,8 +29,8 @@ const plans = [
   },
   {
     name: "Enterprise",
-    price: "Custom",
-    period: "",
+    monthly: 0,
+    annual: 0,
     description: "For large or regulated teams needing high throughput and access controls.",
     cta: "Contact Sales",
     ctaHref: "mailto:sales@trustloop.dev",
@@ -60,15 +52,37 @@ const featureLabels: Record<string, string> = {
   slackIntegration: "Slack Integration",
 };
 
+function formatPrice(plan: typeof plans[number], annual: boolean): string {
+  if (plan.monthly === 0) return "Custom";
+  return annual ? `$${plan.annual}` : `$${plan.monthly}`;
+}
+
 export default function PricingPage() {
+  const [annual, setAnnual] = useState(false);
+
   return (
-    <main className="mx-auto max-w-6xl px-6 py-20">
+    <main className="mx-auto max-w-5xl px-6 py-20">
       <div className="mb-16 text-center">
         <h1 className="text-4xl font-bold text-slate-100">Simple, transparent pricing</h1>
-        <p className="mt-4 text-lg text-neutral-400">Start free. Upgrade when you need more.</p>
+        <p className="mt-4 text-lg text-neutral-400">Every plan starts with a 14-day free trial. No credit card required.</p>
+
+        <div className="mt-6 inline-flex items-center gap-3 rounded-full bg-neutral-800 p-1">
+          <button
+            onClick={() => setAnnual(false)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${!annual ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setAnnual(true)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${annual ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`}
+          >
+            Annual <span className="text-xs text-green-400">Save 20%</span>
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3">
         {plans.map((plan) => (
           <div
             key={plan.name}
@@ -81,9 +95,15 @@ export default function PricingPage() {
             )}
             <h3 className="text-xl font-semibold text-slate-100">{plan.name}</h3>
             <div className="mt-2">
-              <span className="text-3xl font-bold text-slate-100">{plan.price}</span>
-              {plan.period && <span className="text-neutral-500">{plan.period}</span>}
+              <span className="text-3xl font-bold text-slate-100">{formatPrice(plan, annual)}</span>
+              {plan.monthly > 0 && <span className="text-neutral-500">/month</span>}
+              {annual && plan.monthly > 0 && (
+                <span className="ml-2 text-sm text-neutral-500 line-through">${plan.monthly}</span>
+              )}
             </div>
+            {annual && plan.monthly > 0 && (
+              <p className="mt-1 text-xs text-green-400">Billed ${plan.annual * 12}/year</p>
+            )}
             <p className="mt-3 text-sm text-neutral-400">{plan.description}</p>
 
             <Link

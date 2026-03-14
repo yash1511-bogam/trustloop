@@ -48,7 +48,7 @@ export default function BillingPolicyPage() {
           </p>
           <p className="mt-3">
             If billing remains unresolved through the recovery window, TrustLoop may automatically downgrade
-            the workspace to the Free plan to keep access aligned with the last successfully paid state.
+            the workspace to the Starter plan to keep access aligned with the last successfully paid state.
           </p>
         </div>
 

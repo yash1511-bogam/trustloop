@@ -2,7 +2,7 @@ import { IntegrationsPanel } from "@/components/integrations-panel";
 import { OnCallPanel } from "@/components/on-call-panel";
 import { PushNotificationPanel } from "@/components/push-notification-panel";
 import { QuotaSettingsPanel } from "@/components/quota-settings-panel";
-import { UpgradeGate } from "@/components/upgrade-gate";
+import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
 import { WorkspaceSettingsPanel } from "@/components/workspace-settings-panel";
 import { requireAuth } from "@/lib/auth";
 import {
@@ -20,26 +20,10 @@ export default async function SettingsWorkspacePage() {
   const workspace = await prisma.workspace.findUniqueOrThrow({
     where: { id: auth.user.workspaceId },
     select: {
-      id: true,
-      name: true,
-      slug: true,
-      statusPageEnabled: true,
-      planTier: true,
-      slackChannelId: true,
-      slackTeamId: true,
-      samlEnabled: true,
-      samlMetadataUrl: true,
-      samlOrganizationId: true,
-      samlConnectionId: true,
-      complianceMode: true,
-      trialEndsAt: true,
-      billing: {
-        select: {
-          dodoCustomerId: true,
-          dodoSubscriptionId: true,
-          status: true,
-        },
-      },
+      id: true, name: true, slug: true, statusPageEnabled: true, planTier: true,
+      slackChannelId: true, slackTeamId: true, samlEnabled: true, samlMetadataUrl: true,
+      samlOrganizationId: true, samlConnectionId: true, complianceMode: true, trialEndsAt: true,
+      billing: { select: { dodoCustomerId: true, dodoSubscriptionId: true, status: true } },
     },
   });
   const effectivePlanTier = resolveEffectivePlanTier({
@@ -50,15 +34,13 @@ export default async function SettingsWorkspacePage() {
   const [quota, integrations] = await Promise.all([
     prisma.workspaceQuota.upsert({
       where: { workspaceId: auth.user.workspaceId },
-      create: {
-        workspaceId: auth.user.workspaceId,
-        ...quotasForPlan(effectivePlanTier),
-      },
+      create: { workspaceId: auth.user.workspaceId, ...quotasForPlan(effectivePlanTier) },
       update: {},
     }),
     listWebhookIntegrations(auth.user.workspaceId),
   ]);
   const clampedQuota = clampQuotaToPlan(quota, effectivePlanTier);
+  const planLimits = quotasForPlan(effectivePlanTier);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const endpoints = {
@@ -71,6 +53,9 @@ export default async function SettingsWorkspacePage() {
     ARIZE_PHOENIX: `${appUrl}/api/webhooks/arize-phoenix`,
     BRAINTRUST: `${appUrl}/api/webhooks/braintrust`,
   } as const;
+
+  const onCallAllowed = isFeatureAllowed(effectivePlanTier, "on_call");
+  const webhooksAllowed = isFeatureAllowed(effectivePlanTier, "webhooks");
 
   return (
     <div className="space-y-16 pt-8">
@@ -101,15 +86,19 @@ export default async function SettingsWorkspacePage() {
               onCallRotationAnchorAt: quota.onCallRotationAnchorAt.toISOString(),
             }}
             planTier={effectivePlanTier}
+            planLimits={planLimits}
           />
         </div>
       </section>
 
       <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100">On-call rotation</h2>
+        <h2 className="text-xl font-medium text-slate-100">
+          On-call rotation
+          <PlanBadge allowed={onCallAllowed} planLabel="Pro" />
+        </h2>
         <p className="mt-1 text-sm text-neutral-500">View the current on-call schedule and rotation status for P1 escalations.</p>
         <div className="mt-8">
-          <UpgradeGate allowed={isFeatureAllowed(effectivePlanTier, "on_call")} planLabel="Pro">
+          <UpgradeGate allowed={onCallAllowed} planLabel="Pro">
             <OnCallPanel />
           </UpgradeGate>
         </div>
@@ -120,26 +109,23 @@ export default async function SettingsWorkspacePage() {
         <p className="mt-1 text-sm text-neutral-500">Control public status page, Slack connect/channel, and enterprise SSO metadata.</p>
         <div className="mt-8">
           <WorkspaceSettingsPanel
-            workspace={{
-              ...workspace,
-              planTier: effectivePlanTier,
-            }}
+            workspace={{ ...workspace, planTier: effectivePlanTier }}
             slackInstallUrl={slackInstallUrl(auth.user.workspaceId)}
           />
         </div>
       </section>
 
       <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100">Webhook integrations</h2>
+        <h2 className="text-xl font-medium text-slate-100">
+          Webhook integrations
+          <PlanBadge allowed={webhooksAllowed} planLabel="Starter" />
+        </h2>
         <p className="mt-1 text-sm text-neutral-500">
           Configure signed inbound webhook secrets for Datadog, PagerDuty, Sentry, and AI observability tools.
         </p>
         <div className="mt-8">
-          <UpgradeGate allowed={isFeatureAllowed(effectivePlanTier, "webhooks")} planLabel="Starter">
-            <IntegrationsPanel
-              endpoints={endpoints}
-              initialIntegrations={integrations}
-            />
+          <UpgradeGate allowed={webhooksAllowed} planLabel="Starter">
+            <IntegrationsPanel endpoints={endpoints} initialIntegrations={integrations} />
           </UpgradeGate>
         </div>
       </section>

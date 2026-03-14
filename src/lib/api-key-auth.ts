@@ -76,6 +76,9 @@ export async function authenticateApiKeyRequest(
       await redisDelete(cacheKey);
       return null;
     }
+    if (!isRequestIpAllowed(request, cached.identity.ipAllowlist)) {
+      return null;
+    }
     return cached.identity;
   }
 

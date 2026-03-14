@@ -143,9 +143,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }
 
       const workspace = await createWorkspaceWithGeneratedSlug(tx, pending.workspaceName, {
-        planTier: "free",
+        planTier: "starter",
       });
-      const freeQuota = quotasForPlan("free");
+      const starterQuota = quotasForPlan("starter");
 
       const createdUser = existing
         ? await tx.user.update({
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       await tx.workspaceQuota.create({
         data: {
           workspaceId: workspace.id,
-          ...freeQuota,
+          ...starterQuota,
         },
       });
 

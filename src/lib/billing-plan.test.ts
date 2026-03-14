@@ -12,22 +12,14 @@ describe("normalizePlanTier", () => {
   it("returns starter for 'starter'", () => expect(normalizePlanTier("starter")).toBe("starter"));
   it("returns enterprise for 'enterprise'", () => expect(normalizePlanTier("enterprise")).toBe("enterprise"));
   it("returns pro for 'pro'", () => expect(normalizePlanTier("pro")).toBe("pro"));
-  it("returns free for 'free'", () => expect(normalizePlanTier("free")).toBe("free"));
-  it("defaults to free for null", () => expect(normalizePlanTier(null)).toBe("free"));
-  it("defaults to free for undefined", () => expect(normalizePlanTier(undefined)).toBe("free"));
-  it("defaults to free for unknown string", () => expect(normalizePlanTier("premium")).toBe("free"));
-  it("defaults to free for empty string", () => expect(normalizePlanTier("")).toBe("free"));
+  it("defaults to starter for null", () => expect(normalizePlanTier(null)).toBe("starter"));
+  it("defaults to starter for undefined", () => expect(normalizePlanTier(undefined)).toBe("starter"));
+  it("defaults to starter for unknown string", () => expect(normalizePlanTier("premium")).toBe("starter"));
+  it("defaults to starter for 'free' (no longer valid)", () => expect(normalizePlanTier("free")).toBe("starter"));
 });
 
 describe("quotasForPlan", () => {
-  it("free has lowest quotas", () => {
-    const q = quotasForPlan("free");
-    expect(q.apiRequestsPerMinute).toBe(60);
-    expect(q.incidentsPerDay).toBe(5);
-    expect(q.triageRunsPerDay).toBe(10);
-  });
-
-  it("starter has low quotas", () => {
+  it("starter has base quotas", () => {
     const q = quotasForPlan("starter");
     expect(q.apiRequestsPerMinute).toBe(120);
     expect(q.incidentsPerDay).toBe(50);
@@ -50,13 +42,11 @@ describe("quotasForPlan", () => {
     expect(q.triageRunsPerDay).toBe(1_000_000);
   });
 
-  it("free < starter < pro < enterprise for all metrics", () => {
-    const f = quotasForPlan("free");
+  it("starter < pro < enterprise for all metrics", () => {
     const s = quotasForPlan("starter");
     const p = quotasForPlan("pro");
     const e = quotasForPlan("enterprise");
-    for (const key of Object.keys(f) as (keyof typeof f)[]) {
-      expect(f[key]).toBeLessThan(s[key]);
+    for (const key of Object.keys(s) as (keyof typeof s)[]) {
       expect(s[key]).toBeLessThan(p[key]);
       expect(p[key]).toBeLessThan(e[key]);
     }
@@ -98,12 +88,12 @@ describe("trial and effective plan helpers", () => {
     expect(isTrialActive(new Date(Date.now() - 60_000))).toBe(false);
   });
 
-  it("resolves paid plans to free when billing is inactive and trial has ended", () => {
+  it("resolves to starter when billing is inactive and trial has ended", () => {
     expect(resolveEffectivePlanTier({
       planTier: "pro",
       billingStatus: "CANCELED",
       trialEndsAt: new Date(Date.now() - 60_000),
-    })).toBe("free");
+    })).toBe("starter");
   });
 
   it("keeps active paid plans when billing is active", () => {

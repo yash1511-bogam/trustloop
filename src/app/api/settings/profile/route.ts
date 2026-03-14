@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
+import { recordAuditForAccess } from "@/lib/audit";
 import { badRequest, forbidden } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -71,6 +72,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       role: true,
     },
   });
+
+  recordAuditForAccess({
+    access: auth,
+    request,
+    action: "profile.updated",
+    targetType: "User",
+    targetId: auth.user.id,
+    summary: "Profile updated",
+  }).catch(() => {});
 
   return NextResponse.json({ profile: updated });
 }

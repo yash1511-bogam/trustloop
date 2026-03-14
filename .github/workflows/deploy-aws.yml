@@ -74,10 +74,94 @@ jobs:
           REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/ci-queue
         run: pnpm run build
 
-  # ── Stage 2: Deploy to AWS (only after CI passes) ──────────────────────────
-  deploy:
-    name: Deploy
+  # ── Stage 2: Deploy to staging (only after CI passes) ────────────────────────
+  deploy-staging:
+    name: Deploy Staging
     needs: ci
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      TF_IN_AUTOMATION: true
+      TF_WORKSPACE: staging
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform Init
+        working-directory: infra/terraform
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infra/terraform
+        run: |
+          terraform plan \
+            -var="image_tag=${{ github.sha }}" \
+            -var="project_name=trustloop-staging" \
+            -var="public_app_url_override=${{ vars.STAGING_APP_URL }}" \
+            -var="acm_certificate_arn=${{ secrets.STAGING_ACM_CERT_ARN }}" \
+            -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve tfplan
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REPO="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/trustloop-staging"
+          IMAGE="$ECR_REPO:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      - name: Update ECS services
+        working-directory: infra/terraform
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          aws ecs update-service --cluster "$CLUSTER" --service "trustloop-staging-web" --force-new-deployment --no-cli-pager
+          aws ecs update-service --cluster "$CLUSTER" --service "trustloop-staging-worker" --force-new-deployment --no-cli-pager
+
+      - name: Run Prisma migrations
+        working-directory: infra/terraform
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          TASK_DEF=$(terraform output -raw web_task_definition_arn)
+          SUBNETS=$(terraform output -raw ecs_subnet_ids_csv)
+          SG=$(terraform output -raw ecs_security_group_id)
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$CLUSTER" --launch-type FARGATE --task-definition "$TASK_DEF" \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=DISABLED}" \
+            --overrides '{"containerOverrides":[{"name":"trustloop-staging-web","command":["pnpm","run","prisma:deploy"]}]}' \
+            --query 'tasks[0].taskArn' --output text)
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+            --query 'tasks[0].containers[0].exitCode' --output text)
+          if [ "$EXIT_CODE" != "0" ]; then echo "::error::Migration failed"; exit 1; fi
+
+      - name: Smoke test staging
+        working-directory: infra/terraform
+        run: |
+          APP_URL=$(terraform output -raw app_url)
+          for ep in /api/health /login; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL$ep" || echo "000")
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then echo "✅ $ep → $STATUS"
+            else echo "❌ $ep → $STATUS"; exit 1; fi
+          done
+
+  # ── Stage 3: Deploy to production (only after staging passes) ──────────────
+  deploy:
+    name: Deploy Production
+    needs: deploy-staging
     runs-on: ubuntu-latest
     environment: production
     env:

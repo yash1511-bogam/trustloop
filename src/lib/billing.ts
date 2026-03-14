@@ -402,11 +402,11 @@ export async function processDodoWebhookEvent(input: {
       },
     });
 
-    if (currentPlanTier !== "free") {
+    if (currentPlanTier !== "starter") {
       await applyWorkspacePlan({
         prisma,
         workspaceId,
-        planTier: "free",
+        planTier: "starter",
       });
       shouldSendPlanCanceled = true;
     }
@@ -580,7 +580,7 @@ export async function processPastDueBillingAutomation(input?: {
       await applyWorkspacePlan({
         prisma,
         workspaceId: row.workspaceId,
-        planTier: "free",
+        planTier: "starter",
       });
 
       await prisma.workspaceBilling.update({

@@ -1,4 +1,4 @@
-export type PlanTier = "free" | "starter" | "pro" | "enterprise";
+export type PlanTier = "starter" | "pro" | "enterprise";
 
 export type PlanQuota = {
   apiRequestsPerMinute: number;
@@ -17,24 +17,14 @@ export type PlanDefinition = {
 };
 
 export function normalizePlanTier(value: string | null | undefined): PlanTier {
-  if (value === "free") return "free";
   if (value === "starter" || value === "pro" || value === "enterprise") {
     return value;
   }
-  return "free";
+  // No free plan — default to starter (trial)
+  return "starter";
 }
 
 export function quotasForPlan(planTier: PlanTier): PlanQuota {
-  if (planTier === "free") {
-    return {
-      apiRequestsPerMinute: 60,
-      incidentsPerDay: 5,
-      triageRunsPerDay: 10,
-      customerUpdatesPerDay: 5,
-      reminderEmailsPerDay: 10,
-    };
-  }
-
   if (planTier === "starter") {
     return {
       apiRequestsPerMinute: 120,
@@ -55,6 +45,7 @@ export function quotasForPlan(planTier: PlanTier): PlanQuota {
     };
   }
 
+  // pro
   return {
     apiRequestsPerMinute: 240,
     incidentsPerDay: 200,
@@ -80,15 +71,9 @@ export function isTrialActive(
   trialEndsAt: Date | string | null | undefined,
   now = new Date(),
 ): boolean {
-  if (!trialEndsAt) {
-    return false;
-  }
-
+  if (!trialEndsAt) return false;
   const parsed = trialEndsAt instanceof Date ? trialEndsAt : new Date(trialEndsAt);
-  if (Number.isNaN(parsed.getTime())) {
-    return false;
-  }
-
+  if (Number.isNaN(parsed.getTime())) return false;
   return parsed.getTime() > now.getTime();
 }
 
@@ -98,9 +83,6 @@ export function resolveEffectivePlanTier(input: {
   trialEndsAt?: Date | string | null | undefined;
 }, now = new Date()): PlanTier {
   const normalized = normalizePlanTier(input.planTier);
-  if (normalized === "free") {
-    return "free";
-  }
 
   if (isTrialActive(input.trialEndsAt, now)) {
     return normalized;
@@ -110,33 +92,19 @@ export function resolveEffectivePlanTier(input: {
     return normalized;
   }
 
-  return "free";
+  // No active billing or trial — default to starter (limited trial experience)
+  return "starter";
 }
 
 export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
   const quota = quotasForPlan(planTier);
-
-  if (planTier === "free") {
-    return {
-      id: "free",
-      label: "Free",
-      headline: "Get started",
-      description: "Explore TrustLoop with basic incident management. No credit card required.",
-      bullets: [
-        `${quota.incidentsPerDay} incidents per day`,
-        `${quota.triageRunsPerDay} triage runs per day`,
-        `${quota.customerUpdatesPerDay} customer updates per day`,
-        "Community support",
-      ],
-    };
-  }
 
   if (planTier === "starter") {
     return {
       id: "starter",
       label: "Starter",
       headline: "Lean coverage",
-      description: "For smaller teams that need dependable incident coordination without a heavy monthly footprint.",
+      description: "For smaller teams that need dependable incident coordination. Start with a 14-day free trial.",
       bullets: [
         `${quota.incidentsPerDay.toLocaleString("en-US")} incidents per day`,
         `${quota.triageRunsPerDay.toLocaleString("en-US")} triage runs per day`,
@@ -174,4 +142,3 @@ export function planDefinitionFor(planTier: PlanTier): PlanDefinition {
     ],
   };
 }
-

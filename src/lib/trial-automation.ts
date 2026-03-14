@@ -59,7 +59,7 @@ export async function processTrialAutomation(input?: { now?: Date }): Promise<{
           trialEndsAt: null,
         },
       });
-      await applyWorkspacePlan({ prisma, workspaceId: ws.id, planTier: "free" });
+      await applyWorkspacePlan({ prisma, workspaceId: ws.id, planTier: "starter" });
       await prisma.workspaceBilling.update({
         where: { workspaceId: ws.id },
         data: { status: BillingSubscriptionStatus.CANCELED, canceledAt: now, cancelReason: "trial_expired" },

@@ -161,7 +161,7 @@ model Workspace {
   name                            String
   slug                            String?                       @unique
   statusPageEnabled               Boolean                       @default(false)
-  planTier                        String                        @default("free")
+  planTier                        String                        @default("starter")
   timezone                        String                        @default("UTC")
   customerUpdateApprovalsRequired Int                           @default(1)
   slackBotToken                   String?

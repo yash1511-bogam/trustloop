@@ -27,7 +27,7 @@ const entries: Entry[] = [
     version: "1.3.0",
     changes: [
       "Post-mortem generation with AI (OpenAI, Gemini, Anthropic)",
-      "Free tier with quota-based gating",
+      "14-day trial with quota-based gating",
       "Security headers (CSP, HSTS, X-Frame-Options)",
       "SSRF protection for outbound webhooks",
       "Audit log system with UI at /settings/audit",

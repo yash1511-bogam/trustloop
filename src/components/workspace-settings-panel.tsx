@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldCheck, Slack } from "lucide-react";
-import { UpgradeGate } from "@/components/upgrade-gate";
+import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 
 type WorkspaceSettings = {
@@ -183,7 +183,10 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
 
         <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise">
           <label className="block space-y-3 md:col-span-2">
-            <span className="text-sm font-medium text-slate-300">SAML metadata URL (enterprise)</span>
+            <span className="text-sm font-medium text-slate-300">
+              SAML metadata URL
+              <PlanBadge allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise" />
+            </span>
             <input
               className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
               value={form.samlMetadataUrl}

@@ -1,9 +1,10 @@
 "use client";
 
 import { AIIncidentCategory, IncidentSeverity, IncidentStatus } from "@prisma/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { UpgradeGate } from "@/components/upgrade-gate";
+import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 
 type Props = {
@@ -18,6 +19,7 @@ type Props = {
     role: string;
   }>;
   planTier: string;
+  hasAiKeys: boolean;
 };
 
 export function IncidentActions({
@@ -28,6 +30,7 @@ export function IncidentActions({
   ownerUserId,
   owners,
   planTier,
+  hasAiKeys,
 }: Props) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -253,17 +256,20 @@ export function IncidentActions({
         <button className="btn btn-primary" disabled={saving} onClick={saveMeta} type="button">
           Save fields
         </button>
-        <button className="btn btn-ghost" disabled={saving} onClick={runTriage} type="button">
-          Run AI triage
-        </button>
-        <button
-          className="btn btn-ghost"
-          disabled={saving}
-          onClick={generateCustomerUpdate}
-          type="button"
-        >
-          Draft customer update
-        </button>
+        {hasAiKeys ? (
+          <>
+            <button className="btn btn-ghost" disabled={saving} onClick={runTriage} type="button">
+              Run AI triage
+            </button>
+            <button className="btn btn-ghost" disabled={saving} onClick={generateCustomerUpdate} type="button">
+              Draft customer update
+            </button>
+          </>
+        ) : (
+          <Link className="btn btn-ghost text-amber-400 border-amber-500/30" href="/settings/ai">
+            Add AI key to enable triage & drafts
+          </Link>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -302,6 +308,7 @@ export function IncidentActions({
               target="_blank"
             >
               Download incident PDF
+              <PlanBadge allowed={isFeatureAllowed(planTier, "compliance")} planLabel="Pro" />
             </a>
           </UpgradeGate>
         </div>

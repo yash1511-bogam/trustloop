@@ -267,10 +267,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         tx,
         workspaceName?.trim() || defaultWorkspaceName(authResult.name, email),
         {
-          planTier: "free",
+          planTier: "starter",
         },
       );
-      const freeQuota = quotasForPlan("free");
+      const starterQuota = quotasForPlan("starter");
 
       const user = existing
         ? await tx.user.update({
@@ -314,7 +314,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       await tx.workspaceQuota.create({
         data: {
           workspaceId: workspace.id,
-          ...freeQuota,
+          ...starterQuota,
         },
       });
 

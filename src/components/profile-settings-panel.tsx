@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { UpgradeGate } from "@/components/upgrade-gate";
+import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 
 type Profile = {
@@ -84,7 +84,10 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
         <UpgradeGate allowed={isFeatureAllowed(planTier, "on_call")} planLabel="Pro">
           <label className="block space-y-3 md:col-span-2">
             <span className="text-sm font-medium text-slate-300 flex items-center justify-between">
-              On-call phone
+              <span>
+                On-call phone
+                <PlanBadge allowed={isFeatureAllowed(planTier, "on_call")} planLabel="Pro" />
+              </span>
               <span className="text-xs text-neutral-500 font-normal border border-white/10 px-2 py-0.5 rounded-full">E.164 Format</span>
             </span>
             <input

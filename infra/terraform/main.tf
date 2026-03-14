@@ -211,10 +211,20 @@ resource "aws_security_group" "ecs" {
 
 # ─── SQS / ECR / CloudWatch ──────────────────────────────────────────────────
 
+resource "aws_sqs_queue" "reminder_dlq" {
+  name                      = "${local.name}-incident-reminders-dlq"
+  message_retention_seconds = 1209600
+}
+
 resource "aws_sqs_queue" "reminder" {
   name                       = "${local.name}-incident-reminders"
   visibility_timeout_seconds = 60
   message_retention_seconds  = 1209600
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.reminder_dlq.arn
+    maxReceiveCount     = 5
+  })
 }
 
 resource "aws_ecr_repository" "app" {
@@ -270,7 +280,7 @@ resource "aws_iam_role_policy" "task_queue_access" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl", "sqs:SendMessage", "sqs:CreateQueue"]
-      Resource = aws_sqs_queue.reminder.arn
+      Resource = [aws_sqs_queue.reminder.arn, aws_sqs_queue.reminder_dlq.arn]
     }]
   })
 }
@@ -513,6 +523,19 @@ resource "aws_cloudwatch_metric_alarm" "worker_scale_in" {
   threshold           = var.worker_scale_in_threshold
   dimensions          = { QueueName = aws_sqs_queue.reminder.name }
   alarm_actions       = [aws_appautoscaling_policy.worker_scale_in.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
+  alarm_name          = "${local.name}-dlq-messages"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 0
+  dimensions          = { QueueName = aws_sqs_queue.reminder_dlq.name }
+  alarm_description   = "Messages in DLQ indicate repeated processing failures"
 }
 
 # ─── EventBridge Cron Automation ──────────────────────────────────────────────
