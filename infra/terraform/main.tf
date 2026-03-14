@@ -8,6 +8,7 @@ data "aws_secretsmanager_secret_version" "app" {
 
 locals {
   name        = var.project_name
+  has_https   = var.acm_certificate_arn != ""
   app_secrets = jsondecode(data.aws_secretsmanager_secret_version.app.secret_string)
 
   app_url = var.public_app_url_override != "" ? var.public_app_url_override : (
@@ -538,10 +539,11 @@ resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
   alarm_description   = "Messages in DLQ indicate repeated processing failures"
 }
 
-# ─── EventBridge Cron Automation ──────────────────────────────────────────────
+# ─── EventBridge Cron Automation (requires HTTPS / ACM cert) ──────────────────
 
 resource "aws_iam_role" "eventbridge_api_destination" {
-  name = "${local.name}-eventbridge-api-dest-role"
+  count = local.has_https ? 1 : 0
+  name  = "${local.name}-eventbridge-api-dest-role"
   assume_role_policy = jsonencode({
     Version   = "2012-10-17"
     Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "events.amazonaws.com" } }]
@@ -549,6 +551,7 @@ resource "aws_iam_role" "eventbridge_api_destination" {
 }
 
 resource "aws_cloudwatch_event_connection" "automation_ai_key_health" {
+  count              = local.has_https ? 1 : 0
   name               = "${local.name}-ai-key-health"
   authorization_type = "API_KEY"
   auth_parameters {
@@ -560,6 +563,7 @@ resource "aws_cloudwatch_event_connection" "automation_ai_key_health" {
 }
 
 resource "aws_cloudwatch_event_connection" "automation_billing_grace" {
+  count              = local.has_https ? 1 : 0
   name               = "${local.name}-billing-grace"
   authorization_type = "API_KEY"
   auth_parameters {
@@ -571,6 +575,7 @@ resource "aws_cloudwatch_event_connection" "automation_billing_grace" {
 }
 
 resource "aws_cloudwatch_event_connection" "automation_enqueue_reminders" {
+  count              = local.has_https ? 1 : 0
   name               = "${local.name}-enqueue-reminders"
   authorization_type = "API_KEY"
   auth_parameters {
@@ -582,100 +587,113 @@ resource "aws_cloudwatch_event_connection" "automation_enqueue_reminders" {
 }
 
 resource "aws_cloudwatch_event_api_destination" "ai_key_health" {
+  count                            = local.has_https ? 1 : 0
   name                             = "${local.name}-ai-key-health"
-  connection_arn                   = aws_cloudwatch_event_connection.automation_ai_key_health.arn
+  connection_arn                   = aws_cloudwatch_event_connection.automation_ai_key_health[0].arn
   invocation_endpoint              = "${local.app_url}/api/automation/verify-ai-keys"
   http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
 resource "aws_cloudwatch_event_api_destination" "billing_grace" {
+  count                            = local.has_https ? 1 : 0
   name                             = "${local.name}-billing-grace"
-  connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace.arn
+  connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace[0].arn
   invocation_endpoint              = "${local.app_url}/api/automation/process-billing-grace"
   http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
 resource "aws_cloudwatch_event_api_destination" "process_trial" {
+  count                            = local.has_https ? 1 : 0
   name                             = "${local.name}-process-trial"
-  connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace.arn
+  connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace[0].arn
   invocation_endpoint              = "${local.app_url}/api/automation/process-trial"
   http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
 resource "aws_cloudwatch_event_api_destination" "enqueue_reminders" {
+  count                            = local.has_https ? 1 : 0
   name                             = "${local.name}-enqueue-reminders"
-  connection_arn                   = aws_cloudwatch_event_connection.automation_enqueue_reminders.arn
+  connection_arn                   = aws_cloudwatch_event_connection.automation_enqueue_reminders[0].arn
   invocation_endpoint              = "${local.app_url}/api/automation/enqueue-reminders"
   http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
 resource "aws_iam_role_policy" "eventbridge_invoke" {
-  name = "${local.name}-eventbridge-invoke"
-  role = aws_iam_role.eventbridge_api_destination.id
+  count = local.has_https ? 1 : 0
+  name  = "${local.name}-eventbridge-invoke"
+  role  = aws_iam_role.eventbridge_api_destination[0].id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = ["events:InvokeApiDestination"]
       Resource = [
-        aws_cloudwatch_event_api_destination.ai_key_health.arn,
-        aws_cloudwatch_event_api_destination.billing_grace.arn,
-        aws_cloudwatch_event_api_destination.process_trial.arn,
-        aws_cloudwatch_event_api_destination.enqueue_reminders.arn,
+        aws_cloudwatch_event_api_destination.ai_key_health[0].arn,
+        aws_cloudwatch_event_api_destination.billing_grace[0].arn,
+        aws_cloudwatch_event_api_destination.process_trial[0].arn,
+        aws_cloudwatch_event_api_destination.enqueue_reminders[0].arn,
       ]
     }]
   })
 }
 
 resource "aws_cloudwatch_event_rule" "ai_key_health" {
+  count               = local.has_https ? 1 : 0
   name                = "${local.name}-ai-key-health"
   schedule_expression = "cron(0 2 * * ? *)"
 }
 
 resource "aws_cloudwatch_event_rule" "billing_grace" {
+  count               = local.has_https ? 1 : 0
   name                = "${local.name}-billing-grace"
   schedule_expression = "cron(0 */6 * * ? *)"
 }
 
 resource "aws_cloudwatch_event_rule" "process_trial" {
+  count               = local.has_https ? 1 : 0
   name                = "${local.name}-process-trial"
   schedule_expression = "cron(0 1 * * ? *)"
 }
 
 resource "aws_cloudwatch_event_rule" "enqueue_reminders" {
+  count               = local.has_https ? 1 : 0
   name                = "${local.name}-enqueue-reminders"
   schedule_expression = "cron(*/30 * * * ? *)"
 }
 
 resource "aws_cloudwatch_event_target" "ai_key_health" {
-  rule     = aws_cloudwatch_event_rule.ai_key_health.name
-  arn      = aws_cloudwatch_event_api_destination.ai_key_health.arn
-  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  count    = local.has_https ? 1 : 0
+  rule     = aws_cloudwatch_event_rule.ai_key_health[0].name
+  arn      = aws_cloudwatch_event_api_destination.ai_key_health[0].arn
+  role_arn = aws_iam_role.eventbridge_api_destination[0].arn
   input    = jsonencode({})
 }
 
 resource "aws_cloudwatch_event_target" "billing_grace" {
-  rule     = aws_cloudwatch_event_rule.billing_grace.name
-  arn      = aws_cloudwatch_event_api_destination.billing_grace.arn
-  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  count    = local.has_https ? 1 : 0
+  rule     = aws_cloudwatch_event_rule.billing_grace[0].name
+  arn      = aws_cloudwatch_event_api_destination.billing_grace[0].arn
+  role_arn = aws_iam_role.eventbridge_api_destination[0].arn
   input    = jsonencode({})
 }
 
 resource "aws_cloudwatch_event_target" "process_trial" {
-  rule     = aws_cloudwatch_event_rule.process_trial.name
-  arn      = aws_cloudwatch_event_api_destination.process_trial.arn
-  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  count    = local.has_https ? 1 : 0
+  rule     = aws_cloudwatch_event_rule.process_trial[0].name
+  arn      = aws_cloudwatch_event_api_destination.process_trial[0].arn
+  role_arn = aws_iam_role.eventbridge_api_destination[0].arn
   input    = jsonencode({})
 }
 
 resource "aws_cloudwatch_event_target" "enqueue_reminders" {
-  rule     = aws_cloudwatch_event_rule.enqueue_reminders.name
-  arn      = aws_cloudwatch_event_api_destination.enqueue_reminders.arn
-  role_arn = aws_iam_role.eventbridge_api_destination.arn
+  count    = local.has_https ? 1 : 0
+  rule     = aws_cloudwatch_event_rule.enqueue_reminders[0].name
+  arn      = aws_cloudwatch_event_api_destination.enqueue_reminders[0].arn
+  role_arn = aws_iam_role.eventbridge_api_destination[0].arn
   input    = jsonencode({})
 }
 
