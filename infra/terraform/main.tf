@@ -1,6 +1,3 @@
-data "aws_caller_identity" "current" {}
-data "aws_availability_zones" "available" {}
-
 data "aws_secretsmanager_secret" "app" {
   name = "${var.project_name}/production"
 }
@@ -17,7 +14,6 @@ locals {
     var.acm_certificate_arn != "" ? "https://${aws_lb.app.dns_name}" : "http://${aws_lb.app.dns_name}"
   )
 
-  # Plain env vars — these override any same-named key from Secrets Manager
   common_env = [
     { name = "NODE_ENV", value = "production" },
     { name = "LOG_MODE", value = "console" },
@@ -29,7 +25,6 @@ locals {
     { name = "REMINDER_STALE_MINUTES", value = "240" },
   ]
 
-  # Keys to pull from trustloop/production secret
   secret_keys = [
     "AI_KEY_HEALTH_CRON_SECRET",
     "BILLING_AUTOMATION_CRON_SECRET",
@@ -74,7 +69,7 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  tags = { Name = "${local.name}-vpc" }
+  tags                 = { Name = "${local.name}-vpc" }
 }
 
 resource "aws_internet_gateway" "igw" {
@@ -87,7 +82,7 @@ resource "aws_subnet" "public_a" {
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, 1)
   availability_zone       = data.aws_availability_zones.available.names[0]
   map_public_ip_on_launch = true
-  tags = { Name = "${local.name}-public-a" }
+  tags                    = { Name = "${local.name}-public-a" }
 }
 
 resource "aws_subnet" "public_b" {
@@ -95,21 +90,21 @@ resource "aws_subnet" "public_b" {
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, 2)
   availability_zone       = data.aws_availability_zones.available.names[1]
   map_public_ip_on_launch = true
-  tags = { Name = "${local.name}-public-b" }
+  tags                    = { Name = "${local.name}-public-b" }
 }
 
 resource "aws_subnet" "private_a" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, 11)
   availability_zone = data.aws_availability_zones.available.names[0]
-  tags = { Name = "${local.name}-private-a" }
+  tags              = { Name = "${local.name}-private-a" }
 }
 
 resource "aws_subnet" "private_b" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, 12)
   availability_zone = data.aws_availability_zones.available.names[1]
-  tags = { Name = "${local.name}-private-b" }
+  tags              = { Name = "${local.name}-private-b" }
 }
 
 resource "aws_route_table" "public" {
@@ -171,9 +166,26 @@ resource "aws_security_group" "alb" {
   description = "ALB ingress"
   vpc_id      = aws_vpc.main.id
 
-  ingress { from_port = 80;  to_port = 80;  protocol = "tcp"; cidr_blocks = ["0.0.0.0/0"] }
-  ingress { from_port = 443; to_port = 443; protocol = "tcp"; cidr_blocks = ["0.0.0.0/0"] }
-  egress  { from_port = 0;   to_port = 0;   protocol = "-1";  cidr_blocks = ["0.0.0.0/0"] }
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 resource "aws_security_group" "ecs" {
@@ -181,11 +193,22 @@ resource "aws_security_group" "ecs" {
   description = "ECS tasks"
   vpc_id      = aws_vpc.main.id
 
-  ingress { from_port = 3000; to_port = 3000; protocol = "tcp"; security_groups = [aws_security_group.alb.id] }
-  egress  { from_port = 0;    to_port = 0;    protocol = "-1";  cidr_blocks = ["0.0.0.0/0"] }
+  ingress {
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-# ─── SQS ──────────────────────────────────────────────────────────────────────
+# ─── SQS / ECR / CloudWatch ──────────────────────────────────────────────────
 
 resource "aws_sqs_queue" "reminder" {
   name                       = "${local.name}-incident-reminders"
@@ -193,15 +216,13 @@ resource "aws_sqs_queue" "reminder" {
   message_retention_seconds  = 1209600
 }
 
-# ─── ECR ──────────────────────────────────────────────────────────────────────
-
 resource "aws_ecr_repository" "app" {
   name                 = local.name
   image_tag_mutability = "MUTABLE"
-  image_scanning_configuration { scan_on_push = true }
+  image_scanning_configuration {
+    scan_on_push = true
+  }
 }
-
-# ─── CloudWatch ───────────────────────────────────────────────────────────────
 
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/ecs/${local.name}"
@@ -213,7 +234,7 @@ resource "aws_cloudwatch_log_group" "app" {
 resource "aws_iam_role" "ecs_execution" {
   name = "${local.name}-ecs-execution-role"
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "ecs-tasks.amazonaws.com" } }]
   })
 }
@@ -227,7 +248,7 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
   name = "${local.name}-ecs-execution-secrets"
   role = aws_iam_role.ecs_execution.id
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{ Effect = "Allow", Action = ["secretsmanager:GetSecretValue"], Resource = [data.aws_secretsmanager_secret.app.arn] }]
   })
 }
@@ -235,7 +256,7 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
 resource "aws_iam_role" "ecs_task" {
   name = "${local.name}-ecs-task-role"
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "ecs-tasks.amazonaws.com" } }]
   })
 }
@@ -244,7 +265,7 @@ resource "aws_iam_role_policy" "task_queue_access" {
   name = "${local.name}-task-queue-policy"
   role = aws_iam_role.ecs_task.id
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
       Action   = ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes", "sqs:GetQueueUrl", "sqs:SendMessage"]
@@ -286,7 +307,11 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
-  default_action { type = "forward"; target_group_arn = aws_lb_target_group.web.arn }
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web.arn
+  }
 }
 
 resource "aws_lb_listener" "http_redirect" {
@@ -294,9 +319,14 @@ resource "aws_lb_listener" "http_redirect" {
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"
+
   default_action {
     type = "redirect"
-    redirect { port = "443"; protocol = "HTTPS"; status_code = "HTTP_301" }
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 
@@ -307,7 +337,11 @@ resource "aws_lb_listener" "https" {
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = var.acm_certificate_arn
-  default_action { type = "forward"; target_group_arn = aws_lb_target_group.web.arn }
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web.arn
+  }
 }
 
 # ─── ECS ──────────────────────────────────────────────────────────────────────
@@ -326,15 +360,19 @@ resource "aws_ecs_task_definition" "web" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
-    name      = "trustloop-web"
-    image     = local.web_image_uri
-    essential = true
+    name         = "trustloop-web"
+    image        = local.web_image_uri
+    essential    = true
     portMappings = [{ containerPort = 3000, hostPort = 3000, protocol = "tcp" }]
-    environment = local.common_env
-    secrets     = local.secret_env
+    environment  = local.common_env
+    secrets      = local.secret_env
     logConfiguration = {
       logDriver = "awslogs"
-      options   = { awslogs-group = aws_cloudwatch_log_group.app.name, awslogs-region = var.aws_region, awslogs-stream-prefix = "web" }
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.app.name
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "web"
+      }
     }
   }])
 }
@@ -349,15 +387,19 @@ resource "aws_ecs_task_definition" "worker" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
-    name      = "trustloop-worker"
-    image     = local.worker_image_uri
-    essential = true
-    command   = ["pnpm", "run", "worker"]
+    name        = "trustloop-worker"
+    image       = local.worker_image_uri
+    essential   = true
+    command     = ["pnpm", "run", "worker"]
     environment = local.common_env
     secrets     = local.secret_env
     logConfiguration = {
       logDriver = "awslogs"
-      options   = { awslogs-group = aws_cloudwatch_log_group.app.name, awslogs-region = var.aws_region, awslogs-stream-prefix = "worker" }
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.app.name
+        awslogs-region        = var.aws_region
+        awslogs-stream-prefix = "worker"
+      }
     }
   }])
 }
@@ -414,11 +456,16 @@ resource "aws_appautoscaling_policy" "worker_scale_out" {
   service_namespace  = aws_appautoscaling_target.worker.service_namespace
   resource_id        = aws_appautoscaling_target.worker.resource_id
   scalable_dimension = aws_appautoscaling_target.worker.scalable_dimension
+
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
     cooldown                = 60
     metric_aggregation_type = "Average"
-    step_adjustment { metric_interval_lower_bound = 0; scaling_adjustment = 1 }
+
+    step_adjustment {
+      metric_interval_lower_bound = 0
+      scaling_adjustment          = 1
+    }
   }
 }
 
@@ -428,11 +475,16 @@ resource "aws_appautoscaling_policy" "worker_scale_in" {
   service_namespace  = aws_appautoscaling_target.worker.service_namespace
   resource_id        = aws_appautoscaling_target.worker.resource_id
   scalable_dimension = aws_appautoscaling_target.worker.scalable_dimension
+
   step_scaling_policy_configuration {
     adjustment_type         = "ChangeInCapacity"
     cooldown                = 120
     metric_aggregation_type = "Average"
-    step_adjustment { metric_interval_upper_bound = 0; scaling_adjustment = -1 }
+
+    step_adjustment {
+      metric_interval_upper_bound = 0
+      scaling_adjustment          = -1
+    }
   }
 }
 
@@ -467,7 +519,7 @@ resource "aws_cloudwatch_metric_alarm" "worker_scale_in" {
 resource "aws_iam_role" "eventbridge_api_destination" {
   name = "${local.name}-eventbridge-api-destination-role"
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{ Action = "sts:AssumeRole", Effect = "Allow", Principal = { Service = "events.amazonaws.com" } }]
   })
 }
@@ -475,59 +527,89 @@ resource "aws_iam_role" "eventbridge_api_destination" {
 resource "aws_cloudwatch_event_connection" "automation_ai_key_health" {
   name               = "${local.name}-automation-ai-key-health"
   authorization_type = "API_KEY"
+
   auth_parameters {
-    api_key { key = "x-cron-secret"; value = local.app_secrets["AI_KEY_HEALTH_CRON_SECRET"] }
-    invocation_http_parameters { header { key = "Content-Type"; value = "application/json" } }
+    api_key {
+      key   = "x-cron-secret"
+      value = local.app_secrets["AI_KEY_HEALTH_CRON_SECRET"]
+    }
+
+    invocation_http_parameters {
+      header {
+        key   = "Content-Type"
+        value = "application/json"
+      }
+    }
   }
 }
 
 resource "aws_cloudwatch_event_connection" "automation_billing_grace" {
   name               = "${local.name}-automation-billing-grace"
   authorization_type = "API_KEY"
+
   auth_parameters {
-    api_key { key = "x-cron-secret"; value = local.app_secrets["BILLING_AUTOMATION_CRON_SECRET"] }
-    invocation_http_parameters { header { key = "Content-Type"; value = "application/json" } }
+    api_key {
+      key   = "x-cron-secret"
+      value = local.app_secrets["BILLING_AUTOMATION_CRON_SECRET"]
+    }
+
+    invocation_http_parameters {
+      header {
+        key   = "Content-Type"
+        value = "application/json"
+      }
+    }
   }
 }
 
 resource "aws_cloudwatch_event_connection" "automation_enqueue_reminders" {
   name               = "${local.name}-automation-enqueue-reminders"
   authorization_type = "API_KEY"
+
   auth_parameters {
-    api_key { key = "x-cron-secret"; value = local.app_secrets["REMINDER_ENQUEUE_CRON_SECRET"] }
-    invocation_http_parameters { header { key = "Content-Type"; value = "application/json" } }
+    api_key {
+      key   = "x-cron-secret"
+      value = local.app_secrets["REMINDER_ENQUEUE_CRON_SECRET"]
+    }
+
+    invocation_http_parameters {
+      header {
+        key   = "Content-Type"
+        value = "application/json"
+      }
+    }
   }
 }
 
 resource "aws_cloudwatch_event_api_destination" "automation_ai_key_health" {
-  name               = "${local.name}-automation-ai-key-health"
-  connection_arn     = aws_cloudwatch_event_connection.automation_ai_key_health.arn
-  invocation_endpoint = "${local.app_url}/api/automation/verify-ai-keys"
-  http_method        = "POST"
+  name                             = "${local.name}-automation-ai-key-health"
+  connection_arn                   = aws_cloudwatch_event_connection.automation_ai_key_health.arn
+  invocation_endpoint              = "${local.app_url}/api/automation/verify-ai-keys"
+  http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
 resource "aws_cloudwatch_event_api_destination" "automation_billing_grace" {
-  name               = "${local.name}-automation-billing-grace"
-  connection_arn     = aws_cloudwatch_event_connection.automation_billing_grace.arn
-  invocation_endpoint = "${local.app_url}/api/automation/process-billing-grace"
-  http_method        = "POST"
+  name                             = "${local.name}-automation-billing-grace"
+  connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace.arn
+  invocation_endpoint              = "${local.app_url}/api/automation/process-billing-grace"
+  http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
 resource "aws_cloudwatch_event_api_destination" "automation_process_trial" {
-  name               = "${local.name}-automation-process-trial"
-  connection_arn     = aws_cloudwatch_event_connection.automation_billing_grace.arn
-  invocation_endpoint = "${local.app_url}/api/automation/process-trial"
-  http_method        = "POST"
+  name                             = "${local.name}-automation-process-trial"
+  connection_arn                   = aws_cloudwatch_event_connection.automation_billing_grace.arn
+  invocation_endpoint              = "${local.app_url}/api/automation/process-trial"
+  http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
 resource "aws_cloudwatch_event_api_destination" "automation_enqueue_reminders" {
-  name               = "${local.name}-automation-enqueue-reminders"
-  connection_arn     = aws_cloudwatch_event_connection.automation_enqueue_reminders.arn
-  invocation_endpoint = "${local.app_url}/api/automation/enqueue-reminders"
-  http_method        = "POST"
+  name                             = "${local.name}-automation-enqueue-reminders"
+  connection_arn                   = aws_cloudwatch_event_connection.automation_enqueue_reminders.arn
+  invocation_endpoint              = "${local.app_url}/api/automation/enqueue-reminders"
+  http_method                      = "POST"
   invocation_rate_limit_per_second = 1
 }
 
@@ -535,10 +617,10 @@ resource "aws_iam_role_policy" "eventbridge_api_destination_invoke" {
   name = "${local.name}-eventbridge-api-destination-invoke"
   role = aws_iam_role.eventbridge_api_destination.id
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version   = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["events:InvokeApiDestination"]
+      Effect = "Allow"
+      Action = ["events:InvokeApiDestination"]
       Resource = [
         aws_cloudwatch_event_api_destination.automation_ai_key_health.arn,
         aws_cloudwatch_event_api_destination.automation_billing_grace.arn,
@@ -604,33 +686,81 @@ resource "aws_wafv2_web_acl" "app" {
   scope       = "REGIONAL"
   description = "WAF for ${local.name} ALB"
 
-  default_action { allow {} }
+  default_action {
+    allow {}
+  }
 
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 1
-    override_action { none {} }
-    statement { managed_rule_group_statement { name = "AWSManagedRulesCommonRuleSet"; vendor_name = "AWS" } }
-    visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-common-rules"; sampled_requests_enabled = true }
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.name}-common-rules"
+      sampled_requests_enabled   = true
+    }
   }
 
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleSet"
     priority = 2
-    override_action { none {} }
-    statement { managed_rule_group_statement { name = "AWSManagedRulesKnownBadInputsRuleSet"; vendor_name = "AWS" } }
-    visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-bad-inputs"; sampled_requests_enabled = true }
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.name}-bad-inputs"
+      sampled_requests_enabled   = true
+    }
   }
 
   rule {
     name     = "RateLimitRule"
     priority = 3
-    action { block {} }
-    statement { rate_based_statement { limit = 2000; aggregate_key_type = "IP" } }
-    visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-rate-limit"; sampled_requests_enabled = true }
+
+    action {
+      block {}
+    }
+
+    statement {
+      rate_based_statement {
+        limit              = 2000
+        aggregate_key_type = "IP"
+      }
+    }
+
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "${local.name}-rate-limit"
+      sampled_requests_enabled   = true
+    }
   }
 
-  visibility_config { cloudwatch_metrics_enabled = true; metric_name = "${local.name}-waf"; sampled_requests_enabled = true }
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${local.name}-waf"
+    sampled_requests_enabled   = true
+  }
 }
 
 resource "aws_wafv2_web_acl_association" "app" {
