@@ -166,12 +166,12 @@ export function RegisterForm({
       <form className="space-y-4" onSubmit={startRegistration}>
         <div>
           <label className="sr-only" htmlFor="workspace-name">
-            Workspace
+            Company name
           </label>
           <input
             id="workspace-name"
             className="input"
-            placeholder="Workspace name"
+            placeholder="Company name"
             value={workspaceName}
             onChange={(event) => setWorkspaceName(event.target.value)}
             disabled={Boolean(inviteToken)}

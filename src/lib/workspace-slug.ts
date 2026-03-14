@@ -31,6 +31,36 @@ function buildSlugCandidate(base: string, attempt: number): string {
   return `${trimmedBase || "workspace"}${suffix}`;
 }
 
+export async function checkSlugAvailable(
+  db: WorkspaceDbClient,
+  name: string,
+): Promise<boolean> {
+  const slug = slugBaseFromName(name);
+  const existing = await db.workspace.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  return !existing;
+}
+
+export async function createWorkspaceWithExactSlug(
+  db: WorkspaceDbClient,
+  name: string,
+  options?: { planTier?: PlanTier },
+): Promise<Workspace> {
+  const slug = slugBaseFromName(name);
+  const conflict = await db.workspace.findUnique({
+    where: { slug },
+    select: { id: true },
+  });
+  if (conflict) {
+    throw new Error("workspace_slug_taken");
+  }
+  return db.workspace.create({
+    data: { name, slug, planTier: options?.planTier },
+  });
+}
+
 export async function createWorkspaceWithGeneratedSlug(
   db: WorkspaceDbClient,
   name: string,

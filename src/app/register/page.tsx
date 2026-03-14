@@ -22,6 +22,8 @@ const oauthErrorMessages: Record<string, string> = {
   invite_invalid: "Invite is invalid or expired.",
   invite_email_mismatch: "Invite email does not match the OAuth account.",
   oauth_failed: "OAuth registration failed. Try again or use email OTP.",
+  company_name_taken:
+    "A company with this name is already registered. Please choose a different company name.",
   invite_code_required: "An invite code is required to register. Request early access first.",
   invite_code_invalid: "Invalid or already used invite code.",
   saml_not_configured:

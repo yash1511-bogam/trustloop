@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { authenticateEmailOtp } from "@/lib/stytch";
 import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
-import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
+import { createWorkspaceWithExactSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 import { workspacePath } from "@/lib/workspace-url";
 
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         return { user: createdUser, workspace: invite.workspace };
       }
 
-      const workspace = await createWorkspaceWithGeneratedSlug(tx, pending.workspaceName, {
+      const workspace = await createWorkspaceWithExactSlug(tx, pending.workspaceName, {
         planTier: "starter",
       });
       const starterQuota = quotasForPlan("starter");

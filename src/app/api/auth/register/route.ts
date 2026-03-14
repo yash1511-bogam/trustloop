@@ -9,7 +9,7 @@ import { redisSetJson } from "@/lib/redis";
 import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
 import { isPendingStytchUserId, sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 import { verifyTurnstileToken } from "@/lib/turnstile";
-import { slugBaseFromName } from "@/lib/workspace-slug";
+import { checkSlugAvailable } from "@/lib/workspace-slug";
 
 const registerStartSchema = z.object({
   name: z.string().min(2).max(80),
@@ -122,14 +122,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   if (!inviteToken) {
-    const slug = slugBaseFromName(workspaceName);
-    const taken = await prisma.workspace.findUnique({
-      where: { slug },
-      select: { id: true },
-    });
-    if (taken) {
+    const available = await checkSlugAvailable(prisma, workspaceName);
+    if (!available) {
       return NextResponse.json(
-        { error: "A workspace with this company name already exists. Choose a different name." },
+        { error: "A company with this name is already registered. Please choose a different company name." },
         { status: 409 },
       );
     }

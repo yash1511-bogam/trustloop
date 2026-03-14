@@ -9,7 +9,7 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
-import { createWorkspaceWithGeneratedSlug } from "@/lib/workspace-slug";
+import { createWorkspaceWithExactSlug, slugBaseFromName } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 import { workspacePath } from "@/lib/workspace-url";
 
@@ -50,8 +50,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     ? await prisma.user.findUnique({ where: { id: pending.existingUserId }, select: { id: true, stytchUserId: true } })
     : null;
 
+  const companyName = parsed.data.companyName.trim();
+  const slug = slugBaseFromName(companyName);
+  const slugTaken = await prisma.workspace.findUnique({ where: { slug }, select: { id: true } });
+  if (slugTaken) {
+    return NextResponse.json(
+      { error: "A company with this name is already registered. Please choose a different company name." },
+      { status: 409 },
+    );
+  }
+
   const created = await prisma.$transaction(async (tx) => {
-    const workspace = await createWorkspaceWithGeneratedSlug(tx, parsed.data.companyName.trim(), {
+    const workspace = await createWorkspaceWithExactSlug(tx, companyName, {
       planTier: "starter",
     });
     const starterQuota = quotasForPlan("starter");

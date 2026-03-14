@@ -1,16 +1,19 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
 import { appUrl } from "@/lib/app-url";
 import { recordAuditLog } from "@/lib/audit";
+import { quotasForPlan } from "@/lib/billing-plan";
 import { setSessionCookie } from "@/lib/cookies";
-import { sendGettingStartedGuideEmail, scheduleWelcomeEmail } from "@/lib/email";
+import { sendGettingStartedGuideEmail, scheduleWelcomeEmail, upsertEmailSubscription } from "@/lib/email";
 import { log } from "@/lib/logger";
+import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
 import { prisma } from "@/lib/prisma";
 import { redisSetJson } from "@/lib/redis";
 import { workspaceUrl } from "@/lib/workspace-url";
 import { authenticateOAuthToken } from "@/lib/stytch";
-import { ensureWorkspaceSlug } from "@/lib/workspace-slug";
+import { createWorkspaceWithExactSlug, ensureWorkspaceSlug, slugBaseFromName } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
@@ -210,8 +213,71 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // For new registrations without a workspace invite, redirect to collect company name
+    // For new registrations without a workspace invite
     if (!inviteToken) {
+      // If company name was provided on the register form, create workspace directly
+      if (workspaceName) {
+        // Check slug uniqueness before creating
+        const slug = slugBaseFromName(workspaceName);
+        const slugTaken = await prisma.workspace.findUnique({ where: { slug }, select: { id: true } });
+        if (slugTaken) {
+          return buildRedirectWithClear(request, "/register", {
+            email,
+            error: "company_name_taken",
+          });
+        }
+
+        const starterQuota = quotasForPlan("starter");
+        const startOfDay = new Date();
+        startOfDay.setUTCHours(0, 0, 0, 0);
+
+        const created = await prisma.$transaction(async (tx) => {
+          const workspace = await createWorkspaceWithExactSlug(tx, workspaceName, { planTier: "starter" });
+
+          const user = existing
+            ? await tx.user.update({
+                where: { id: existing.id },
+                data: { workspaceId: workspace.id, role: Role.OWNER, stytchUserId: existing.stytchUserId !== authResult.stytchUserId ? authResult.stytchUserId : undefined },
+              })
+            : await tx.user.create({
+                data: { workspaceId: workspace.id, email, name: authResult.name?.trim() || "Workspace Owner", role: Role.OWNER, stytchUserId: authResult.stytchUserId },
+              });
+
+          await tx.workflowSetting.createMany({
+            data: [
+              { workspaceId: workspace.id, workflowType: WorkflowType.INCIDENT_TRIAGE, provider: AiProvider.OPENAI, model: "gpt-4o-mini" },
+              { workspaceId: workspace.id, workflowType: WorkflowType.CUSTOMER_UPDATE, provider: AiProvider.OPENAI, model: "gpt-4o-mini" },
+            ],
+          });
+          await tx.workspaceQuota.create({ data: { workspaceId: workspace.id, ...starterQuota } });
+          await tx.workspaceDailyUsage.upsert({
+            where: { workspaceId_usageDate: { workspaceId: workspace.id, usageDate: startOfDay } },
+            create: { workspaceId: workspace.id, usageDate: startOfDay },
+            update: {},
+          });
+          await ensureWorkspaceMembership(tx, { workspaceId: workspace.id, userId: user.id, role: Role.OWNER });
+          await createSampleIncidentsForWorkspace(tx, { workspaceId: workspace.id, ownerUserId: user.id });
+
+          return { user, workspace };
+        });
+
+        if (inviteCodeValue) {
+          await prisma.inviteCode.update({ where: { code: inviteCodeValue }, data: { used: true, usedAt: new Date(), usedByUserId: created.user.id } });
+        }
+
+        upsertEmailSubscription({ email: created.user.email, name: created.user.name, userId: created.user.id }).catch(() => {});
+        recordAuditLog({ workspaceId: created.workspace.id, actorUserId: created.user.id, action: "auth.oauth_register", targetType: "user", targetId: created.user.id, summary: `OAuth registration for ${created.user.email}` }).catch(() => {});
+        scheduleWelcomeEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name });
+        sendGettingStartedGuideEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name }).catch(() => {});
+
+        const dashUrl = created.workspace.slug ? workspaceUrl("/dashboard", created.workspace.slug, created.user.role) : "/dashboard";
+        const response = NextResponse.redirect(new URL(dashUrl, appUrl("/", request)));
+        setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+        clearOAuthContextCookie(response);
+        return response;
+      }
+
+      // Fallback: no company name provided, redirect to collect it
       const sessionKey = `auth:oauth-pending:${crypto.randomUUID()}`;
       await redisSetJson(sessionKey, {
         sessionToken: authResult.sessionToken,
