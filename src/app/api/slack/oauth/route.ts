@@ -13,7 +13,7 @@ function stateSigningKey(): string {
   return process.env.KEY_ENCRYPTION_SECRET ?? "fallback-dev-key";
 }
 
-function signState(workspaceId: string): string {
+export function signState(workspaceId: string): string {
   const sig = createHmac("sha256", stateSigningKey())
     .update(workspaceId)
     .digest("hex")

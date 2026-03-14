@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
-const schema = z.object({ email: z.string().email().max(255) });
+const schema = z.object({
+  email: z.string().email().max(255),
+  turnstileToken: z.string().min(1).optional().nullable(),
+});
 
 export async function POST(
   request: NextRequest,
@@ -21,6 +25,14 @@ export async function POST(
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+  }
+
+  const turnstile = await verifyTurnstileToken({
+    request,
+    token: parsed.data.turnstileToken,
+  });
+  if (!turnstile.success) {
+    return NextResponse.json({ error: "Security verification failed." }, { status: 403 });
   }
 
   await prisma.statusPageSubscriber.upsert({

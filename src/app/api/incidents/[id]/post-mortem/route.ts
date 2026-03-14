@@ -16,10 +16,6 @@ async function generatePostMortemBody(input: {
   summary?: string | null;
   events: Array<{ eventType: string; body: string; createdAt: Date }>;
 }): Promise<string> {
-  const { runModel } = await import("@/lib/ai/service") as unknown as {
-    runModel: (provider: string, apiKey: string, model: string, system: string, user: string) => Promise<string>;
-  };
-
   const systemPrompt = [
     "You write structured post-mortem reports for AI incidents.",
     "Use markdown format with these sections:",
@@ -44,8 +40,6 @@ async function generatePostMortemBody(input: {
     timeline || "No events recorded.",
   ].filter(Boolean).join("\n");
 
-  // Use the AI service's internal runModel via dynamic import
-  const { generateCustomerUpdateDraft } = await import("@/lib/ai/service");
   // We reuse the provider infrastructure but with a custom prompt
   const model = input.model?.trim() || "";
 

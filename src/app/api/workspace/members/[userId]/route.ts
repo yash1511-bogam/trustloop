@@ -6,7 +6,6 @@ import { recordAuditForAccess } from "@/lib/audit";
 import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { badRequest, forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
-import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const patchSchema = z.object({
   role: z.nativeEnum(Role),

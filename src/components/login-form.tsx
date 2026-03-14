@@ -88,7 +88,10 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
       return;
     }
 
-    router.push("/dashboard");
+    const payload = (await response.json().catch(() => null)) as
+      | { redirectTo?: string }
+      | null;
+    router.push(payload?.redirectTo ?? "/dashboard");
     router.refresh();
   }
 

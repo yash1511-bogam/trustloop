@@ -50,6 +50,7 @@ locals {
     "STYTCH_OAUTH_START_MODE",
     "TURNSTILE_SITE_KEY",
     "TURNSTILE_SECRET_KEY",
+    "NEXT_PUBLIC_ROOT_DOMAIN",
   ]
 
   secret_env = [

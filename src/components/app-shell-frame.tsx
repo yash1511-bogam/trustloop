@@ -10,6 +10,8 @@ import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 type AppShellFrameProps = {
   workspaceName: string;
   currentWorkspaceId: string;
+  currentRole: string;
+  currentSlug: string | null;
   complianceMode: boolean;
   workspaces: Array<{
     id: string;
@@ -23,6 +25,8 @@ type AppShellFrameProps = {
 export function AppShellFrame({
   workspaceName,
   currentWorkspaceId,
+  currentRole,
+  currentSlug,
   complianceMode,
   workspaces,
   children,
@@ -135,6 +139,8 @@ export function AppShellFrame({
 
         <AppShellNav
           compact={compactDesktopMenu}
+          role={currentRole}
+          slug={currentSlug}
           onNavigate={() => {
             if (!desktop) closeMenu();
           }}

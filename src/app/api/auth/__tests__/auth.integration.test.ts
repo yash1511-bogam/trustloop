@@ -88,7 +88,7 @@ vi.mock("@/lib/workspace-membership", () => ({
 }));
 
 import { __stytchState, resetStytchState } from "@/test/mock-stytch";
-import { __sentEmails, resetEmails } from "@/test/mock-email";
+import { resetEmails } from "@/test/mock-email";
 
 function req(url: string, body: unknown): NextRequest {
   return new NextRequest(new URL(url, "http://localhost:3000"), {

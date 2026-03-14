@@ -8,6 +8,7 @@ import { setSessionCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { workspaceUrl } from "@/lib/workspace-url";
 import { authenticateOAuthToken } from "@/lib/stytch";
 import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
 import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
@@ -183,7 +184,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
       await ensureWorkspaceSlug(prisma, existing.workspace.id, existing.workspace.name);
 
-      const response = buildRedirect(request, "/dashboard");
+      const slug = existing.workspace.slug ?? (await ensureWorkspaceSlug(prisma, existing.workspace.id, existing.workspace.name));
+      const dashboardUrl = slug
+        ? workspaceUrl("/dashboard", slug, existing.role)
+        : "/dashboard";
+      const response = NextResponse.redirect(new URL(dashboardUrl, appUrl("/", request)));
       setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
       clearOAuthContextCookie(response);
       return response;
@@ -372,7 +377,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    const response = buildRedirect(request, "/dashboard");
+    const newSlug = created.workspace.slug;
+    const newDashUrl = newSlug
+      ? workspaceUrl("/dashboard", newSlug, created.user.role)
+      : "/dashboard";
+    const response = NextResponse.redirect(new URL(newDashUrl, appUrl("/", request)));
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
     clearOAuthContextCookie(response);
     return response;

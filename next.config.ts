@@ -7,6 +7,20 @@ const withMDX = createMDX({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  rewrites: async () => {
+    // Path-based workspace routing for MANAGER/AGENT: /<slug>/dashboard → /dashboard
+    const appPaths = [
+      "dashboard",
+      "executive",
+      "settings",
+      "settings/:path*",
+      "incidents/:path*",
+    ];
+    return appPaths.map((p) => ({
+      source: `/:slug((?!api|_next|docs|status|login|register|forgot-access|choose-plan|changelog)[a-z0-9-]+)/${p}`,
+      destination: `/${p}`,
+    }));
+  },
   headers: async () => [
     {
       source: "/(.*)",

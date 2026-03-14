@@ -38,7 +38,7 @@ describe("encryptSecret / decryptSecret", () => {
 
   it("rejects tampered ciphertext", () => {
     const encrypted = encryptSecret("secret");
-    const [iv, cipher, tag] = encrypted.split(":");
+    const [iv, , tag] = encrypted.split(":");
     const tampered = `${iv}:${Buffer.from("tampered").toString("base64")}:${tag}`;
     expect(() => decryptSecret(tampered)).toThrow();
   });

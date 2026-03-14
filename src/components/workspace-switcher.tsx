@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Role } from "@prisma/client";
+import { workspaceUrl } from "@/lib/workspace-url";
 
 type WorkspaceOption = {
   id: string;
@@ -41,8 +43,15 @@ export function WorkspaceSwitcher({
       return;
     }
 
-    router.refresh();
-    router.push("/dashboard");
+    const target = workspaces.find((w) => w.id === nextWorkspaceId);
+    if (target?.slug) {
+      window.location.assign(
+        workspaceUrl("/dashboard", target.slug, target.role as Role),
+      );
+    } else {
+      router.refresh();
+      router.push("/dashboard");
+    }
   }
 
   if (workspaces.length <= 1) {

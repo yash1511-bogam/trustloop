@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 vi.mock("@/lib/dodo", () => ({
   dodoClient: vi.fn(() => ({
     webhooks: {
-      unwrap: vi.fn((_body: string, _opts: unknown) => ({
+      unwrap: vi.fn(() => ({
         type: "subscription.active",
         data: { subscription_id: "sub_1", customer_id: "cust_1" },
       })),

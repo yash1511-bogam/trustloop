@@ -14,6 +14,7 @@ import { authenticateEmailOtp } from "@/lib/stytch";
 import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
 import { createWorkspaceWithGeneratedSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
+import { workspacePath } from "@/lib/workspace-url";
 
 const registerVerifySchema = z.object({
   methodId: z.string().min(6).max(200),
@@ -252,12 +253,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
+    const redirectTo = created.workspace.slug
+      ? workspacePath("/dashboard", created.workspace.slug, created.user.role)
+      : "/dashboard";
+
     const response = NextResponse.json({
       user: {
         id: created.user.id,
         email: created.user.email,
         name: created.user.name,
       },
+      redirectTo,
     });
 
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);

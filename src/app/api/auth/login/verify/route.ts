@@ -3,6 +3,7 @@ import { z } from "zod";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { setSessionCookie } from "@/lib/cookies";
 import { badRequest, notFound } from "@/lib/http";
+import { workspacePath } from "@/lib/workspace-url";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateEmailOtp } from "@/lib/stytch";
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         id: true,
         name: true,
         email: true,
+        role: true,
         workspaceId: true,
       },
     });
@@ -50,6 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
           id: true,
           name: true,
           email: true,
+          role: true,
           workspaceId: true,
         },
       });
@@ -77,11 +80,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return notFound("No TrustLoop user found for this Stytch identity.");
     }
 
-    await ensureWorkspaceSlug(prisma, user.workspaceId);
+    const slug = await ensureWorkspaceSlug(prisma, user.workspaceId);
+    const redirectTo = slug
+      ? workspacePath("/dashboard", slug, user.role)
+      : "/dashboard";
 
     const response = NextResponse.json({
       success: true,
       user,
+      redirectTo,
     });
 
     recordAuditLog({

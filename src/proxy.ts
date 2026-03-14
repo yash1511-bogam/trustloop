@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { slugFromSubdomain } from "@/lib/workspace-url";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
@@ -27,6 +28,13 @@ export function proxy(request: NextRequest): NextResponse {
 
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);
+  }
+
+  // Resolve workspace from subdomain (OWNER routing)
+  const host = request.headers.get("host") ?? request.headers.get("x-forwarded-host");
+  const subdomainSlug = slugFromSubdomain(host);
+  if (subdomainSlug) {
+    response.headers.set("x-workspace-slug", subdomainSlug);
   }
 
   // X-Request-ID on all API responses

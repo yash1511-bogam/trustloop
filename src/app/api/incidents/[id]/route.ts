@@ -165,7 +165,6 @@ export async function PATCH(
     resolvedAtValue =
       parsed.data.status === IncidentStatus.RESOLVED ? new Date() : null;
   }
-  const nextSeverity = parsed.data.severity ?? existing.severity;
   const policy = await ensureWorkspaceSlaPolicy(auth.workspaceId);
 
   const updated = await prisma.$transaction(async (tx) => {

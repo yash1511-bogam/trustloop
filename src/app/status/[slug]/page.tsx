@@ -2,6 +2,7 @@ import { IncidentStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { StatusSubscribeForm } from "@/components/status-subscribe-form";
+import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 
 function statusTone(status: IncidentStatus): string {
   if (status === IncidentStatus.RESOLVED) return "badge";
@@ -24,6 +25,7 @@ export default async function PublicStatusPage({
 }) {
   const { slug } = await params;
   const now = new Date();
+  const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 
   const workspace = await prisma.workspace.findFirst({
     where: { slug, statusPageEnabled: true },
@@ -77,7 +79,7 @@ export default async function PublicStatusPage({
         <h1 className="mt-2 text-3xl font-bold text-white">{workspace.name}</h1>
         <p className="mt-2 text-sm text-neutral-400">Customer-facing incident communication stream.</p>
         <div className="mt-4">
-          <StatusSubscribeForm slug={slug} />
+          <StatusSubscribeForm slug={slug} turnstileSiteKey={siteKey} />
         </div>
       </section>
 

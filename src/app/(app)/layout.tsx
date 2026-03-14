@@ -19,10 +19,16 @@ export default async function AppLayout({
     listUserWorkspaceMemberships(auth.user.id),
   ]);
 
+  const currentMembership = memberships.find(
+    (m) => m.workspace.id === auth.user.workspaceId,
+  );
+
   return (
     <AppShellFrame
       complianceMode={workspace?.complianceMode ?? false}
       currentWorkspaceId={auth.user.workspaceId}
+      currentRole={auth.user.role}
+      currentSlug={currentMembership?.workspace.slug ?? null}
       workspaceName={auth.user.workspaceName}
       workspaces={memberships.map((membership) => ({
         id: membership.workspace.id,
