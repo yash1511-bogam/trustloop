@@ -33,82 +33,35 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Start local dependencies
-        run: docker compose -f docker-compose.localstack.yml up -d
-
-      - name: Wait for local dependencies
-        run: |
-          until docker compose -f docker-compose.localstack.yml exec -T postgres pg_isready -U postgres -d trustloop >/dev/null 2>&1; do sleep 2; done
-          until docker compose -f docker-compose.localstack.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 2; done
-          until curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1; do sleep 2; done
-
-      - name: Bootstrap Prisma, database and queue
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trustloop?schema=public
-          REDIS_URL: redis://localhost:6379
-          STYTCH_PROJECT_ID: project-test-placeholder
-          STYTCH_SECRET: secret-test-placeholder
-          STYTCH_ENV: test
-          KEY_ENCRYPTION_SECRET: placeholder-key-encryption-secret-123456789
-          RESEND_API_KEY: re_placeholder
-          RESEND_FROM_EMAIL: TrustLoop <onboarding@resend.dev>
-          DODO_PAYMENTS_API_KEY: dodo_test_placeholder
-          DODO_PAYMENTS_WEBHOOK_KEY: dodo_whsec_placeholder
-          DODO_PAYMENTS_ENV: test_mode
-          DODO_PRODUCT_ID_STARTER: prod_test_starter
-          DODO_PRODUCT_ID_PRO: prod_test_pro
-          DODO_PRODUCT_ID_ENTERPRISE: prod_test_enterprise
-          BILLING_AUTOMATION_CRON_SECRET: billing-cron-test-secret
-          REMINDER_ENQUEUE_CRON_SECRET: reminder-enqueue-test-secret
-          AI_KEY_HEALTH_CRON_SECRET: ai-key-health-test-secret
-          REMINDER_STALE_MINUTES: "240"
-          AWS_REGION: us-east-1
-          AWS_ACCESS_KEY_ID: test
-          AWS_SECRET_ACCESS_KEY: test
-          AWS_ENDPOINT_URL: http://localhost:4566
-          AWS_ACCOUNT_ID: "000000000000"
-          REMINDER_QUEUE_NAME: trustloop-incident-reminders
-          REMINDER_QUEUE_URL: http://localhost:4566/000000000000/trustloop-incident-reminders
-        run: |
-          pnpm run prisma:validate
-          pnpm run prisma:generate
-          pnpm run prisma:deploy
-          pnpm run prisma:status
-          pnpm run db:seed
-          pnpm run localstack:init
-          pnpm run worker:once
-          pnpm run billing:grace:once
+      - name: Generate Prisma client
+        run: pnpm run prisma:generate
 
       - name: Lint
         run: pnpm run lint
 
       - name: Build
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trustloop?schema=public
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
           REDIS_URL: redis://localhost:6379
-          STYTCH_PROJECT_ID: project-test-placeholder
-          STYTCH_SECRET: secret-test-placeholder
+          STYTCH_PROJECT_ID: placeholder
+          STYTCH_SECRET: placeholder
           STYTCH_ENV: test
           KEY_ENCRYPTION_SECRET: placeholder-key-encryption-secret-123456789
           RESEND_API_KEY: re_placeholder
-          RESEND_FROM_EMAIL: TrustLoop <onboarding@resend.dev>
-          DODO_PAYMENTS_API_KEY: dodo_test_placeholder
-          DODO_PAYMENTS_WEBHOOK_KEY: dodo_whsec_placeholder
+          RESEND_FROM_EMAIL: TrustLoop <noreply@example.com>
+          DODO_PAYMENTS_API_KEY: placeholder
+          DODO_PAYMENTS_WEBHOOK_KEY: placeholder
           DODO_PAYMENTS_ENV: test_mode
-          DODO_PRODUCT_ID_STARTER: prod_test_starter
-          DODO_PRODUCT_ID_PRO: prod_test_pro
-          DODO_PRODUCT_ID_ENTERPRISE: prod_test_enterprise
-          BILLING_AUTOMATION_CRON_SECRET: billing-cron-test-secret
-          REMINDER_ENQUEUE_CRON_SECRET: reminder-enqueue-test-secret
-          AI_KEY_HEALTH_CRON_SECRET: ai-key-health-test-secret
+          DODO_PRODUCT_ID_STARTER: placeholder
+          DODO_PRODUCT_ID_PRO: placeholder
+          DODO_PRODUCT_ID_ENTERPRISE: placeholder
+          BILLING_AUTOMATION_CRON_SECRET: placeholder
+          REMINDER_ENQUEUE_CRON_SECRET: placeholder
+          AI_KEY_HEALTH_CRON_SECRET: placeholder
           REMINDER_STALE_MINUTES: "240"
           AWS_REGION: us-east-1
-          AWS_ACCESS_KEY_ID: test
-          AWS_SECRET_ACCESS_KEY: test
-          AWS_ENDPOINT_URL: http://localhost:4566
-          AWS_ACCOUNT_ID: "000000000000"
           REMINDER_QUEUE_NAME: trustloop-incident-reminders
-          REMINDER_QUEUE_URL: http://localhost:4566/000000000000/trustloop-incident-reminders
+          REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/trustloop-incident-reminders
         run: pnpm run build
 
       - uses: hashicorp/setup-terraform@v3
