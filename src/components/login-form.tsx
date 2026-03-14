@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { useCleanUrl } from "@/hooks/use-clean-url";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { SamlSsoForm } from "@/components/saml-sso-form";
-import { useOtpResend } from "@/components/use-otp-resend";
+import {
+  OTP_RESEND_COOLDOWN_SECONDS,
+  useOtpResend,
+} from "@/components/use-otp-resend";
 import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
@@ -36,11 +39,15 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: emailRef.current }),
     });
-    if (!res.ok) return false;
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setError(data?.error ?? "Unable to resend verification code.");
+      return false;
+    }
     setMethodId(data.methodId);
-    setMessage("Verification code resent.");
-    return true;
+    setError(null);
+    setMessage(data.message ?? "Verification code resent.");
+    return data.cooldownSeconds ?? OTP_RESEND_COOLDOWN_SECONDS;
   }, []);
   const otpResend = useOtpResend(resendFn);
 
@@ -74,9 +81,11 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
     const payload = (await response.json()) as {
       methodId: string;
       message?: string;
+      cooldownSeconds?: number;
     };
 
     setMethodId(payload.methodId);
+    otpResend.activate(payload.cooldownSeconds ?? OTP_RESEND_COOLDOWN_SECONDS);
     setMessage(payload.message ?? "Verification code sent.");
   }
 

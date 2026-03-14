@@ -15,6 +15,7 @@ type LoggedEmailInput = {
   subject: string;
   html: string;
   text: string;
+  idempotencyKey?: string;
 };
 
 type LoggedEmailResult = {
@@ -52,6 +53,7 @@ function appBaseUrl(): string {
 const CRITICAL_EMAIL_TYPES = new Set<EmailNotificationType>([
   EmailNotificationType.AUTH_OTP,
   EmailNotificationType.AUTH_RECOVERY,
+  EmailNotificationType.EARLY_ACCESS_CONFIRMATION,
   EmailNotificationType.PAYMENT_FAILURE_REMINDER,
 ]);
 
@@ -143,6 +145,25 @@ async function createEmailLog(
   });
 }
 
+async function safeCreateEmailLog(
+  input: Pick<LoggedEmailInput, "workspaceId" | "incidentId" | "type" | "toEmail"> & {
+    status: EmailDeliveryStatus;
+    providerMessageId?: string;
+    errorMessage?: string;
+  },
+): Promise<void> {
+  try {
+    await createEmailLog(input);
+  } catch (error) {
+    log.app.warn("Failed to persist email notification log", {
+      workspaceId: input.workspaceId,
+      toEmail: input.toEmail,
+      type: input.type,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResult> {
   // Gate non-critical emails on subscription status
   if (!isCriticalEmail(input.type)) {
@@ -168,7 +189,7 @@ async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResu
 
   if (isStubEmailDeliveryEnabled()) {
     const providerMessageId = `stub-${Date.now()}`;
-    await createEmailLog({
+    await safeCreateEmailLog({
       workspaceId: input.workspaceId,
       incidentId: input.incidentId,
       type: input.type,
@@ -186,7 +207,7 @@ async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResu
 
   if (!client) {
     const error = "RESEND_API_KEY is not configured.";
-    await createEmailLog({
+    await safeCreateEmailLog({
       workspaceId: input.workspaceId,
       incidentId: input.incidentId,
       type: input.type,
@@ -204,11 +225,11 @@ async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResu
       subject: input.subject,
       html,
       text,
-    });
+    }, input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : undefined);
 
     if (result.error?.message) {
       const message = result.error.message.slice(0, 500);
-      await createEmailLog({
+      await safeCreateEmailLog({
         workspaceId: input.workspaceId,
         incidentId: input.incidentId,
         type: input.type,
@@ -220,7 +241,7 @@ async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResu
       return { success: false, error: message };
     }
 
-    await createEmailLog({
+    await safeCreateEmailLog({
       workspaceId: input.workspaceId,
       incidentId: input.incidentId,
       type: input.type,
@@ -235,7 +256,7 @@ async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResu
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Resend send failed.";
-    await createEmailLog({
+    await safeCreateEmailLog({
       workspaceId: input.workspaceId,
       incidentId: input.incidentId,
       type: input.type,
@@ -273,6 +294,54 @@ export async function sendReminderEmail(input: {
       `Status: ${input.incidentStatus}`,
       "Please review owner actions and publish the next customer update.",
     ].join("\n"),
+  });
+}
+
+export async function sendAuthOtpCodeEmail(input: {
+  toEmail: string;
+  code: string;
+  purpose: "login" | "register" | "recovery";
+  idempotencyKey?: string;
+}): Promise<LoggedEmailResult> {
+  const actionLabel =
+    input.purpose === "register"
+      ? "finish creating your TrustLoop workspace"
+      : input.purpose === "recovery"
+        ? "recover access to your TrustLoop workspace"
+        : "sign in to TrustLoop";
+  const subject =
+    input.purpose === "register"
+      ? `${input.code} is your TrustLoop registration code`
+      : input.purpose === "recovery"
+        ? `${input.code} is your TrustLoop recovery code`
+        : `${input.code} is your TrustLoop sign-in code`;
+
+  return sendLoggedEmail({
+    workspaceId: "system",
+    type:
+      input.purpose === "recovery"
+        ? EmailNotificationType.AUTH_RECOVERY
+        : EmailNotificationType.AUTH_OTP,
+    toEmail: input.toEmail,
+    subject,
+    html: [
+      "<p>Hi,</p>",
+      `<p>Use the code below to ${actionLabel}:</p>`,
+      `<p style="font-size:32px;font-weight:bold;letter-spacing:4px;padding:16px;background:#111;border-radius:8px;text-align:center;color:#fff;">${input.code}</p>`,
+      "<p>This code expires in 15 minutes.</p>",
+      "<p>If you did not request this, you can safely ignore this email.</p>",
+    ].join(""),
+    text: [
+      "Hi,",
+      "",
+      `Use this code to ${actionLabel}:`,
+      "",
+      input.code,
+      "",
+      "This code expires in 15 minutes.",
+      "If you did not request this, you can safely ignore this email.",
+    ].join("\n"),
+    idempotencyKey: input.idempotencyKey,
   });
 }
 
@@ -800,6 +869,7 @@ export async function sendEarlyAccessConfirmationEmail(input: {
 export async function sendEarlyAccessOtpEmail(input: {
   toEmail: string;
   code: string;
+  idempotencyKey?: string;
 }): Promise<LoggedEmailResult> {
   return sendLoggedEmail({
     workspaceId: "system",
@@ -823,5 +893,6 @@ export async function sendEarlyAccessOtpEmail(input: {
       "This code expires in 15 minutes.",
       "If you didn't request this, you can safely ignore this email.",
     ].join("\n"),
+    idempotencyKey: input.idempotencyKey,
   });
 }

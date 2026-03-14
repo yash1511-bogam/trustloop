@@ -29,6 +29,7 @@ function makeMock(name: string) {
 }
 
 export const sendReminderEmail = makeMock("sendReminderEmail");
+export const sendAuthOtpCodeEmail = makeMock("sendAuthOtpCodeEmail");
 export const sendAuthOtpNoticeEmail = makeMock("sendAuthOtpNoticeEmail");
 export const sendRecoveryInstructionsEmail = makeMock("sendRecoveryInstructionsEmail");
 export const sendWelcomeEmail = makeMock("sendWelcomeEmail");
@@ -47,3 +48,4 @@ export const sendTrialReminderEmail = makeMock("sendTrialReminderEmail");
 export const sendTrialExpiredEmail = makeMock("sendTrialExpiredEmail");
 export const sendEarlyAccessConfirmationEmail = makeMock("sendEarlyAccessConfirmationEmail");
 export const sendEarlyAccessOtpEmail = makeMock("sendEarlyAccessOtpEmail");
+export const upsertEmailSubscription = vi.fn(async () => {});

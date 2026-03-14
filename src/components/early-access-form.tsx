@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
-import { useOtpResend } from "@/components/use-otp-resend";
+import {
+  OTP_RESEND_COOLDOWN_SECONDS,
+  useOtpResend,
+} from "@/components/use-otp-resend";
 
 export function EarlyAccessForm() {
   const [name, setName] = useState("");
@@ -14,6 +17,7 @@ export function EarlyAccessForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const formDataRef = useRef({ name, email, companyName });
   useEffect(() => { formDataRef.current = { name, email, companyName }; }, [name, email, companyName]);
 
@@ -24,57 +28,73 @@ export function EarlyAccessForm() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: d.name, email: d.email, companyName: d.companyName || undefined }),
     });
-    if (!res.ok) return false;
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      setError(data?.error ?? "Unable to send verification code.");
+      return false;
+    }
     setMethodId(data.methodId);
-    setMessage("Verification code resent.");
-    return true;
+    setError(null);
+    setMessage(data.message ?? "Verification code resent.");
+    return data.cooldownSeconds ?? OTP_RESEND_COOLDOWN_SECONDS;
   }, []);
   const otpResend = useOtpResend(resendFn);
 
   async function requestAccess(e: React.FormEvent) {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError(null);
     setMessage(null);
     setSubmitting(true);
 
-    const res = await fetch("/api/early-access", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, companyName: companyName || undefined }),
-    });
+    try {
+      const res = await fetch("/api/early-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, companyName: companyName || undefined }),
+      });
 
-    setSubmitting(false);
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-      setError(data?.error ?? "Something went wrong.");
-      return;
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error ?? "Something went wrong.");
+        return;
+      }
+      setMethodId(data.methodId);
+      otpResend.activate(data.cooldownSeconds ?? OTP_RESEND_COOLDOWN_SECONDS);
+      setMessage(data.message);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-    setMethodId(data.methodId);
-    setMessage(data.message);
   }
 
   async function verifyCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!methodId) return;
+    if (!methodId || submittingRef.current) return;
+    submittingRef.current = true;
     setError(null);
     setMessage(null);
     setSubmitting(true);
 
-    const res = await fetch("/api/early-access/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ methodId, code }),
-    });
+    try {
+      const res = await fetch("/api/early-access/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ methodId, code }),
+      });
 
-    setSubmitting(false);
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-      setError(data?.error ?? "Verification failed.");
-      return;
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        setError(data?.error ?? "Verification failed.");
+        return;
+      }
+      setVerified(true);
+      setMessage(data.message);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
-    setVerified(true);
-    setMessage(data.message);
   }
 
   if (verified) {

@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 
-const COOLDOWN_SECONDS = 90;
+export const OTP_RESEND_COOLDOWN_SECONDS = 90;
 const MAX_RESENDS = 3;
 const LOCKOUT_MS = 60 * 60 * 1000; // 1 hour
 
-export function useOtpResend(resendFn: () => Promise<boolean>) {
+export function useOtpResend(resendFn: () => Promise<number | false>) {
   const [resendCount, setResendCount] = useState(0);
-  const [cooldown, setCooldown] = useState(COOLDOWN_SECONDS);
+  const [cooldown, setCooldown] = useState(0);
   const [locked, setLocked] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -21,16 +21,20 @@ export function useOtpResend(resendFn: () => Promise<boolean>) {
 
   const canResend = cooldown === 0 && !locked && resendCount < MAX_RESENDS && !resending;
 
+  const activate = useCallback((seconds = OTP_RESEND_COOLDOWN_SECONDS) => {
+    setCooldown(Math.max(0, Math.ceil(seconds)));
+  }, []);
+
   const resend = useCallback(async () => {
     if (!canResend) return;
     setResending(true);
-    const ok = await resendFn();
+    const nextCooldown = await resendFn();
     setResending(false);
-    if (!ok) return;
+    if (nextCooldown === false) return;
 
     const newCount = resendCount + 1;
     setResendCount(newCount);
-    setCooldown(COOLDOWN_SECONDS);
+    activate(nextCooldown);
 
     if (newCount >= MAX_RESENDS) {
       setLocked(true);
@@ -39,7 +43,7 @@ export function useOtpResend(resendFn: () => Promise<boolean>) {
         setResendCount(0);
       }, LOCKOUT_MS);
     }
-  }, [canResend, resendCount, resendFn]);
+  }, [activate, canResend, resendCount, resendFn]);
 
   let label: string;
   if (resending) label = "Resending...";
@@ -47,5 +51,5 @@ export function useOtpResend(resendFn: () => Promise<boolean>) {
   else if (cooldown > 0) label = `Resend code in ${cooldown}s`;
   else label = "Resend code";
 
-  return { canResend, resend, label, resending };
+  return { canResend, resend, label, resending, activate };
 }

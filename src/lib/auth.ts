@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
+import { authenticateAppSession, isAppSessionToken } from "@/lib/app-session";
 import { SESSION_CACHE_TTL_SECONDS, SESSION_COOKIE_NAME } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson, redisSetJson } from "@/lib/redis";
@@ -23,6 +24,18 @@ export type AuthContext = {
 type CachedSessionAuth = {
   user: AuthContext["user"];
   expiresAtIso: string;
+};
+
+type SessionUserRecord = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  workspaceId: string;
+  stytchUserId: string;
+  workspace: {
+    name: string;
+  };
 };
 
 function sessionCacheKey(sessionToken: string): string {
@@ -51,20 +64,27 @@ export async function getAuth(): Promise<AuthContext | null> {
     await redisDelete(cacheKey);
   }
 
-  let stytchUserId: string;
   let expiresAt: Date;
+  let user: SessionUserRecord | null = null;
   try {
-    const validated = await authenticateSessionToken(sessionToken);
-    stytchUserId = validated.stytchUserId;
-    expiresAt = validated.expiresAt;
+    if (isAppSessionToken(sessionToken)) {
+      const validated = await authenticateAppSession(sessionToken);
+      expiresAt = validated.expiresAt;
+      user = await prisma.user.findUnique({
+        where: { id: validated.userId },
+        include: { workspace: true },
+      });
+    } else {
+      const validated = await authenticateSessionToken(sessionToken);
+      expiresAt = validated.expiresAt;
+      user = await prisma.user.findUnique({
+        where: { stytchUserId: validated.stytchUserId },
+        include: { workspace: true },
+      });
+    }
   } catch {
     return null;
   }
-
-  const user = await prisma.user.findUnique({
-    where: { stytchUserId },
-    include: { workspace: true },
-  });
 
   if (!user) {
     return null;

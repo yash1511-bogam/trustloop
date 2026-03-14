@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  clearAuthEmailOtp,
+  verifyAuthEmailOtp,
+} from "@/lib/auth-email-otp";
+import { issueAppSession } from "@/lib/app-session";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { setSessionCookie } from "@/lib/cookies";
 import { badRequest, notFound } from "@/lib/http";
 import { workspacePath } from "@/lib/workspace-url";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { authenticateEmailOtp } from "@/lib/stytch";
 import { ensureWorkspaceSlug } from "@/lib/workspace-slug";
 import { recordAuditLog } from "@/lib/audit";
 import { requestIpAddress } from "@/lib/api-key-scopes";
@@ -27,14 +31,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const authResult = await authenticateEmailOtp({
-      methodId: parsed.data.methodId,
-      code: parsed.data.code.trim(),
-      intent: "login",
-    });
+    const pending = await verifyAuthEmailOtp("login", parsed.data.methodId, parsed.data.code);
+    if (!pending) {
+      throw new Error("otp_invalid");
+    }
 
-    let user = await prisma.user.findUnique({
-      where: { stytchUserId: authResult.stytchUserId },
+    const user = await prisma.user.findFirst({
+      where: { email: pending.email },
       select: {
         id: true,
         name: true,
@@ -44,46 +47,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    if (!user && parsed.data.methodId.includes("@")) {
-      const email = parsed.data.methodId.toLowerCase().trim();
-      const existingByEmail = await prisma.user.findFirst({
-        where: { email },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          role: true,
-          workspaceId: true,
-        },
-      });
-
-      if (existingByEmail) {
-        try {
-          await prisma.user.update({
-            where: { id: existingByEmail.id },
-            data: {
-              stytchUserId: authResult.stytchUserId,
-            },
-          });
-        } catch (error) {
-          log.auth.warn("Failed to backfill Stytch user ID during login verify", {
-            methodId: parsed.data.methodId,
-            userId: existingByEmail.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }
-        user = existingByEmail;
-      }
-    }
-
     if (!user) {
-      return notFound("No TrustLoop user found for this Stytch identity.");
+      return notFound("No TrustLoop user found for this email.");
     }
 
     const slug = await ensureWorkspaceSlug(prisma, user.workspaceId);
     const redirectTo = slug
       ? workspacePath("/dashboard", slug, user.role)
       : "/dashboard";
+    const session = await issueAppSession(user.id);
 
     const response = NextResponse.json({
       success: true,
@@ -101,7 +73,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ipAddress: requestIpAddress(request),
     }).catch(() => {});
 
-    setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+    clearAuthEmailOtp("login", parsed.data.methodId, pending.email).catch((cleanupError) =>
+      log.auth.warn("Failed to clear login OTP challenge", {
+        methodId: parsed.data.methodId,
+        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      }),
+    );
+    setSessionCookie(response, session.sessionToken, session.expiresAt);
     return response;
   } catch (error) {
     log.auth.error("Failed to verify login OTP", {

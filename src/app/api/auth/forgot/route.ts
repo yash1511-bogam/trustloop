@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { startAuthEmailOtp } from "@/lib/auth-email-otp";
 import { recordAuditLog } from "@/lib/audit";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
-import { sendRecoveryInstructionsEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
-import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const forgotStartSchema = z.object({
@@ -56,37 +54,35 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const otp = await sendEmailOtpLoginOrCreate(email);
+    const otp = await startAuthEmailOtp({
+      scope: "login",
+      purpose: "recovery",
+      email,
+      payload: {},
+    });
+    if (!otp.success) {
+      log.auth.error("Failed to send forgot-access OTP", {
+        email,
+        error: otp.error,
+      });
+      return NextResponse.json({ error: otp.error }, { status: 502 });
+    }
 
     recordAuditLog({ workspaceId: user.workspaceId, actorUserId: user.id, action: "auth.forgot_start", targetType: "user", targetId: user.id, summary: `Recovery OTP requested for ${email}` }).catch(() => {});
-
-    sendRecoveryInstructionsEmail({
-      workspaceId: user.workspaceId,
-      toEmail: email,
-      workspaceName: user.workspace?.name ?? "your workspace",
-      userName: user.name,
-    }).catch((err) =>
-      log.auth.error("Failed to send recovery instructions email", { email, error: err instanceof Error ? err.message : String(err) }),
-    );
 
     return NextResponse.json({
       methodId: otp.methodId,
       message: "If an account exists for that email, a recovery code has been sent.",
+      cooldownSeconds: otp.cooldownSeconds,
     });
   } catch (error) {
-    const stytchError = extractStytchError(error);
     log.auth.error("Failed to start forgot-access challenge", {
       email,
-      errorType: stytchError?.error_type,
-      errorMessage: stytchError?.error_message,
-      requestId: stytchError?.request_id,
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
-      {
-        error: authChallengeErrorMessage(error, "Unable to start recovery challenge."),
-      },
-      { status: 400 },
+      { error: "Unable to start recovery challenge." },
+      { status: 500 },
     );
   }
 }

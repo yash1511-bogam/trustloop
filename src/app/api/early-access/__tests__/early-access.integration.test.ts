@@ -7,6 +7,7 @@ vi.mock("@/lib/redis", () => {
   const store = new Map<string, string>();
   return {
     redis: undefined,
+    __resetRedisMock: vi.fn(() => { store.clear(); }),
     isRedisEnabled: () => true,
     redisGet: vi.fn(async (k: string) => store.get(k) ?? null),
     redisSet: vi.fn(async (k: string, v: string) => { store.set(k, v); }),
@@ -28,8 +29,12 @@ vi.mock("@/lib/prisma", () => ({
 }));
 
 import { __sentEmails, resetEmails } from "@/test/mock-email";
-import { redisSetJson, redisDelete } from "@/lib/redis";
+import * as redisModule from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
+
+const redisMock = redisModule as typeof redisModule & {
+  __resetRedisMock: () => void;
+};
 
 function req(url: string, body: unknown): NextRequest {
   return new NextRequest(new URL(url, "http://localhost:3000"), {
@@ -43,6 +48,7 @@ function req(url: string, body: unknown): NextRequest {
 describe("POST /api/early-access", () => {
   beforeEach(() => {
     resetEmails();
+    redisMock.__resetRedisMock();
     vi.clearAllMocks();
   });
 
@@ -95,11 +101,32 @@ describe("POST /api/early-access", () => {
   it("stores pending data with otpHash in redis", async () => {
     const { POST } = await import("@/app/api/early-access/route");
     await POST(req("/api/early-access", { name: "Alice", email: "alice@example.com" }));
-    expect(redisSetJson).toHaveBeenCalledWith(
+    expect(redisModule.redisSetJson).toHaveBeenCalledWith(
       expect.stringContaining("early-access:"),
-      expect.objectContaining({ name: "Alice", email: "alice@example.com", otpHash: expect.any(String) }),
+      expect.objectContaining({
+        name: "Alice",
+        email: "alice@example.com",
+        otpHash: expect.any(String),
+        resendAvailableAt: expect.any(Number),
+      }),
       expect.any(Number),
     );
+  });
+
+  it("reuses the same methodId and does not send duplicate emails during cooldown", async () => {
+    const { POST } = await import("@/app/api/early-access/route");
+
+    const first = await POST(req("/api/early-access", { name: "Alice", email: "alice@example.com" }));
+    const firstJson = await first.json();
+    const second = await POST(req("/api/early-access", { name: "Alice", email: "alice@example.com" }));
+    const secondJson = await second.json();
+
+    expect(second.status).toBe(200);
+    expect(secondJson.methodId).toBe(firstJson.methodId);
+    expect(secondJson.cooldownSeconds).toBeGreaterThan(0);
+    expect(
+      __sentEmails.filter((email) => email.fn === "sendEarlyAccessOtpEmail"),
+    ).toHaveLength(1);
   });
 });
 
@@ -107,13 +134,14 @@ describe("POST /api/early-access", () => {
 describe("POST /api/early-access/verify", () => {
   beforeEach(() => {
     resetEmails();
+    redisMock.__resetRedisMock();
     vi.clearAllMocks();
   });
 
   async function seedPending(methodId: string, code: string) {
     const { hashOtp } = await import("@/app/api/early-access/route");
     const otpHash = await hashOtp(code);
-    await (redisSetJson as unknown as (...args: unknown[]) => Promise<void>)(
+    await (redisModule.redisSetJson as unknown as (...args: unknown[]) => Promise<void>)(
       `early-access:${methodId}`,
       { name: "Alice", email: "alice@example.com", otpHash },
       900,
@@ -146,7 +174,7 @@ describe("POST /api/early-access/verify", () => {
     await seedPending("method-1", "123456");
     const { POST } = await import("@/app/api/early-access/verify/route");
     await POST(req("/api/early-access/verify", { methodId: "method-1", code: "123456" }));
-    expect(redisDelete).toHaveBeenCalledWith("early-access:method-1");
+    expect(redisModule.redisDelete).toHaveBeenCalledWith("early-access:method-1");
   });
 
   it("sends confirmation email on success", async () => {

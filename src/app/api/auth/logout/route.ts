@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth, invalidateSessionAuthCache } from "@/lib/auth";
+import { isAppSessionToken, revokeAppSession } from "@/lib/app-session";
 import { recordAuditLog } from "@/lib/audit";
 import { requestIpAddress } from "@/lib/api-key-scopes";
 import { clearSessionCookie } from "@/lib/cookies";
@@ -13,7 +14,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = await getAuth().catch(() => null);
 
   if (token) {
-    await revokeSessionToken(token).catch(() => {});
+    if (isAppSessionToken(token)) {
+      await revokeAppSession(token).catch(() => {});
+    } else {
+      await revokeSessionToken(token).catch(() => {});
+    }
     await invalidateSessionAuthCache(token);
   }
 

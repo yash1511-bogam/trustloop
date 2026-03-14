@@ -79,6 +79,9 @@ const comparisonRows = [
   { feature: "14-day free trial", starter: "✓", pro: "✓", enterprise: "✓" },
 ];
 
+const LANDING_SHELL = "mx-auto w-full max-w-[1200px]";
+const LANDING_PADDED_SHELL = "mx-auto w-full max-w-[1248px] px-6";
+
 export function LandingBelowFold() {
   const comparisonRef = useRef<HTMLDivElement>(null);
   const [showComparison, setShowComparison] = useState(false);
@@ -150,7 +153,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Features */}
-      <section className="mx-auto max-w-[1200px] pb-16 md:pb-32 scroll-mt-24" id="features">
+      <section className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`} id="features">
         <div className="mb-12 flex flex-col items-center text-center">
           <p className="kicker">Core capabilities</p>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Built to run incident operations at production scale.</h2>
@@ -167,7 +170,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Workflow */}
-      <section className="mx-auto w-full max-w-[1200px] grid gap-16 pb-16 md:grid-cols-2 md:items-start md:pb-32 scroll-mt-24" id="workflow">
+      <section className={`${LANDING_SHELL} grid gap-16 pb-16 md:grid-cols-2 md:items-start md:pb-32 scroll-mt-24`} id="workflow">
         <div className="flex flex-col">
           <p className="kicker">Workflow</p>
           <h3 className="mt-4 text-4xl font-bold text-white leading-tight">From alert to executive signal.</h3>
@@ -202,7 +205,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Pricing */}
-      <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32 scroll-mt-24" id="pricing">
+      <section className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`} id="pricing">
         <div className="mb-12 flex flex-col items-center text-center">
           <p className="kicker">Pricing</p>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Clear pricing for incident volume and operational maturity.</h2>
@@ -281,7 +284,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* FAQ */}
-      <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32 scroll-mt-24" id="faq">
+      <section className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`} id="faq">
         <div className="mb-12 flex flex-col items-center text-center">
           <p className="kicker">FAQ</p>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Everything needed to evaluate and launch quickly.</h2>
@@ -300,7 +303,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* CTA + Early Access */}
-      <section id="early-access" className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32 scroll-mt-24">
+      <section id="early-access" className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`}>
         <framerMotion.div className="grid gap-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-white shadow-2xl md:grid-cols-2 md:p-16" initial={{ opacity: 0, y: 14 }} transition={{ duration: 0.45 }} viewport={{ once: true, amount: 0.4 }} whileInView={{ opacity: 1, y: 0 }}>
           <div className="flex flex-col justify-center">
             <p className="kicker text-neutral-400">Ready to ship safer AI products?</p>
@@ -328,35 +331,37 @@ export function LandingBelowFold() {
 
       {/* Footer */}
       <footer className="border-t border-neutral-800/50 bg-black/20 backdrop-blur-2xl">
-        <div className="mx-auto w-full max-w-[1200px] grid gap-10 py-16 md:grid-cols-4 md:py-24">
-          <div className="flex flex-col items-start">
-            <a className="flex items-center gap-3 text-sm font-bold tracking-wide text-white" href="#top">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 text-white shadow-sm">TL</span>
-              TrustLoop
-            </a>
-            <p className="mt-4 text-sm leading-relaxed text-neutral-400 max-w-[240px]">Incident operations SaaS for software companies shipping AI to production.</p>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Product</p>
-            <ul className="mt-4 space-y-3 text-sm text-neutral-400">
-              <li><a className="transition-colors hover:text-white" href="#features">Features</a></li>
-              <li><a className="transition-colors hover:text-white" href="#workflow">Workflow</a></li>
-              <li><a className="transition-colors hover:text-white" href="#pricing">Pricing</a></li>
-              <li><HoverLink className="transition-colors hover:text-white" href="/docs">Documentation</HoverLink></li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Platform</p>
-            <ul className="mt-4 space-y-3 text-sm text-neutral-400">
-              <li className="flex items-center gap-3 transition-colors hover:text-white"><ShieldCheck className="h-4 w-4" /> BYOK encryption</li>
-              <li className="flex items-center gap-3 transition-colors hover:text-white"><Gauge className="h-4 w-4" /> Workspace quotas</li>
-              <li className="flex items-center gap-3 transition-colors hover:text-white"><Sparkles className="h-4 w-4" /> AI triage automation</li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white">Get Started</p>
-            <p className="mt-4 text-sm leading-relaxed text-neutral-400">Launch your workspace and connect provider keys in under 10 minutes.</p>
-            <HoverLink className="btn btn-primary mt-6 w-full justify-center" href="/#early-access">Create workspace</HoverLink>
+        <div className={LANDING_PADDED_SHELL}>
+          <div className="grid gap-10 py-16 md:grid-cols-4 md:py-24">
+            <div className="flex flex-col items-start">
+              <a className="flex items-center gap-3 text-sm font-bold tracking-wide text-white" href="#top">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 text-white shadow-sm">TL</span>
+                TrustLoop
+              </a>
+              <p className="mt-4 max-w-[240px] text-sm leading-relaxed text-neutral-400">Incident operations SaaS for software companies shipping AI to production.</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Product</p>
+              <ul className="mt-4 space-y-3 text-sm text-neutral-400">
+                <li><a className="transition-colors hover:text-white" href="#features">Features</a></li>
+                <li><a className="transition-colors hover:text-white" href="#workflow">Workflow</a></li>
+                <li><a className="transition-colors hover:text-white" href="#pricing">Pricing</a></li>
+                <li><HoverLink className="transition-colors hover:text-white" href="/docs">Documentation</HoverLink></li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Platform</p>
+              <ul className="mt-4 space-y-3 text-sm text-neutral-400">
+                <li className="flex items-center gap-3 transition-colors hover:text-white"><ShieldCheck className="h-4 w-4" /> BYOK encryption</li>
+                <li className="flex items-center gap-3 transition-colors hover:text-white"><Gauge className="h-4 w-4" /> Workspace quotas</li>
+                <li className="flex items-center gap-3 transition-colors hover:text-white"><Sparkles className="h-4 w-4" /> AI triage automation</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">Get Started</p>
+              <p className="mt-4 text-sm leading-relaxed text-neutral-400">Launch your workspace and connect provider keys in under 10 minutes.</p>
+              <HoverLink className="btn btn-primary mt-6 w-full justify-center" href="/#early-access">Create workspace</HoverLink>
+            </div>
           </div>
         </div>
       </footer>

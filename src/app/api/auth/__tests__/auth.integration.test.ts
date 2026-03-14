@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 /* ---- mocks ---- */
-vi.mock("@/lib/stytch", () => import("@/test/mock-stytch"));
 vi.mock("@/lib/email", () => import("@/test/mock-email"));
 vi.mock("@/lib/queue", () => import("@/test/mock-queue"));
 vi.mock("@/lib/audit", () => ({
@@ -22,6 +21,7 @@ vi.mock("@/lib/redis", () => {
   const store = new Map<string, string>();
   return {
     redis: undefined,
+    __resetRedisMock: vi.fn(() => { store.clear(); }),
     isRedisEnabled: () => true,
     redisGet: vi.fn(async (k: string) => store.get(k) ?? null),
     redisSet: vi.fn(async (k: string, v: string) => { store.set(k, v); }),
@@ -48,6 +48,14 @@ vi.mock("@/lib/prisma", () => ({
         stytchUserId: args.data.stytchUserId,
       })),
       update: vi.fn(),
+    },
+    inviteCode: {
+      findUnique: vi.fn(async (args: { where: { code: string } }) => ({
+        code: args.where.code,
+        used: false,
+        email: "alice@example.com",
+      })),
+      update: vi.fn(async () => ({})),
     },
     workspace: {
       findUnique: vi.fn(async () => null),
@@ -76,7 +84,8 @@ vi.mock("@/lib/prisma", () => ({
 }));
 vi.mock("@/lib/workspace-slug", () => ({
   slugBaseFromName: vi.fn((name: string) => name.toLowerCase().replace(/\s+/g, "-")),
-  createWorkspaceWithGeneratedSlug: vi.fn(async (_tx: unknown, name: string) => ({
+  checkSlugAvailable: vi.fn(async () => true),
+  createWorkspaceWithExactSlug: vi.fn(async (_tx: unknown, name: string) => ({
     id: "ws-1",
     name,
     slug: name.toLowerCase().replace(/\s+/g, "-"),
@@ -87,8 +96,15 @@ vi.mock("@/lib/workspace-membership", () => ({
   ensureWorkspaceMembership: vi.fn(async () => {}),
 }));
 
-import { __stytchState, resetStytchState } from "@/test/mock-stytch";
+import * as emailModule from "@/lib/email";
 import { resetEmails } from "@/test/mock-email";
+import * as redisModule from "@/lib/redis";
+import { prisma } from "@/lib/prisma";
+import * as workspaceSlug from "@/lib/workspace-slug";
+
+const redisMock = redisModule as typeof redisModule & {
+  __resetRedisMock: () => void;
+};
 
 function req(url: string, body: unknown): NextRequest {
   return new NextRequest(new URL(url, "http://localhost:3000"), {
@@ -98,11 +114,30 @@ function req(url: string, body: unknown): NextRequest {
   });
 }
 
+async function seedAuthChallenge(
+  scope: "login" | "register",
+  methodId: string,
+  payload: Record<string, unknown>,
+  code = "123456",
+) {
+  const { hashOtp } = await import("@/lib/auth-email-otp");
+  const otpHash = await hashOtp(code);
+  await (redisModule.redisSetJson as unknown as (...args: unknown[]) => Promise<void>)(
+    `auth:${scope}:${methodId}`,
+    {
+      ...payload,
+      otpHash,
+      resendAvailableAt: Date.now() + 90_000,
+    },
+    900,
+  );
+}
+
 /* ===== POST /api/auth/register ===== */
 describe("POST /api/auth/register", () => {
   beforeEach(() => {
-    resetStytchState();
     resetEmails();
+    redisMock.__resetRedisMock();
     vi.clearAllMocks();
   });
 
@@ -113,6 +148,7 @@ describe("POST /api/auth/register", () => {
         name: "Alice",
         email: "alice@example.com",
         workspaceName: "Acme Inc",
+        inviteCode: "INVITE-1",
       }),
     );
     expect(res.status).toBe(200);
@@ -127,15 +163,15 @@ describe("POST /api/auth/register", () => {
   });
 
   it("rejects duplicate workspace slug", async () => {
-    const { prisma } = await import("@/lib/prisma");
-    vi.mocked(prisma.workspace.findUnique).mockResolvedValueOnce({ id: "existing" } as never);
+    vi.mocked(workspaceSlug.checkSlugAvailable).mockResolvedValueOnce(false as never);
 
     const { POST } = await import("@/app/api/auth/register/route");
     const res = await POST(
       req("/api/auth/register", {
         name: "Bob",
-        email: "bob@example.com",
+        email: "alice@example.com",
         workspaceName: "Taken Corp",
+        inviteCode: "INVITE-1",
       }),
     );
     expect(res.status).toBe(409);
@@ -145,8 +181,8 @@ describe("POST /api/auth/register", () => {
 /* ===== POST /api/auth/register/verify ===== */
 describe("POST /api/auth/register/verify", () => {
   beforeEach(() => {
-    resetStytchState();
     resetEmails();
+    redisMock.__resetRedisMock();
     vi.clearAllMocks();
   });
 
@@ -161,20 +197,11 @@ describe("POST /api/auth/register/verify", () => {
   });
 
   it("creates user + workspace on valid OTP", async () => {
-    // Seed the pending registration in Redis
-    const { redisSetJson } = await import("@/lib/redis");
-    await redisSetJson("auth:register:method-1", {
+    await seedAuthChallenge("register", "method-1", {
       name: "Alice",
       email: "alice@example.com",
       workspaceName: "Acme Inc",
-    }, 900);
-
-    __stytchState.authResult = {
-      stytchUserId: "stytch-alice",
-      sessionToken: "tok-1",
-      sessionJwt: "jwt-1",
-      expiresAt: new Date(Date.now() + 3600_000),
-    };
+    });
 
     const { POST } = await import("@/app/api/auth/register/verify/route");
     const res = await POST(
@@ -190,7 +217,8 @@ describe("POST /api/auth/register/verify", () => {
 /* ===== POST /api/auth/login ===== */
 describe("POST /api/auth/login", () => {
   beforeEach(() => {
-    resetStytchState();
+    resetEmails();
+    redisMock.__resetRedisMock();
     vi.clearAllMocks();
   });
 
@@ -211,23 +239,29 @@ describe("POST /api/auth/login", () => {
   });
 
   it("returns 400 when Stytch throws", async () => {
-    __stytchState.error = new Error("stytch_down");
+    vi.mocked(emailModule.sendAuthOtpCodeEmail).mockResolvedValueOnce({
+      success: false,
+      error: "mail_down",
+    } as never);
     const { POST } = await import("@/app/api/auth/login/route");
     const res = await POST(
       req("/api/auth/login", { email: "alice@example.com" }),
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(502);
   });
 });
 
 /* ===== POST /api/auth/login/verify ===== */
 describe("POST /api/auth/login/verify", () => {
   beforeEach(() => {
-    resetStytchState();
+    redisMock.__resetRedisMock();
     vi.clearAllMocks();
   });
 
   it("returns 404 when no user found for stytch ID", async () => {
+    await seedAuthChallenge("login", "method-1", {
+      email: "missing@example.com",
+    });
     const { POST } = await import("@/app/api/auth/login/verify/route");
     const res = await POST(
       req("/api/auth/login/verify", { methodId: "method-1", code: "123456" }),
@@ -236,11 +270,14 @@ describe("POST /api/auth/login/verify", () => {
   });
 
   it("returns user on valid OTP with existing user", async () => {
-    const { prisma } = await import("@/lib/prisma");
-    vi.mocked(prisma.user.findUnique).mockResolvedValueOnce({
+    await seedAuthChallenge("login", "method-1", {
+      email: "alice@example.com",
+    });
+    vi.mocked(prisma.user.findFirst).mockResolvedValueOnce({
       id: "user-1",
       name: "Alice",
       email: "alice@example.com",
+      role: "OWNER",
       workspaceId: "ws-1",
     } as never);
 
@@ -255,7 +292,9 @@ describe("POST /api/auth/login/verify", () => {
   });
 
   it("returns 401 when OTP is invalid", async () => {
-    __stytchState.error = new Error("otp_invalid");
+    await seedAuthChallenge("login", "method-1", {
+      email: "alice@example.com",
+    });
     const { POST } = await import("@/app/api/auth/login/verify/route");
     const res = await POST(
       req("/api/auth/login/verify", { methodId: "method-1", code: "000000" }),

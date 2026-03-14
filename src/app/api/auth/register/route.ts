@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { startAuthEmailOtp } from "@/lib/auth-email-otp";
 import { recordAuditLog } from "@/lib/audit";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { redisSetJson } from "@/lib/redis";
-import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
-import { isPendingStytchUserId, sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 import { checkSlugAvailable } from "@/lib/workspace-slug";
 
@@ -24,14 +22,9 @@ type PendingRegisterPayload = {
   name: string;
   email: string;
   workspaceName: string;
-  expectedStytchUserId?: string;
   inviteToken?: string;
   inviteCode?: string;
 };
-
-function pendingRegisterKey(methodId: string): string {
-  return `auth:register:${methodId}`;
-}
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const rateLimited = await enforceAuthRateLimit(request, "register");
@@ -131,57 +124,41 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
-  let otp: Awaited<ReturnType<typeof sendEmailOtpLoginOrCreate>>;
+  let otp: Awaited<ReturnType<typeof startAuthEmailOtp>>;
   try {
-    otp = await sendEmailOtpLoginOrCreate(email);
+    otp = await startAuthEmailOtp<PendingRegisterPayload>({
+      scope: "register",
+      purpose: "register",
+      email,
+      payload: {
+        name: parsed.data.name.trim(),
+        email,
+        workspaceName,
+        inviteToken,
+        inviteCode: parsed.data.inviteCode?.trim(),
+      },
+    });
   } catch (error) {
-    const stytchError = extractStytchError(error);
     log.auth.error("Failed to start registration challenge", {
       email,
-      errorType: stytchError?.error_type,
-      errorMessage: stytchError?.error_message,
-      requestId: stytchError?.request_id,
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
-      {
-        error: authChallengeErrorMessage(
-          error,
-          "Unable to start registration challenge.",
-        ),
-      },
-      { status: 400 },
+      { error: "Unable to start registration challenge." },
+      { status: 500 },
     );
+  }
+  if (!otp.success) {
+    log.auth.error("Failed to send registration OTP", { email, error: otp.error });
+    return NextResponse.json({ error: otp.error }, { status: 502 });
   }
 
   // OTP was sent — always return success from here so the UI never
   // shows an error that would cause the user to retry and receive
   // duplicate codes.
-  try {
-    await redisSetJson<PendingRegisterPayload>(
-      pendingRegisterKey(otp.methodId),
-      {
-        name: parsed.data.name.trim(),
-        email,
-        workspaceName,
-        expectedStytchUserId: isPendingStytchUserId(otp.stytchUserId)
-          ? undefined
-          : otp.stytchUserId,
-        inviteToken,
-        inviteCode: parsed.data.inviteCode?.trim(),
-      },
-      15 * 60,
-    );
-  } catch (redisError) {
-    log.auth.error("Redis store failed after OTP sent (register)", {
-      email,
-      methodId: otp.methodId,
-      error: redisError instanceof Error ? redisError.message : String(redisError),
-    });
-  }
-
   return NextResponse.json({
     methodId: otp.methodId,
     message: "A verification code has been sent to your email.",
+    cooldownSeconds: otp.cooldownSeconds,
   });
 }

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
+import {
+  clearAuthEmailOtp,
+  localAuthIdentityForEmail,
+  verifyAuthEmailOtp,
+} from "@/lib/auth-email-otp";
+import { issueAppSession } from "@/lib/app-session";
 import { recordAuditLog } from "@/lib/audit";
 import { requestIpAddress } from "@/lib/api-key-scopes";
 import { quotasForPlan } from "@/lib/billing-plan";
@@ -9,8 +15,6 @@ import { sendGettingStartedGuideEmail, scheduleWelcomeEmail, upsertEmailSubscrip
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { redisDelete, redisGetJson } from "@/lib/redis";
-import { authenticateEmailOtp } from "@/lib/stytch";
 import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
 import { createWorkspaceWithExactSlug, ensureWorkspaceSlug } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
@@ -25,14 +29,9 @@ type PendingRegisterPayload = {
   name: string;
   email: string;
   workspaceName: string;
-  expectedStytchUserId?: string;
   inviteToken?: string;
   inviteCode?: string;
 };
-
-function pendingRegisterKey(methodId: string): string {
-  return `auth:register:${methodId}`;
-}
 
 function startOfUtcDay(): Date {
   const now = new Date();
@@ -47,42 +46,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return badRequest("Invalid registration verification payload.");
   }
 
-  const pending = await redisGetJson<PendingRegisterPayload>(
-    pendingRegisterKey(parsed.data.methodId),
-  );
-
-  if (!pending) {
-    return NextResponse.json(
-      { error: "Registration session expired. Start registration again." },
-      { status: 400 },
-    );
-  }
-
   try {
-    const authResult = await authenticateEmailOtp({
-      methodId: parsed.data.methodId,
-      code: parsed.data.code.trim(),
-      intent: "register",
-      organizationName: pending.workspaceName,
-    });
-
-    if (pending.expectedStytchUserId && authResult.stytchUserId !== pending.expectedStytchUserId) {
+    const pending = await verifyAuthEmailOtp<PendingRegisterPayload>(
+      "register",
+      parsed.data.methodId,
+      parsed.data.code,
+    );
+    if (!pending) {
       return NextResponse.json(
-        { error: "Stytch identity mismatch. Restart registration." },
+        { error: "Registration session expired. Start registration again." },
         { status: 400 },
       );
     }
 
     const existing = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: pending.email },
-          { stytchUserId: authResult.stytchUserId },
-        ],
-      },
+      where: { email: pending.email },
       select: {
         id: true,
-        stytchUserId: true,
       },
     });
 
@@ -109,10 +89,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               data: {
                 workspaceId: invite.workspaceId,
                 role: invite.role,
-                stytchUserId:
-                  existing.stytchUserId !== authResult.stytchUserId
-                    ? authResult.stytchUserId
-                    : undefined,
               },
             })
           : await tx.user.create({
@@ -121,7 +97,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
                 email: pending.email,
                 name: pending.name,
                 role: invite.role,
-                stytchUserId: authResult.stytchUserId,
+                stytchUserId: localAuthIdentityForEmail(pending.email),
               },
             });
 
@@ -154,10 +130,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             data: {
               workspaceId: workspace.id,
               role: Role.OWNER,
-              stytchUserId:
-                existing.stytchUserId !== authResult.stytchUserId
-                  ? authResult.stytchUserId
-                  : undefined,
             },
           })
         : await tx.user.create({
@@ -166,7 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
               email: pending.email,
               name: pending.name,
               role: Role.OWNER,
-              stytchUserId: authResult.stytchUserId,
+              stytchUserId: localAuthIdentityForEmail(pending.email),
             },
           });
 
@@ -222,7 +194,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return { user: createdUser, workspace };
     });
 
-    await redisDelete(pendingRegisterKey(parsed.data.methodId));
+    const session = await issueAppSession(created.user.id);
+    clearAuthEmailOtp("register", parsed.data.methodId, pending.email).catch((cleanupError) =>
+      log.auth.warn("Failed to clear registration OTP challenge", {
+        methodId: parsed.data.methodId,
+        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      }),
+    );
 
     // Collect email subscription
     upsertEmailSubscription({
@@ -274,7 +252,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       redirectTo,
     });
 
-    setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+    setSessionCookie(response, session.sessionToken, session.expiresAt);
 
     recordAuditLog({
       workspaceId: created.workspace.id,

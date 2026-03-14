@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { startAuthEmailOtp } from "@/lib/auth-email-otp";
 import { recordAuditLog } from "@/lib/audit";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
-import { sendAuthOtpNoticeEmail } from "@/lib/email";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
-import { authChallengeErrorMessage, extractStytchError } from "@/lib/stytch-errors";
-import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
 import { verifyTurnstileToken } from "@/lib/turnstile";
 
 const loginStartSchema = z.object({
@@ -37,24 +35,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  let otp: Awaited<ReturnType<typeof sendEmailOtpLoginOrCreate>>;
+  let otp: Awaited<ReturnType<typeof startAuthEmailOtp>>;
   try {
-    otp = await sendEmailOtpLoginOrCreate(email);
+    otp = await startAuthEmailOtp({
+      scope: "login",
+      purpose: "login",
+      email,
+      payload: {},
+    });
   } catch (error) {
-    const stytchError = extractStytchError(error);
     log.auth.error("Failed to start login challenge", {
       email,
-      errorType: stytchError?.error_type,
-      errorMessage: stytchError?.error_message,
-      requestId: stytchError?.request_id,
       error: error instanceof Error ? error.message : String(error),
     });
     return NextResponse.json(
-      {
-        error: authChallengeErrorMessage(error, "Unable to start login challenge."),
-      },
-      { status: 400 },
+      { error: "Unable to start login challenge." },
+      { status: 500 },
     );
+  }
+  if (!otp.success) {
+    log.auth.error("Failed to send login OTP", { email, error: otp.error });
+    return NextResponse.json({ error: otp.error }, { status: 502 });
   }
 
   // OTP was sent — always return success from here so the UI never
@@ -62,17 +63,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // duplicate codes.
   try {
     const account = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { stytchUserId: otp.stytchUserId },
-          { email },
-        ],
-      },
+      where: { email },
       select: {
         id: true,
         name: true,
         workspaceId: true,
-        workspace: { select: { name: true } },
       },
     });
 
@@ -80,17 +75,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       log.auth.warn("Login attempt for email with no workspace account", { email });
     } else if (account.workspaceId) {
       recordAuditLog({ workspaceId: account.workspaceId, actorUserId: account.id, action: "auth.login_start", targetType: "user", targetId: account.id, summary: `Login OTP requested for ${email}` }).catch(() => {});
-    }
-
-    if (account?.workspaceId) {
-      sendAuthOtpNoticeEmail({
-        workspaceId: account.workspaceId,
-        toEmail: email,
-        workspaceName: account.workspace?.name ?? "your workspace",
-        userName: account.name,
-      }).catch((err) =>
-        log.auth.error("Failed to send OTP notice email", { email, error: err instanceof Error ? err.message : String(err) }),
-      );
     }
   } catch (postOtpError) {
     log.auth.error("Post-OTP operations failed (login)", {
@@ -103,5 +87,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   return NextResponse.json({
     methodId: otp.methodId,
     message: "If an account exists, a verification code has been sent to your email.",
+    cooldownSeconds: otp.cooldownSeconds,
   });
 }

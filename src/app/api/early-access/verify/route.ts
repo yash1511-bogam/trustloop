@@ -4,7 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { log } from "@/lib/logger";
 import { sendEarlyAccessConfirmationEmail, upsertEmailSubscription } from "@/lib/email";
-import { earlyAccessKey, hashOtp, type PendingEarlyAccess } from "../route";
+import {
+  earlyAccessEmailKey,
+  earlyAccessKey,
+  hashOtp,
+  type PendingEarlyAccess,
+} from "../route";
 
 const schema = z.object({
   methodId: z.string().min(6).max(200),
@@ -44,7 +49,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    await redisDelete(earlyAccessKey(parsed.data.methodId));
+    await Promise.all([
+      redisDelete(earlyAccessKey(parsed.data.methodId)),
+      redisDelete(earlyAccessEmailKey(pending.email)),
+    ]);
 
     // Collect email subscription
     upsertEmailSubscription({
