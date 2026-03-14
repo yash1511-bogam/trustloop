@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { HoverLink } from "./hover-link";
 import { FeatureIllustration } from "./feature-illustrations";
+import { EarlyAccessForm } from "./early-access-form";
 
 type Feature = {
   title: string;
@@ -44,9 +45,9 @@ const steps = [
 ];
 
 const plans = [
-  { name: "Starter", price: "$49", period: "/workspace/mo", description: "For early-stage AI product teams handling customer incidents weekly.", bullets: ["Up to 50 incidents / day", "100 AI triage runs / day", "Provider BYOK: OpenAI, Gemini, Anthropic", "Email reminders and executive trends"], cta: "Start Starter" },
-  { name: "Pro", price: "$149", period: "/workspace/mo", description: "For multi-team SaaS organizations with daily AI incident operations.", bullets: ["Up to 200 incidents / day", "300 AI triage runs / day", "On-call rotation and compliance mode", "Advanced analytics, PDF export, and API keys"], cta: "Start Pro", featured: true },
-  { name: "Enterprise", price: "Custom", period: "", description: "For regulated and high-volume software companies with strict reliability targets.", bullets: ["Unlimited incidents and triage runs", "SAML SSO and custom retention", "Private networking and VPC options", "Dedicated onboarding and support"], cta: "Contact Sales" },
+  { name: "Starter", monthly: "$49", annual: "$39", period: "/workspace/mo", description: "For early-stage AI product teams handling customer incidents weekly.", bullets: ["Up to 50 incidents / day", "100 AI triage runs / day", "Provider BYOK: OpenAI, Gemini, Anthropic", "Email reminders and executive trends"], cta: "Start Starter" },
+  { name: "Pro", monthly: "$149", annual: "$119", period: "/workspace/mo", description: "For multi-team SaaS organizations with daily AI incident operations.", bullets: ["Up to 200 incidents / day", "300 AI triage runs / day", "On-call rotation and compliance mode", "Advanced analytics, PDF export, and API keys"], cta: "Start Pro", featured: true },
+  { name: "Enterprise", monthly: "Custom", annual: "Custom", period: "", description: "For regulated and high-volume software companies with strict reliability targets.", bullets: ["Unlimited incidents and triage runs", "SAML SSO and custom retention", "Private networking and VPC options", "Dedicated onboarding and support"], cta: "Contact Sales" },
 ];
 
 const faqs = [
@@ -57,7 +58,7 @@ const faqs = [
 ];
 
 const comparisonRows = [
-  { feature: "Price", starter: "$49/mo", pro: "$149/mo", enterprise: "Custom" },
+  { feature: "Price", starter: "$49/mo", pro: "$149/mo", enterprise: "Custom", starterAnnual: "$39/mo", proAnnual: "$119/mo", enterpriseAnnual: "Custom" },
   { feature: "Incidents per day", starter: "50", pro: "200", enterprise: "Unlimited" },
   { feature: "AI triage runs per day", starter: "100", pro: "300", enterprise: "Unlimited" },
   { feature: "Customer updates per day", starter: "100", pro: "300", enterprise: "Unlimited" },
@@ -81,6 +82,7 @@ const comparisonRows = [
 export function LandingBelowFold() {
   const comparisonRef = useRef<HTMLDivElement>(null);
   const [showComparison, setShowComparison] = useState(false);
+  const [annual, setAnnual] = useState(false);
 
   return (
     <>
@@ -204,6 +206,10 @@ export function LandingBelowFold() {
         <div className="mb-12 flex flex-col items-center text-center">
           <p className="kicker">Pricing</p>
           <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Clear pricing for incident volume and operational maturity.</h2>
+          <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-neutral-800 bg-neutral-900 p-1">
+            <button onClick={() => setAnnual(false)} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${!annual ? "bg-cyan-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`} type="button">Monthly</button>
+            <button onClick={() => setAnnual(true)} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${annual ? "bg-cyan-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`} type="button">Annual <span className="text-xs text-emerald-400">Save 20%</span></button>
+          </div>
         </div>
         <div className="grid gap-6 lg:grid-cols-3">
           {plans.map((plan, index) => {
@@ -219,7 +225,7 @@ export function LandingBelowFold() {
               <motionDev.article className={`${cardClass} flex flex-col`} key={plan.name} style={{ "--grain-gradient": gradients[index] } as React.CSSProperties} transition={{ duration: 0.35 }}>
                 <p className="kicker text-inherit/80">{plan.name}</p>
                 <div className="mt-2 flex items-end gap-1">
-                  <span className="text-4xl font-black">{plan.price}</span>
+                  <span className="text-4xl font-black">{annual ? plan.annual : plan.monthly}</span>
                   <span className="pb-1 text-sm opacity-85">{plan.period}</span>
                 </div>
                 <p className="mt-2 text-sm opacity-90">{plan.description}</p>
@@ -229,7 +235,7 @@ export function LandingBelowFold() {
                   ))}
                 </ul>
                 <div className="mt-auto pt-8">
-                  <HoverLink className={`btn w-full justify-center ${plan.featured ? "bg-white text-cyan-700 hover:bg-neutral-900" : "btn-primary"}`} href="/register">{plan.cta}</HoverLink>
+                  <HoverLink className={`btn w-full justify-center ${plan.featured ? "bg-white text-cyan-700 hover:bg-neutral-900" : "btn-primary"}`} href={plan.name === "Enterprise" ? "mailto:sales@trustloop.dev" : "/#early-access"}>{plan.cta}</HoverLink>
                 </div>
               </motionDev.article>
             );
@@ -253,16 +259,21 @@ export function LandingBelowFold() {
                 </tr>
               </thead>
               <tbody>
-                {comparisonRows.map((row) => (
+                {comparisonRows.map((row) => {
+                  const vals = row.feature === "Price" && annual
+                    ? [(row as Record<string, string>).starterAnnual ?? row.starter, (row as Record<string, string>).proAnnual ?? row.pro, (row as Record<string, string>).enterpriseAnnual ?? row.enterprise]
+                    : [row.starter, row.pro, row.enterprise];
+                  return (
                   <tr key={row.feature} className="border-b border-neutral-800/50 last:border-0">
                     <td className="px-6 py-3 text-neutral-300">{row.feature}</td>
-                    {[row.starter, row.pro, row.enterprise].map((val, i) => (
+                    {vals.map((val, i) => (
                       <td key={i} className="px-6 py-3 text-center">
                         {val === "✓" ? <Check className="mx-auto h-4 w-4 text-emerald-400" /> : val === "—" ? <Minus className="mx-auto h-4 w-4 text-neutral-600" /> : <span className="text-neutral-300">{val}</span>}
                       </td>
                     ))}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -288,14 +299,29 @@ export function LandingBelowFold() {
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32">
-        <framerMotion.div className="flex flex-col items-center text-center rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-white shadow-2xl md:p-16" initial={{ opacity: 0, y: 14 }} transition={{ duration: 0.45 }} viewport={{ once: true, amount: 0.4 }} whileInView={{ opacity: 1, y: 0 }}>
-          <p className="kicker text-neutral-400">Ready to ship safer AI products?</p>
-          <h2 className="mt-6 max-w-3xl text-3xl font-bold leading-tight text-white md:text-5xl">Move incident response from reactive chaos to a measurable operating system.</h2>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
-            <HoverLink className="btn btn-primary btn-lg" href="/register">Start free trial <span aria-hidden>→</span></HoverLink>
-            <HoverLink className="btn btn-ghost btn-lg" href="/login">Sign in</HoverLink>
+      {/* CTA + Early Access */}
+      <section id="early-access" className="mx-auto w-full max-w-[1200px] pb-16 md:pb-32">
+        <framerMotion.div className="grid gap-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-white shadow-2xl md:grid-cols-2 md:p-16" initial={{ opacity: 0, y: 14 }} transition={{ duration: 0.45 }} viewport={{ once: true, amount: 0.4 }} whileInView={{ opacity: 1, y: 0 }}>
+          <div className="flex flex-col justify-center">
+            <p className="kicker text-neutral-400">Ready to ship safer AI products?</p>
+            <h2 className="mt-6 text-3xl font-bold leading-tight text-white md:text-5xl">Move incident response from reactive chaos to a measurable operating system.</h2>
+            <div className="mt-10 flex flex-wrap gap-4">
+              <HoverLink className="btn btn-primary btn-lg" href="/#early-access">Start free trial <span aria-hidden>→</span></HoverLink>
+              <HoverLink className="btn btn-ghost btn-lg" href="/login">Sign in</HoverLink>
+            </div>
+          </div>
+          <div className="flex flex-col justify-center">
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-8">
+              <div className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-cyan-500">
+                <Sparkles className="h-4 w-4" />
+                Early Access
+              </div>
+              <h3 className="mb-2 text-2xl font-bold text-white">Request early access</h3>
+              <p className="mb-6 text-sm text-neutral-400">
+                Join the waitlist and we&apos;ll send you an invite code when your spot is ready.
+              </p>
+              <EarlyAccessForm />
+            </div>
           </div>
         </framerMotion.div>
       </section>
@@ -330,7 +356,7 @@ export function LandingBelowFold() {
           <div>
             <p className="text-sm font-semibold text-white">Get Started</p>
             <p className="mt-4 text-sm leading-relaxed text-neutral-400">Launch your workspace and connect provider keys in under 10 minutes.</p>
-            <HoverLink className="btn btn-primary mt-6 w-full justify-center" href="/register">Create workspace</HoverLink>
+            <HoverLink className="btn btn-primary mt-6 w-full justify-center" href="/#early-access">Create workspace</HoverLink>
           </div>
         </div>
       </footer>

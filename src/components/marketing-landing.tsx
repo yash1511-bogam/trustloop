@@ -16,7 +16,6 @@ import dynamic from "next/dynamic";
 
 import { HoverLink } from "./hover-link";
 import { HeroIllustration } from "./hero-illustration";
-import { EarlyAccessForm } from "./early-access-form";
 
 const LandingBelowFold = dynamic(() => import("./landing-below-fold").then((m) => ({ default: m.LandingBelowFold })), {
   loading: () => <div className="min-h-screen" />,
@@ -68,7 +67,7 @@ export function MarketingLanding() {
   );
 
   return (
-    <div ref={scope} className="relative overflow-clip pb-20">
+    <div ref={scope} className="relative overflow-clip">
       <framerMotion.div
         aria-hidden
         className="pointer-events-none absolute -left-20 top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,_rgba(32,154,205,0.35),_rgba(32,154,205,0))] blur-3xl parallax-slow"
@@ -131,7 +130,7 @@ export function MarketingLanding() {
 
             <div className="flex flex-wrap justify-center gap-4 pt-4">
               <motionDev.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
-                <HoverLink className="btn btn-primary btn-lg" href="/register">
+                <HoverLink className="btn btn-primary btn-lg" href="#early-access">
                   Launch workspace
                   <ArrowRight className="h-4 w-4" />
                 </HoverLink>
@@ -158,21 +157,6 @@ export function MarketingLanding() {
         </section>
 
         <LandingBelowFold />
-
-        {/* Early Access */}
-        <section id="early-access" className="mx-auto w-full max-w-md py-16 md:py-24">
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 shadow-2xl">
-            <div className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-cyan-500">
-              <Sparkles className="h-4 w-4" />
-              Early Access
-            </div>
-            <h2 className="mb-2 text-2xl font-bold text-white">Request early access</h2>
-            <p className="mb-6 text-sm text-neutral-400">
-              Join the waitlist and we&apos;ll send you an invite code when your spot is ready.
-            </p>
-            <EarlyAccessForm />
-          </div>
-        </section>
       </main>
     </div>
   );

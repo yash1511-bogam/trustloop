@@ -44,3 +44,4 @@ export const sendPlanCanceledEmail = makeMock("sendPlanCanceledEmail");
 export const sendTrialStartedEmail = makeMock("sendTrialStartedEmail");
 export const sendTrialReminderEmail = makeMock("sendTrialReminderEmail");
 export const sendTrialExpiredEmail = makeMock("sendTrialExpiredEmail");
+export const sendEarlyAccessConfirmationEmail = makeMock("sendEarlyAccessConfirmationEmail");

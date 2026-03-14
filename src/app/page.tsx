@@ -13,8 +13,8 @@ const softwareSchema = {
     "TrustLoop is an incident operations SaaS for AI software companies that unifies intake, triage, ownership, and customer-safe updates.",
   offers: {
     "@type": "AggregateOffer",
-    lowPrice: "199",
-    highPrice: "649",
+    lowPrice: "49",
+    highPrice: "149",
     priceCurrency: "USD",
     offerCount: "3",
   },
