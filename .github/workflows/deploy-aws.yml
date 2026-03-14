@@ -12,21 +12,24 @@ permissions:
 env:
   AWS_REGION: us-east-1
   PROJECT_NAME: trustloop
-  TF_IN_AUTOMATION: true
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.30.3"
 
 jobs:
-  deploy:
+  # ── Stage 1: Validate code quality and build ────────────────────────────────
+  ci:
+    name: Lint & Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10.30.3
+          version: ${{ env.PNPM_VERSION }}
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
@@ -39,94 +42,146 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
+      - name: Validate Prisma schema
+        run: pnpm run prisma:validate
+
       - name: Build
         env:
-          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
           REDIS_URL: redis://localhost:6379
-          STYTCH_PROJECT_ID: placeholder
-          STYTCH_SECRET: placeholder
+          STYTCH_PROJECT_ID: ci-placeholder
+          STYTCH_SECRET: ci-placeholder
           STYTCH_ENV: test
-          KEY_ENCRYPTION_SECRET: placeholder-key-encryption-secret-123456789
-          RESEND_API_KEY: re_placeholder
-          RESEND_FROM_EMAIL: TrustLoop <noreply@example.com>
-          DODO_PAYMENTS_API_KEY: placeholder
-          DODO_PAYMENTS_WEBHOOK_KEY: placeholder
+          KEY_ENCRYPTION_SECRET: ci-placeholder-key-encryption-secret-32
+          RESEND_API_KEY: re_ci_placeholder
+          RESEND_FROM_EMAIL: CI <noreply@example.com>
+          DODO_PAYMENTS_API_KEY: ci-placeholder
+          DODO_PAYMENTS_WEBHOOK_KEY: ci-placeholder
           DODO_PAYMENTS_ENV: test_mode
-          DODO_PRODUCT_ID_STARTER: placeholder
-          DODO_PRODUCT_ID_PRO: placeholder
-          DODO_PRODUCT_ID_ENTERPRISE: placeholder
-          BILLING_AUTOMATION_CRON_SECRET: placeholder
-          REMINDER_ENQUEUE_CRON_SECRET: placeholder
-          AI_KEY_HEALTH_CRON_SECRET: placeholder
+          DODO_PRODUCT_ID_STARTER: ci
+          DODO_PRODUCT_ID_PRO: ci
+          DODO_PRODUCT_ID_ENTERPRISE: ci
+          BILLING_AUTOMATION_CRON_SECRET: ci
+          REMINDER_ENQUEUE_CRON_SECRET: ci
+          AI_KEY_HEALTH_CRON_SECRET: ci
           REMINDER_STALE_MINUTES: "240"
           AWS_REGION: us-east-1
-          REMINDER_QUEUE_NAME: trustloop-incident-reminders
-          REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/trustloop-incident-reminders
+          REMINDER_QUEUE_NAME: ci-queue
+          REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/ci-queue
         run: pnpm run build
 
-      - uses: hashicorp/setup-terraform@v3
+  # ── Stage 2: Deploy to AWS (only after CI passes) ──────────────────────────
+  deploy:
+    name: Deploy
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      TF_IN_AUTOMATION: true
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      # ── Terraform ───────────────────────────────────────────────────────────
+      - uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
         working-directory: infra/terraform
         run: terraform init
 
-      - name: Terraform Apply (ECR bootstrap)
+      - name: Terraform Plan
         working-directory: infra/terraform
-        run: terraform apply -target=aws_ecr_repository.app -auto-approve -var="image_tag=bootstrap"
+        run: terraform plan -var="image_tag=${{ github.sha }}" -out=tfplan
 
+      - name: Terraform Apply
+        working-directory: infra/terraform
+        run: terraform apply -auto-approve tfplan
+
+      # ── Docker build & push ─────────────────────────────────────────────────
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push Docker Image
+      - name: Build and push Docker image
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           ECR_REPO="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PROJECT_NAME}"
-          docker build -t "$ECR_REPO:$GITHUB_SHA" .
-          docker push "$ECR_REPO:$GITHUB_SHA"
+          IMAGE="$ECR_REPO:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
 
-      - name: Terraform Apply (Full deploy)
-        working-directory: infra/terraform
-        run: terraform apply -auto-approve -var="image_tag=${{ github.sha }}"
-
-      - name: Run Prisma Migrations
+      # ── Force ECS to pick up new image ──────────────────────────────────────
+      - name: Update ECS services
         working-directory: infra/terraform
         run: |
-          ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)
-          WEB_TASK_DEF=$(terraform output -raw web_task_definition_arn)
-          ECS_SUBNETS=$(terraform output -raw ecs_subnet_ids_csv)
-          ECS_SG=$(terraform output -raw ecs_security_group_id)
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-web" --force-new-deployment --no-cli-pager
+          aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-worker" --force-new-deployment --no-cli-pager
 
+      # ── Database migrations ─────────────────────────────────────────────────
+      - name: Run Prisma migrations
+        working-directory: infra/terraform
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          TASK_DEF=$(terraform output -raw web_task_definition_arn)
+          SUBNETS=$(terraform output -raw ecs_subnet_ids_csv)
+          SG=$(terraform output -raw ecs_security_group_id)
+
+          echo "Starting migration task..."
           TASK_ARN=$(aws ecs run-task \
-            --cluster "$ECS_CLUSTER" \
+            --cluster "$CLUSTER" \
             --launch-type FARGATE \
-            --task-definition "$WEB_TASK_DEF" \
-            --network-configuration "awsvpcConfiguration={subnets=[$ECS_SUBNETS],securityGroups=[$ECS_SG],assignPublicIp=DISABLED}" \
+            --task-definition "$TASK_DEF" \
+            --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=DISABLED}" \
             --overrides '{"containerOverrides":[{"name":"trustloop-web","command":["pnpm","run","prisma:deploy"]}]}' \
             --query 'tasks[0].taskArn' --output text)
 
-          aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN"
+          echo "Waiting for migration task to complete: $TASK_ARN"
+          aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
 
-          EXIT_CODE=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" \
+          EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
             --query 'tasks[0].containers[0].exitCode' --output text)
+
           if [ "$EXIT_CODE" != "0" ]; then
-            echo "Migration failed with exit code $EXIT_CODE"
+            echo "::error::Migration failed (exit code $EXIT_CODE)"
+            aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+              --query 'tasks[0].containers[0].reason' --output text
             exit 1
           fi
+          echo "Migrations applied successfully"
 
-      - name: Post-deploy smoke test
+      # ── Verify deployment ───────────────────────────────────────────────────
+      - name: Wait for ECS services to stabilize
+        working-directory: infra/terraform
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          echo "Waiting for web service to stabilize..."
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "${PROJECT_NAME}-web"
+          echo "Web service is stable"
+
+      - name: Smoke test
         working-directory: infra/terraform
         run: |
           APP_URL=$(terraform output -raw app_url)
-          echo "Deployed to $APP_URL"
+          echo "Testing $APP_URL"
+          FAILED=0
           for ep in /api/health /login /register; do
-            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$APP_URL$ep" || echo "000")
-            if [ "$STATUS" = "000" ]; then echo "FAIL $ep"; exit 1; fi
-            echo "OK $ep — $STATUS"
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL$ep" || echo "000")
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+              echo "✅ $ep → $STATUS"
+            else
+              echo "❌ $ep → $STATUS"
+              FAILED=1
+            fi
           done
+          if [ "$FAILED" = "1" ]; then exit 1; fi
+          echo ""
+          echo "🚀 Deployed successfully to $APP_URL"
