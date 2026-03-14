@@ -44,22 +44,36 @@ function verifyAndParseState(state: string): string | null {
   return workspaceId;
 }
 
+function slackFlashRedirect(status: string): NextResponse {
+  const response = NextResponse.redirect(`${appBaseUrl()}/settings/workspace`);
+  response.cookies.set({
+    name: "trustloop_flash",
+    value: status,
+    httpOnly: false,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 30,
+    path: "/",
+  });
+  return response;
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const error = request.nextUrl.searchParams.get("error");
 
   if (error) {
-    return NextResponse.redirect(`${appBaseUrl()}/settings?slack=denied`);
+    return slackFlashRedirect("slack_denied");
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${appBaseUrl()}/settings?slack=invalid`);
+    return slackFlashRedirect("slack_invalid");
   }
 
   const workspaceId = verifyAndParseState(state);
   if (!workspaceId) {
-    return NextResponse.redirect(`${appBaseUrl()}/settings?slack=invalid_state`);
+    return slackFlashRedirect("slack_invalid_state");
   }
 
   try {
@@ -68,7 +82,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       select: { id: true },
     });
     if (!workspace) {
-      return NextResponse.redirect(`${appBaseUrl()}/settings?slack=workspace_missing`);
+      return slackFlashRedirect("slack_workspace_missing");
     }
 
     const oauth = await exchangeSlackOAuthCode(code);
@@ -83,8 +97,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     recordAuditLog({ workspaceId: workspace.id, action: "slack.connected", targetType: "Workspace", summary: `Slack workspace ${oauth.teamId} connected` }).catch(() => {});
 
-    return NextResponse.redirect(`${appBaseUrl()}/settings?slack=connected`);
+    return slackFlashRedirect("slack_connected");
   } catch {
-    return NextResponse.redirect(`${appBaseUrl()}/settings?slack=error`);
+    return slackFlashRedirect("slack_error");
   }
 }

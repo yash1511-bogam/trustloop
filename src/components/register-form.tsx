@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCleanUrl } from "@/hooks/use-clean-url";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { SamlSsoForm } from "@/components/saml-sso-form";
 import {
@@ -22,6 +23,7 @@ export function RegisterForm({
   inviteToken,
   turnstileSiteKey,
 }: Props) {
+  useCleanUrl(["error", "email", "token", "provider", "stytch_token_type"]);
   const router = useRouter();
   const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [workspaceName, setWorkspaceName] = useState(initialWorkspaceName ?? "");

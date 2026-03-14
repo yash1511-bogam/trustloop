@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCleanUrl } from "@/hooks/use-clean-url";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { SamlSsoForm } from "@/components/saml-sso-form";
 import {
@@ -14,6 +15,7 @@ type LoginFormProps = {
 };
 
 export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
+  useCleanUrl(["error", "token", "provider", "stytch_token_type"]);
   const router = useRouter();
   const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const [email, setEmail] = useState("");

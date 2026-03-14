@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   ArrowRight,
 } from "lucide-react";
+import { useCleanUrl } from "@/hooks/use-clean-url";
 import { PlanTier, planDefinitionFor } from "@/lib/billing-plan";
 
 type Usage = {
@@ -329,6 +330,7 @@ export function BillingPanel({
   quota,
   usage,
 }: Props) {
+  useCleanUrl(["billing"]);
   const [selectedPlan, setSelectedPlan] = useState<PlanTier>(
     planTier === "free" ? "starter" : planTier,
   );
