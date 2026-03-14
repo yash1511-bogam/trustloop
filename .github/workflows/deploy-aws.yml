@@ -3,33 +3,28 @@ name: Deploy AWS
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: read
   id-token: write
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+  AWS_REGION: us-east-1
   PROJECT_NAME: trustloop
   TF_IN_AUTOMATION: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 10.30.3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
@@ -38,23 +33,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Start local dependencies (Postgres, Redis, LocalStack)
+      - name: Start local dependencies
         run: docker compose -f docker-compose.localstack.yml up -d
 
       - name: Wait for local dependencies
         run: |
-          for svc in postgres redis localstack; do
-            for i in $(seq 1 60); do
-              case $svc in
-                postgres)  docker compose -f docker-compose.localstack.yml exec -T postgres pg_isready -U postgres -d trustloop >/dev/null 2>&1 && break ;;
-                redis)     docker compose -f docker-compose.localstack.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG && break ;;
-                localstack) curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1 && break ;;
-              esac
-              sleep 2
-            done
-          done
+          until docker compose -f docker-compose.localstack.yml exec -T postgres pg_isready -U postgres -d trustloop >/dev/null 2>&1; do sleep 2; done
+          until docker compose -f docker-compose.localstack.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 2; done
+          until curl -sf http://localhost:4566/_localstack/health >/dev/null 2>&1; do sleep 2; done
 
-      - name: Bootstrap Prisma, database, Redis and queue
+      - name: Bootstrap Prisma, database and queue
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trustloop?schema=public
           REDIS_URL: redis://localhost:6379
@@ -63,7 +51,7 @@ jobs:
           STYTCH_ENV: test
           KEY_ENCRYPTION_SECRET: placeholder-key-encryption-secret-123456789
           RESEND_API_KEY: re_placeholder
-          RESEND_FROM_EMAIL: "TrustLoop <onboarding@resend.dev>"
+          RESEND_FROM_EMAIL: TrustLoop <onboarding@resend.dev>
           DODO_PAYMENTS_API_KEY: dodo_test_placeholder
           DODO_PAYMENTS_WEBHOOK_KEY: dodo_whsec_placeholder
           DODO_PAYMENTS_ENV: test_mode
@@ -103,7 +91,7 @@ jobs:
           STYTCH_ENV: test
           KEY_ENCRYPTION_SECRET: placeholder-key-encryption-secret-123456789
           RESEND_API_KEY: re_placeholder
-          RESEND_FROM_EMAIL: "TrustLoop <onboarding@resend.dev>"
+          RESEND_FROM_EMAIL: TrustLoop <onboarding@resend.dev>
           DODO_PAYMENTS_API_KEY: dodo_test_placeholder
           DODO_PAYMENTS_WEBHOOK_KEY: dodo_whsec_placeholder
           DODO_PAYMENTS_ENV: test_mode
@@ -123,23 +111,14 @@ jobs:
           REMINDER_QUEUE_URL: http://localhost:4566/000000000000/trustloop-incident-reminders
         run: pnpm run build
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
 
-      - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Configure AWS credentials (Access Keys)
-        if: ${{ secrets.AWS_ROLE_TO_ASSUME == '' }}
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-east-1
 
       - name: Terraform Init
         working-directory: infra/terraform
@@ -153,59 +132,48 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and Push Docker Image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           ECR_REPO="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PROJECT_NAME}"
-          docker build -t "$ECR_REPO:$IMAGE_TAG" .
-          docker push "$ECR_REPO:$IMAGE_TAG"
+          docker build -t "$ECR_REPO:$GITHUB_SHA" .
+          docker push "$ECR_REPO:$GITHUB_SHA"
 
       - name: Terraform Apply (Full deploy)
         working-directory: infra/terraform
-        run: terraform apply -auto-approve -var="image_tag=${GITHUB_SHA}"
+        run: terraform apply -auto-approve -var="image_tag=${{ github.sha }}"
 
       - name: Run Prisma Migrations
         working-directory: infra/terraform
         run: |
           ECS_CLUSTER=$(terraform output -raw ecs_cluster_name)
-          WEB_TASK_DEFINITION=$(terraform output -raw web_task_definition_arn)
+          WEB_TASK_DEF=$(terraform output -raw web_task_definition_arn)
           ECS_SUBNETS=$(terraform output -raw ecs_subnet_ids_csv)
-          ECS_SECURITY_GROUP=$(terraform output -raw ecs_security_group_id)
-
-          cat > migration-overrides.json <<'JSON'
-          { "containerOverrides": [{ "name": "trustloop-web", "command": ["pnpm", "run", "prisma:deploy"] }] }
-          JSON
+          ECS_SG=$(terraform output -raw ecs_security_group_id)
 
           TASK_ARN=$(aws ecs run-task \
             --cluster "$ECS_CLUSTER" \
             --launch-type FARGATE \
-            --task-definition "$WEB_TASK_DEFINITION" \
-            --network-configuration "awsvpcConfiguration={subnets=[$ECS_SUBNETS],securityGroups=[$ECS_SECURITY_GROUP],assignPublicIp=DISABLED}" \
-            --overrides file://migration-overrides.json \
-            --query 'tasks[0].taskArn' \
-            --output text)
+            --task-definition "$WEB_TASK_DEF" \
+            --network-configuration "awsvpcConfiguration={subnets=[$ECS_SUBNETS],securityGroups=[$ECS_SG],assignPublicIp=DISABLED}" \
+            --overrides '{"containerOverrides":[{"name":"trustloop-web","command":["pnpm","run","prisma:deploy"]}]}' \
+            --query 'tasks[0].taskArn' --output text)
 
           aws ecs wait tasks-stopped --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN"
 
           EXIT_CODE=$(aws ecs describe-tasks --cluster "$ECS_CLUSTER" --tasks "$TASK_ARN" \
             --query 'tasks[0].containers[0].exitCode' --output text)
-
           if [ "$EXIT_CODE" != "0" ]; then
-            echo "Migration task failed with exit code $EXIT_CODE"
+            echo "Migration failed with exit code $EXIT_CODE"
             exit 1
           fi
-
-      - name: Show deployment endpoint
-        working-directory: infra/terraform
-        run: echo "Application URL:$(terraform output -raw app_url)"
 
       - name: Post-deploy smoke test
         working-directory: infra/terraform
         run: |
           APP_URL=$(terraform output -raw app_url)
-          for endpoint in "/api/health" "/login" "/register"; do
-            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$APP_URL$endpoint" || echo "000")
-            if [ "$STATUS" = "000" ]; then echo "❌ $endpoint — unreachable"; exit 1; fi
-            echo "✅ $endpoint — HTTP $STATUS"
+          echo "Deployed to $APP_URL"
+          for ep in /api/health /login /register; do
+            STATUS=$(curl -sf -o /dev/null -w "%{http_code}" "$APP_URL$ep" || echo "000")
+            if [ "$STATUS" = "000" ]; then echo "FAIL $ep"; exit 1; fi
+            echo "OK $ep — $STATUS"
           done
