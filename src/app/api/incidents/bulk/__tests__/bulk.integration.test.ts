@@ -41,7 +41,7 @@ vi.mock("@/lib/outbound-webhooks", () => ({ dispatchOutboundWebhookEvent: vi.fn(
 vi.mock("@/lib/sanitize", () => ({ sanitizeLongText: vi.fn((s: string) => s) }));
 
 function req(url: string, method: string, body?: unknown): NextRequest {
-  const init: RequestInit = { method, headers: { "content-type": "application/json" } };
+  const init: Record<string, unknown> = { method, headers: { "content-type": "application/json" } };
   if (body) init.body = JSON.stringify(body);
   return new NextRequest(new URL(url, "http://localhost:3000"), init);
 }

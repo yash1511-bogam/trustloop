@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { sendEmailOtpLoginOrCreate } from "@/lib/stytch";
+import { sendEarlyAccessOtpEmail } from "@/lib/email";
 import { redisSetJson } from "@/lib/redis";
 import { log } from "@/lib/logger";
+import { randomInt, randomUUID } from "crypto";
 
 const schema = z.object({
   name: z.string().min(2).max(80),
@@ -15,13 +16,23 @@ type PendingEarlyAccess = {
   name: string;
   email: string;
   companyName?: string;
+  otpHash: string;
 };
 
 function earlyAccessKey(methodId: string): string {
   return `early-access:${methodId}`;
 }
 
-export { earlyAccessKey, type PendingEarlyAccess };
+function generateOtp(): string {
+  return String(randomInt(100000, 999999));
+}
+
+async function hashOtp(otp: string): Promise<string> {
+  const { createHash } = await import("crypto");
+  return createHash("sha256").update(otp).digest("hex");
+}
+
+export { earlyAccessKey, type PendingEarlyAccess, hashOtp };
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = await request.json().catch(() => null);
@@ -38,15 +49,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const otp = await sendEmailOtpLoginOrCreate(email);
+    const otp = generateOtp();
+    const methodId = randomUUID();
 
-    await redisSetJson<PendingEarlyAccess>(earlyAccessKey(otp.methodId), {
+    await sendEarlyAccessOtpEmail({ toEmail: email, code: otp });
+
+    await redisSetJson<PendingEarlyAccess>(earlyAccessKey(methodId), {
       name: parsed.data.name.trim(),
       email,
       companyName: parsed.data.companyName?.trim(),
+      otpHash: await hashOtp(otp),
     }, 15 * 60);
 
-    return NextResponse.json({ methodId: otp.methodId, message: "Verification code sent to your email." });
+    return NextResponse.json({ methodId, message: "Verification code sent to your email." });
   } catch (error) {
     log.auth.error("Failed to send early access OTP", {
       email,

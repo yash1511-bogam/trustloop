@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCleanUrl } from "@/hooks/use-clean-url";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { SamlSsoForm } from "@/components/saml-sso-form";
+import { useOtpResend } from "@/components/use-otp-resend";
 import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
@@ -26,6 +27,22 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const requiresTurnstile = Boolean(turnstileSiteKey);
+  const emailRef = useRef(email);
+  useEffect(() => { emailRef.current = email; }, [email]);
+
+  const resendFn = useCallback(async () => {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: emailRef.current }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    setMethodId(data.methodId);
+    setMessage("Verification code resent.");
+    return true;
+  }, []);
+  const otpResend = useOtpResend(resendFn);
 
   async function startChallenge(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -170,6 +187,9 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
 
           <button className="btn btn-primary w-full" disabled={submitting} type="submit">
             {submitting ? "Verifying..." : "Verify and sign in"}
+          </button>
+          <button className="btn btn-ghost w-full text-sm" disabled={!otpResend.canResend} onClick={otpResend.resend} type="button">
+            {otpResend.label}
           </button>
         </form>
       ) : null}

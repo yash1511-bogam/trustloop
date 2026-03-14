@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCleanUrl } from "@/hooks/use-clean-url";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { SamlSsoForm } from "@/components/saml-sso-form";
+import { useOtpResend } from "@/components/use-otp-resend";
 import {
   TurnstileWidget,
   type TurnstileWidgetHandle,
@@ -39,6 +40,29 @@ export function RegisterForm({
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const requiresTurnstile = Boolean(turnstileSiteKey);
+  const formDataRef = useRef({ workspaceName, name, email, inviteToken, inviteCode });
+  useEffect(() => { formDataRef.current = { workspaceName, name, email, inviteToken, inviteCode }; }, [workspaceName, name, email, inviteToken, inviteCode]);
+
+  const resendFn = useCallback(async () => {
+    const d = formDataRef.current;
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workspaceName: d.workspaceName,
+        name: d.name,
+        email: d.email,
+        inviteToken: d.inviteToken ?? undefined,
+        inviteCode: d.inviteCode || undefined,
+      }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    setMethodId(data.methodId);
+    setMessage("Verification code resent.");
+    return true;
+  }, []);
+  const otpResend = useOtpResend(resendFn);
 
   async function startRegistration(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -238,6 +262,9 @@ export function RegisterForm({
 
           <button className="btn btn-primary w-full" disabled={submitting} type="submit">
             {submitting ? "Verifying..." : "Verify and create workspace"}
+          </button>
+          <button className="btn btn-ghost w-full text-sm" disabled={!otpResend.canResend} onClick={otpResend.resend} type="button">
+            {otpResend.label}
           </button>
         </form>
       ) : null}

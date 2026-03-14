@@ -4,7 +4,7 @@ import { z } from "zod";
 import { appUrl } from "@/lib/app-url";
 import { recordAuditLog } from "@/lib/audit";
 import { setSessionCookie } from "@/lib/cookies";
-import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
+import { sendGettingStartedGuideEmail, scheduleWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { redisSetJson } from "@/lib/redis";
@@ -285,21 +285,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     recordAuditLog({ workspaceId: created.workspace.id, actorUserId: created.user.id, action: "auth.oauth_register", targetType: "user", targetId: created.user.id, summary: `OAuth registration for ${created.user.email}` }).catch(() => {});
 
-    try {
-      await sendWelcomeEmail({
-        workspaceId: created.workspace.id,
-        toEmail: created.user.email,
-        workspaceName: created.workspace.name,
-        userName: created.user.name,
-      });
-    } catch (error) {
-      log.auth.error("Failed to send OAuth welcome email", {
-        workspaceId: created.workspace.id,
-        toEmail: created.user.email,
-        intent,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    scheduleWelcomeEmail({
+      workspaceId: created.workspace.id,
+      toEmail: created.user.email,
+      workspaceName: created.workspace.name,
+      userName: created.user.name,
+    });
     try {
       await sendGettingStartedGuideEmail({
         workspaceId: created.workspace.id,

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { authenticateEmailOtp } from "@/lib/stytch";
 import { redisDelete, redisGetJson } from "@/lib/redis";
 import { log } from "@/lib/logger";
-import { sendEarlyAccessConfirmationEmail } from "@/lib/email";
-import { earlyAccessKey, type PendingEarlyAccess } from "../route";
+import { sendEarlyAccessConfirmationEmail, upsertEmailSubscription } from "@/lib/email";
+import { earlyAccessKey, hashOtp, type PendingEarlyAccess } from "../route";
 
 const schema = z.object({
   methodId: z.string().min(6).max(200),
@@ -25,11 +24,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    await authenticateEmailOtp({
-      methodId: parsed.data.methodId,
-      code: parsed.data.code.trim(),
-      intent: "login",
-    });
+    const codeHash = await hashOtp(parsed.data.code.trim());
+    if (codeHash !== pending.otpHash) {
+      return NextResponse.json({ error: "Invalid or expired verification code." }, { status: 401 });
+    }
 
     await prisma.earlyAccessRequest.upsert({
       where: { email: pending.email },
@@ -47,6 +45,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     await redisDelete(earlyAccessKey(parsed.data.methodId));
+
+    // Collect email subscription
+    upsertEmailSubscription({
+      email: pending.email,
+      name: pending.name,
+    }).catch(() => {});
 
     sendEarlyAccessConfirmationEmail({
       toEmail: pending.email,

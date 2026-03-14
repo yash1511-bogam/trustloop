@@ -829,6 +829,7 @@ model EarlyAccessRequest {
   email         String   @unique
   companyName   String?
   emailVerified Boolean  @default(false)
+  userId        String?
   createdAt     DateTime @default(now())
 }
 
@@ -845,4 +846,19 @@ model InviteCode {
   createdAt       DateTime  @default(now())
 
   @@index([email])
+}
+
+model EmailSubscription {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  subscribed       Boolean   @default(true)
+  unsubscribedAt   DateTime?
+  unsubscribeToken String    @unique @default(cuid())
+  userId           String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([email])
+  @@index([unsubscribeToken])
 }

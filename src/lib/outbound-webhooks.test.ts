@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { normalizeOutboundWebhookEvents, OUTBOUND_WEBHOOK_EVENTS } from "@/lib/outbound-webhooks";
 
 // Mock dependencies to avoid DB/crypto side effects on import

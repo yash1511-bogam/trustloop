@@ -49,7 +49,7 @@ vi.mock("@/lib/incident-push", () => ({ notifyIncidentPush: vi.fn() }));
 vi.mock("@/lib/slack", () => ({ postSlackMessage: vi.fn(async () => null) }));
 
 function req(method: string, body?: unknown): NextRequest {
-  const init: RequestInit = { method, headers: { "content-type": "application/json" } };
+  const init: Record<string, unknown> = { method, headers: { "content-type": "application/json" } };
   if (body) init.body = JSON.stringify(body);
   return new NextRequest(new URL("http://localhost:3000/api/incidents/inc-1/customer-update"), init);
 }

@@ -35,7 +35,7 @@ vi.mock("@/lib/feature-gate-server", () => ({ isWorkspaceFeatureAllowed: vi.fn(a
 vi.mock("@/lib/turnstile", () => ({ verifyTurnstileToken: vi.fn(async () => ({ success: true })), isTurnstileEnabled: vi.fn(() => false) }));
 
 function req(url: string, method: string, body?: unknown): NextRequest {
-  const init: RequestInit = { method, headers: { "content-type": "application/json" } };
+  const init: Record<string, unknown> = { method, headers: { "content-type": "application/json" } };
   if (body) init.body = JSON.stringify(body);
   return new NextRequest(new URL(url, "http://localhost:3000"), init);
 }

@@ -1,6 +1,7 @@
 import { EmailDeliveryStatus, EmailNotificationType } from "@prisma/client";
 import { Resend } from "resend";
 import { prisma } from "@/lib/prisma";
+import { log } from "@/lib/logger";
 
 const globalForResend = globalThis as unknown as {
   resendClient?: Resend;
@@ -47,6 +48,77 @@ function appBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 }
 
+// --- Email types that should ALWAYS be sent regardless of subscription ---
+const CRITICAL_EMAIL_TYPES = new Set<EmailNotificationType>([
+  EmailNotificationType.AUTH_OTP,
+  EmailNotificationType.AUTH_RECOVERY,
+  EmailNotificationType.PAYMENT_FAILURE_REMINDER,
+]);
+
+function isCriticalEmail(type: EmailNotificationType): boolean {
+  return CRITICAL_EMAIL_TYPES.has(type);
+}
+
+async function isEmailSubscribed(email: string): Promise<boolean> {
+  const sub = await prisma.emailSubscription.findUnique({
+    where: { email: email.toLowerCase().trim() },
+    select: { subscribed: true },
+  });
+  return sub?.subscribed !== false;
+}
+
+function unsubscribeUrl(token: string): string {
+  return `${appBaseUrl()}/unsubscribe?token=${encodeURIComponent(token)}`;
+}
+
+async function getUnsubscribeToken(email: string): Promise<string | null> {
+  const sub = await prisma.emailSubscription.findUnique({
+    where: { email: email.toLowerCase().trim() },
+    select: { unsubscribeToken: true },
+  });
+  return sub?.unsubscribeToken ?? null;
+}
+
+function brandedHtml(bodyHtml: string, unsub?: string | null): string {
+  const footer = unsub
+    ? `<p style="margin-top:32px;padding-top:16px;border-top:1px solid #222;font-size:12px;color:#666;">
+        <a href="${unsub}" style="color:#06b6d4;text-decoration:underline;">Unsubscribe</a> from TrustLoop emails
+      </p>`
+    : "";
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#020203;color:#e5e5e5;font-family:Inter,system-ui,sans-serif;">
+<div style="max-width:560px;margin:0 auto;padding:40px 24px;">
+  <div style="margin-bottom:24px;">
+    <span style="font-size:20px;font-weight:700;color:#fff;">TrustLoop</span>
+  </div>
+  <div style="font-size:15px;line-height:1.6;color:#d4d4d4;">
+    ${bodyHtml}
+  </div>
+  <div style="margin-top:40px;font-size:12px;color:#555;">
+    <p>© ${new Date().getFullYear()} TrustLoop · AI Incident Operations</p>
+    ${footer}
+  </div>
+</div></body></html>`;
+}
+
+function brandedText(bodyText: string, unsub?: string | null): string {
+  const footer = unsub ? `\n---\nUnsubscribe: ${unsub}` : "";
+  return `${bodyText}\n\n© ${new Date().getFullYear()} TrustLoop · AI Incident Operations${footer}`;
+}
+
+export async function upsertEmailSubscription(input: {
+  email: string;
+  name: string;
+  userId?: string;
+}): Promise<void> {
+  const email = input.email.toLowerCase().trim();
+  await prisma.emailSubscription.upsert({
+    where: { email },
+    create: { email, name: input.name, userId: input.userId },
+    update: { name: input.name, ...(input.userId ? { userId: input.userId } : {}) },
+  });
+}
+
 function isStubEmailDeliveryEnabled(): boolean {
   return process.env.TRUSTLOOP_STUB_EMAIL_DELIVERY === "1";
 }
@@ -72,6 +144,28 @@ async function createEmailLog(
 }
 
 async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResult> {
+  // Gate non-critical emails on subscription status
+  if (!isCriticalEmail(input.type)) {
+    const subscribed = await isEmailSubscribed(input.toEmail);
+    if (!subscribed) {
+      log.app.info("Skipped email to unsubscribed address", { toEmail: input.toEmail, type: input.type });
+      return { success: true };
+    }
+  }
+
+  // Wrap with branding + unsubscribe for non-critical emails
+  let html = input.html;
+  let text = input.text;
+  if (!isCriticalEmail(input.type)) {
+    const token = await getUnsubscribeToken(input.toEmail);
+    const unsub = token ? unsubscribeUrl(token) : null;
+    html = brandedHtml(input.html, unsub);
+    text = brandedText(input.text, unsub);
+  } else {
+    html = brandedHtml(input.html);
+    text = brandedText(input.text);
+  }
+
   if (isStubEmailDeliveryEnabled()) {
     const providerMessageId = `stub-${Date.now()}`;
     await createEmailLog({
@@ -108,8 +202,8 @@ async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResu
       from: senderAddress(),
       to: [input.toEmail],
       subject: input.subject,
-      html: input.html,
-      text: input.text,
+      html,
+      text,
     });
 
     if (result.error?.message) {
@@ -198,13 +292,13 @@ export async function sendAuthOtpNoticeEmail(input: {
     html: [
       `<p>Hi ${input.userName || "there"},</p>`,
       `<p>A one-time verification code was requested for your <strong>${input.workspaceName}</strong> TrustLoop workspace.</p>`,
-      "<p>If this was you, use the code from the Stytch email to continue signing in.</p>",
+      "<p>If this was you, check your inbox for the verification code to continue signing in.</p>",
       "<p>If this was not you, ignore this message and rotate access controls for your workspace.</p>",
     ].join(""),
     text: [
       `Hi ${input.userName || "there"},`,
       `A one-time verification code was requested for your ${input.workspaceName} TrustLoop workspace.`,
-      "If this was you, use the code from the Stytch email to continue signing in.",
+      "If this was you, check your inbox for the verification code to continue signing in.",
       "If this was not you, ignore this message and rotate access controls for your workspace.",
     ].join("\n"),
   });
@@ -267,6 +361,19 @@ export async function sendWelcomeEmail(input: {
       `Open your dashboard: ${baseUrl}/dashboard`,
     ].join("\n"),
   });
+}
+
+const WELCOME_EMAIL_DELAY_MS = 10 * 60 * 1000;
+
+export function scheduleWelcomeEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  userName: string;
+}): void {
+  setTimeout(() => {
+    sendWelcomeEmail(input).catch(() => {});
+  }, WELCOME_EMAIL_DELAY_MS);
 }
 
 export async function sendGettingStartedGuideEmail(input: {
@@ -686,6 +793,35 @@ export async function sendEarlyAccessConfirmationEmail(input: {
       "In the meantime, feel free to reply to this email if you have any questions.",
       "",
       "— The TrustLoop Team",
+    ].join("\n"),
+  });
+}
+
+export async function sendEarlyAccessOtpEmail(input: {
+  toEmail: string;
+  code: string;
+}): Promise<LoggedEmailResult> {
+  return sendLoggedEmail({
+    workspaceId: "system",
+    type: EmailNotificationType.EARLY_ACCESS_CONFIRMATION,
+    toEmail: input.toEmail,
+    subject: `${input.code} is your TrustLoop verification code`,
+    html: [
+      "<p>Hi,</p>",
+      "<p>Use the code below to verify your email for TrustLoop early access:</p>",
+      `<p style="font-size:32px;font-weight:bold;letter-spacing:4px;padding:16px;background:#111;border-radius:8px;text-align:center;color:#fff;">${input.code}</p>`,
+      "<p>This code expires in 15 minutes.</p>",
+      "<p>If you didn't request this, you can safely ignore this email.</p>",
+    ].join(""),
+    text: [
+      "Hi,",
+      "",
+      "Use this code to verify your email for TrustLoop early access:",
+      "",
+      input.code,
+      "",
+      "This code expires in 15 minutes.",
+      "If you didn't request this, you can safely ignore this email.",
     ].join("\n"),
   });
 }

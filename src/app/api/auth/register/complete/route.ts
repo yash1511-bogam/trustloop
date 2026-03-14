@@ -4,7 +4,7 @@ import { z } from "zod";
 import { recordAuditLog } from "@/lib/audit";
 import { quotasForPlan } from "@/lib/billing-plan";
 import { setSessionCookie } from "@/lib/cookies";
-import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
+import { sendGettingStartedGuideEmail, scheduleWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { redisDelete, redisGetJson } from "@/lib/redis";
@@ -109,9 +109,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   recordAuditLog({ workspaceId: created.workspace.id, actorUserId: created.user.id, action: "auth.oauth_register", targetType: "user", targetId: created.user.id, summary: `OAuth registration for ${created.user.email}` }).catch(() => {});
 
-  sendWelcomeEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name }).catch((e) => {
-    log.auth.error("Failed to send OAuth welcome email", { error: e instanceof Error ? e.message : String(e) });
-  });
+  scheduleWelcomeEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name });
   sendGettingStartedGuideEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name }).catch((e) => {
     log.auth.error("Failed to send OAuth getting started email", { error: e instanceof Error ? e.message : String(e) });
   });

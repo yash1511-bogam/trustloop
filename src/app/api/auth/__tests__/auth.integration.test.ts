@@ -167,7 +167,7 @@ describe("POST /api/auth/register/verify", () => {
       name: "Alice",
       email: "alice@example.com",
       workspaceName: "Acme Inc",
-    });
+    }, 900);
 
     __stytchState.authResult = {
       stytchUserId: "stytch-alice",

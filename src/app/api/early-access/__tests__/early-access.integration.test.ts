@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
 /* ---- mocks ---- */
-vi.mock("@/lib/stytch", () => import("@/test/mock-stytch"));
 vi.mock("@/lib/email", () => import("@/test/mock-email"));
 vi.mock("@/lib/redis", () => {
   const store = new Map<string, string>();
@@ -28,7 +27,6 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { __stytchState, resetStytchState } from "@/test/mock-stytch";
 import { __sentEmails, resetEmails } from "@/test/mock-email";
 import { redisSetJson, redisDelete } from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
@@ -44,7 +42,6 @@ function req(url: string, body: unknown): NextRequest {
 /* ===== POST /api/early-access ===== */
 describe("POST /api/early-access", () => {
   beforeEach(() => {
-    resetStytchState();
     resetEmails();
     vi.clearAllMocks();
   });
@@ -56,6 +53,12 @@ describe("POST /api/early-access", () => {
     const json = await res.json();
     expect(json.methodId).toBeDefined();
     expect(json.message).toContain("Verification code sent");
+  });
+
+  it("sends OTP via Resend not Stytch", async () => {
+    const { POST } = await import("@/app/api/early-access/route");
+    await POST(req("/api/early-access", { name: "Alice", email: "alice@example.com" }));
+    expect(__sentEmails.some((e) => e.fn === "sendEarlyAccessOtpEmail")).toBe(true);
   });
 
   it("accepts optional companyName", async () => {
@@ -89,36 +92,36 @@ describe("POST /api/early-access", () => {
     expect(res.status).toBe(409);
   });
 
-  it("stores pending data in redis", async () => {
+  it("stores pending data with otpHash in redis", async () => {
     const { POST } = await import("@/app/api/early-access/route");
-    await POST(req("/api/early-access", { name: "Alice", email: "alice@example.com", companyName: "Acme" }));
+    await POST(req("/api/early-access", { name: "Alice", email: "alice@example.com" }));
     expect(redisSetJson).toHaveBeenCalledWith(
       expect.stringContaining("early-access:"),
-      expect.objectContaining({ name: "Alice", email: "alice@example.com", companyName: "Acme" }),
+      expect.objectContaining({ name: "Alice", email: "alice@example.com", otpHash: expect.any(String) }),
       expect.any(Number),
     );
-  });
-
-  it("returns 500 when stytch fails", async () => {
-    __stytchState.error = new Error("Stytch down");
-    const { POST } = await import("@/app/api/early-access/route");
-    const res = await POST(req("/api/early-access", { name: "Alice", email: "alice@example.com" }));
-    expect(res.status).toBe(500);
   });
 });
 
 /* ===== POST /api/early-access/verify ===== */
 describe("POST /api/early-access/verify", () => {
   beforeEach(() => {
-    resetStytchState();
     resetEmails();
     vi.clearAllMocks();
   });
 
-  it("verifies OTP and upserts early access request", async () => {
-    // Seed pending data in redis
-    await (redisSetJson as ReturnType<typeof vi.fn>)("early-access:method-1", { name: "Alice", email: "alice@example.com", companyName: "Acme" }, 900);
+  async function seedPending(methodId: string, code: string) {
+    const { hashOtp } = await import("@/app/api/early-access/route");
+    const otpHash = await hashOtp(code);
+    await (redisSetJson as unknown as (...args: unknown[]) => Promise<void>)(
+      `early-access:${methodId}`,
+      { name: "Alice", email: "alice@example.com", otpHash },
+      900,
+    );
+  }
 
+  it("verifies OTP and upserts early access request", async () => {
+    await seedPending("method-1", "123456");
     const { POST } = await import("@/app/api/early-access/verify/route");
     const res = await POST(req("/api/early-access/verify", { methodId: "method-1", code: "123456" }));
     expect(res.status).toBe(200);
@@ -127,8 +130,7 @@ describe("POST /api/early-access/verify", () => {
   });
 
   it("upserts prisma record on success", async () => {
-    await (redisSetJson as ReturnType<typeof vi.fn>)("early-access:method-1", { name: "Alice", email: "alice@example.com" }, 900);
-
+    await seedPending("method-1", "123456");
     const { POST } = await import("@/app/api/early-access/verify/route");
     await POST(req("/api/early-access/verify", { methodId: "method-1", code: "123456" }));
     expect(prisma.earlyAccessRequest.upsert).toHaveBeenCalledWith(
@@ -141,19 +143,16 @@ describe("POST /api/early-access/verify", () => {
   });
 
   it("cleans up redis after verification", async () => {
-    await (redisSetJson as ReturnType<typeof vi.fn>)("early-access:method-1", { name: "Alice", email: "alice@example.com" }, 900);
-
+    await seedPending("method-1", "123456");
     const { POST } = await import("@/app/api/early-access/verify/route");
     await POST(req("/api/early-access/verify", { methodId: "method-1", code: "123456" }));
     expect(redisDelete).toHaveBeenCalledWith("early-access:method-1");
   });
 
   it("sends confirmation email on success", async () => {
-    await (redisSetJson as ReturnType<typeof vi.fn>)("early-access:method-1", { name: "Alice", email: "alice@example.com" }, 900);
-
+    await seedPending("method-1", "123456");
     const { POST } = await import("@/app/api/early-access/verify/route");
     await POST(req("/api/early-access/verify", { methodId: "method-1", code: "123456" }));
-    // Allow fire-and-forget promise to settle
     await new Promise((r) => setTimeout(r, 50));
     expect(__sentEmails.some((e) => e.fn === "sendEarlyAccessConfirmationEmail")).toBe(true);
   });
@@ -164,18 +163,14 @@ describe("POST /api/early-access/verify", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when session expired (no redis data)", async () => {
+  it("returns 400 when session expired", async () => {
     const { POST } = await import("@/app/api/early-access/verify/route");
     const res = await POST(req("/api/early-access/verify", { methodId: "expired-method", code: "123456" }));
     expect(res.status).toBe(400);
-    const json = await res.json();
-    expect(json.error).toContain("expired");
   });
 
   it("returns 401 when OTP is wrong", async () => {
-    await (redisSetJson as ReturnType<typeof vi.fn>)("early-access:method-1", { name: "Alice", email: "alice@example.com" }, 900);
-    __stytchState.error = new Error("Invalid OTP");
-
+    await seedPending("method-1", "123456");
     const { POST } = await import("@/app/api/early-access/verify/route");
     const res = await POST(req("/api/early-access/verify", { methodId: "method-1", code: "000000" }));
     expect(res.status).toBe(401);

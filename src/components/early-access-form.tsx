@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
+import { useOtpResend } from "@/components/use-otp-resend";
 
 export function EarlyAccessForm() {
   const [name, setName] = useState("");
@@ -13,6 +14,23 @@ export function EarlyAccessForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [verified, setVerified] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const formDataRef = useRef({ name, email, companyName });
+  useEffect(() => { formDataRef.current = { name, email, companyName }; }, [name, email, companyName]);
+
+  const resendFn = useCallback(async () => {
+    const d = formDataRef.current;
+    const res = await fetch("/api/early-access", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: d.name, email: d.email, companyName: d.companyName || undefined }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    setMethodId(data.methodId);
+    setMessage("Verification code resent.");
+    return true;
+  }, []);
+  const otpResend = useOtpResend(resendFn);
 
   async function requestAccess(e: React.FormEvent) {
     e.preventDefault();
@@ -114,6 +132,9 @@ export function EarlyAccessForm() {
           />
           <button className="btn btn-primary w-full" disabled={submitting} type="submit">
             {submitting ? "Verifying..." : "Verify email"}
+          </button>
+          <button className="btn btn-ghost w-full text-sm" disabled={!otpResend.canResend} onClick={otpResend.resend} type="button">
+            {otpResend.label}
           </button>
         </form>
       )}

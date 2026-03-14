@@ -5,7 +5,7 @@ import { recordAuditLog } from "@/lib/audit";
 import { requestIpAddress } from "@/lib/api-key-scopes";
 import { quotasForPlan } from "@/lib/billing-plan";
 import { setSessionCookie } from "@/lib/cookies";
-import { sendGettingStartedGuideEmail, sendWelcomeEmail } from "@/lib/email";
+import { sendGettingStartedGuideEmail, scheduleWelcomeEmail, upsertEmailSubscription } from "@/lib/email";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -224,6 +224,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     await redisDelete(pendingRegisterKey(parsed.data.methodId));
 
+    // Collect email subscription
+    upsertEmailSubscription({
+      email: created.user.email,
+      name: created.user.name,
+      userId: created.user.id,
+    }).catch(() => {});
+
     // Mark invite code as used
     if (pending.inviteCode) {
       await prisma.inviteCode.update({
@@ -232,20 +239,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    try {
-      await sendWelcomeEmail({
-        workspaceId: created.workspace.id,
-        toEmail: created.user.email,
-        workspaceName: created.workspace.name,
-        userName: created.user.name,
-      });
-    } catch (error) {
-      log.auth.error("Failed to send post-registration welcome email", {
-        workspaceId: created.workspace.id,
-        toEmail: created.user.email,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+    scheduleWelcomeEmail({
+      workspaceId: created.workspace.id,
+      toEmail: created.user.email,
+      workspaceName: created.workspace.name,
+      userName: created.user.name,
+    });
 
     try {
       await sendGettingStartedGuideEmail({
