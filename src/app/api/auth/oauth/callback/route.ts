@@ -163,7 +163,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    if (existing && intent !== "register" && !inviteToken) {
+    if (existing && !inviteToken) {
       if (existing.stytchUserId !== authResult.stytchUserId) {
         try {
           await prisma.user.update({

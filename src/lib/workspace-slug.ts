@@ -31,13 +31,6 @@ function buildSlugCandidate(base: string, attempt: number): string {
   return `${trimmedBase || "workspace"}${suffix}`;
 }
 
-function isUniqueConstraintError(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002"
-  );
-}
-
 export async function createWorkspaceWithGeneratedSlug(
   db: WorkspaceDbClient,
   name: string,
@@ -49,21 +42,19 @@ export async function createWorkspaceWithGeneratedSlug(
 
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const slug = buildSlugCandidate(base, attempt);
+    const conflict = await db.workspace.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (conflict) continue;
 
-    try {
-      return await db.workspace.create({
-        data: {
-          name,
-          slug,
-          planTier: options?.planTier,
-        },
-      });
-    } catch (error) {
-      if (isUniqueConstraintError(error)) {
-        continue;
-      }
-      throw error;
-    }
+    return await db.workspace.create({
+      data: {
+        name,
+        slug,
+        planTier: options?.planTier,
+      },
+    });
   }
 
   throw new Error("workspace_slug_generation_failed");
