@@ -1,0 +1,1 @@
+ALTER TABLE "InviteCode" ADD COLUMN "inviteSentAt" TIMESTAMP(3);

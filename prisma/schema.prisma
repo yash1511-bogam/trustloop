@@ -843,6 +843,7 @@ model InviteCode {
   createdByUser   User?     @relation("InviteCodeCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
   usedByUserId    String?
   usedByUser      User?     @relation("InviteCodeRecipient", fields: [usedByUserId], references: [id], onDelete: SetNull)
+  inviteSentAt    DateTime?
   createdAt       DateTime  @default(now())
 
   @@index([email])

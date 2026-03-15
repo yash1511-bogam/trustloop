@@ -259,7 +259,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       action: "auth.register",
       targetType: "User",
       targetId: created.user.id,
-      summary: `User ${created.user.email} registered${pending.inviteToken ? " via invite" : ""}`,
+      summary: `User ${created.user.email} registered${pending.inviteToken ? " via invite" : ""}${pending.inviteCode ? ` (invite code: ${pending.inviteCode})` : ""}`,
       actorUserId: created.user.id,
       ipAddress: requestIpAddress(request),
     }).catch(() => {});

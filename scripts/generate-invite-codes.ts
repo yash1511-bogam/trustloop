@@ -53,6 +53,10 @@ async function main() {
           userName: req.name,
           inviteCode: code,
         });
+        await prisma.inviteCode.update({
+          where: { code },
+          data: { inviteSentAt: new Date() },
+        });
         sent++;
         console.log(`  ${req.email} — email sent`);
       } catch (err) {
