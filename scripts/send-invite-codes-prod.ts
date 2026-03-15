@@ -7,8 +7,15 @@
  *   pnpm tsx scripts/send-invite-codes-prod.ts              # dry-run (shows what would be sent)
  *   pnpm tsx scripts/send-invite-codes-prod.ts --send       # actually send emails
  */
-import { config } from "dotenv";
-config({ path: ".env.prod", override: true });
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+// Load .env.prod into process.env before any other imports
+const envPath = resolve(__dirname, "..", ".env.prod");
+for (const line of readFileSync(envPath, "utf-8").split("\n")) {
+  const match = line.match(/^([^#=]+)=(.*)$/);
+  if (match) process.env[match[1].trim()] = match[2].trim();
+}
 
 import { randomBytes } from "crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
