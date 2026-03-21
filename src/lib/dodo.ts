@@ -15,7 +15,7 @@ function requiredValue(name: string): string {
 
 function dodoEnvironment(): "test_mode" | "live_mode" {
   const env = (process.env.DODO_PAYMENTS_ENV ?? "test_mode").trim().toLowerCase();
-  return env === "live_mode" ? "live_mode" : "test_mode";
+  return env === "live_mode" || env === "live" ? "live_mode" : "test_mode";
 }
 
 export function dodoCheckoutMode(): "test" | "live" {
