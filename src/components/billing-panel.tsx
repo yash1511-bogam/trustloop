@@ -546,6 +546,7 @@ export function BillingPanel({
             const data = asRecord(event.data);
 
             if (event.event_type === "checkout.opened") {
+              setCheckoutFrameReady(true);
               setGatewayOpen(true);
               setCheckoutHint("Payment form loaded.");
               return;
@@ -917,12 +918,10 @@ export function BillingPanel({
       <section className="pb-10 border-b border-white/5">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h2 className="text-xl font-medium text-slate-100">Checkout</h2>
-          {previewLoading ? (
+          {previewLoading && (
             <span className="text-sm tracking-wide text-neutral-500 flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Updating
             </span>
-          ) : (
-            <span className="text-sm tracking-wide text-neutral-500">Live preview</span>
           )}
         </div>
 
@@ -1026,15 +1025,11 @@ export function BillingPanel({
                 
                 <div className="min-h-[300px]" id={CHECKOUT_ELEMENT_ID} />
 
-                {sessionStatus && (
+                {sessionStatus && sessionFinalized && (
                   <div className="mt-8 text-sm text-neutral-500">
-                    {sessionFinalized ? (
-                      <button className="text-sky-400 hover:text-sky-300 transition-colors" onClick={startCheckout}>
-                        Start new payment session
-                      </button>
-                    ) : (
-                      <span>Session ID: {checkoutSession.sessionId}</span>
-                    )}
+                    <button className="text-sky-400 hover:text-sky-300 transition-colors" onClick={startCheckout}>
+                      Start new payment session
+                    </button>
                   </div>
                 )}
               </div>
