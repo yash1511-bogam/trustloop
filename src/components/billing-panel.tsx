@@ -143,7 +143,6 @@ type DodoEvent = {
 type DodoSdk = {
   Initialize: (config: {
     displayType?: "inline" | "overlay";
-    linkType?: "session";
     mode: "live" | "test";
     onEvent?: (event: DodoEvent) => void;
   }) => void;
@@ -160,11 +159,6 @@ type DodoSdk = {
         payButtonText?: string;
         showSecurityBadge?: boolean;
         showTimer?: boolean;
-        themeConfig?: {
-          radius?: string;
-          dark?: Record<string, string>;
-          light?: Record<string, string>;
-        };
       };
     }) => void;
   };
@@ -183,47 +177,6 @@ type Props = {
 const CHECKOUT_ELEMENT_ID = "billing-inline-checkout";
 const CHECKOUT_STORAGE_KEY = "trustloop.billing.pendingCheckout";
 const FINAL_PAYMENT_STATUSES = new Set(["failed", "succeeded", "cancelled", "canceled"]);
-
-// Adjusted theme to blend more seamlessly into the flat UI without visible borders
-const gatewayTheme = {
-  radius: "12px",
-  light: {
-    bgPrimary: "transparent",
-    bgSecondary: "transparent",
-    borderPrimary: "transparent",
-    borderSecondary: "transparent",
-    buttonPrimary: "#0f172a",
-    buttonPrimaryHover: "#1e293b",
-    buttonSecondary: "transparent",
-    buttonSecondaryHover: "rgba(15, 23, 42, 0.05)",
-    buttonTextPrimary: "#f8fafc",
-    buttonTextSecondary: "#0f172a",
-    inputFocusBorder: "#cbd5e1",
-    textError: "#ef4444",
-    textPlaceholder: "#94a3b8",
-    textPrimary: "#0f172a",
-    textSecondary: "#64748b",
-    textSuccess: "#22c55e",
-  },
-  dark: {
-    bgPrimary: "transparent",
-    bgSecondary: "transparent",
-    borderPrimary: "transparent",
-    borderSecondary: "transparent",
-    buttonPrimary: "#f8fafc",
-    buttonPrimaryHover: "#e2e8f0",
-    buttonSecondary: "transparent",
-    buttonSecondaryHover: "rgba(248, 250, 252, 0.05)",
-    buttonTextPrimary: "#0f172a",
-    buttonTextSecondary: "#f8fafc",
-    inputFocusBorder: "#334155",
-    textError: "#f87171",
-    textPlaceholder: "#64748b",
-    textPrimary: "#f8fafc",
-    textSecondary: "#94a3b8",
-    textSuccess: "#4ade80",
-  },
-};
 
 function normalizeCoupon(value: string | null | undefined): string | null {
   const normalized = value?.trim().toUpperCase() ?? "";
@@ -537,7 +490,6 @@ export function BillingPanel({
         sdk.Initialize({
           mode: checkoutMode,
           displayType: "inline",
-          linkType: "session",
           onEvent: (event) => {
             if (cancelled) {
               return;
@@ -651,7 +603,6 @@ export function BillingPanel({
             payButtonText: "Complete checkout",
             showSecurityBadge: true,
             showTimer: false,
-            themeConfig: gatewayTheme,
           },
         });
       } catch (error) {
