@@ -330,7 +330,7 @@ export function LandingBelowFold() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-neutral-800/50 bg-black/20 backdrop-blur-2xl">
+      <footer className="-mx-6 border-t border-neutral-800/50 bg-black/20 backdrop-blur-2xl">
         <div className={LANDING_PADDED_SHELL}>
           <div className="grid gap-10 py-16 md:grid-cols-4 md:py-24">
             <div className="flex flex-col items-start">
