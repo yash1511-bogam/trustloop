@@ -11,7 +11,7 @@ import { log } from "@/lib/logger";
 import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
 import { prisma } from "@/lib/prisma";
 import { redisSetJson } from "@/lib/redis";
-import { workspacePath } from "@/lib/workspace-url";
+import { workspaceUrl } from "@/lib/workspace-url";
 import { authenticateOAuthToken } from "@/lib/stytch";
 import { createWorkspaceWithExactSlug, ensureWorkspaceSlug, slugBaseFromName } from "@/lib/workspace-slug";
 import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
@@ -177,10 +177,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       recordAuditLog({ workspaceId: existing.workspace.id, actorUserId: existing.id, action: "auth.oauth_login", targetType: "user", targetId: existing.id, summary: `OAuth sign-in for ${email}` }).catch(() => {});
 
       const slug = existing.workspace.slug ?? (await ensureWorkspaceSlug(prisma, existing.workspace.id, existing.workspace.name));
-      const dashboardPath = slug
-        ? workspacePath("/dashboard", slug, existing.role)
-        : "/dashboard";
-      const response = NextResponse.redirect(appUrl(dashboardPath, request));
+      const dashboardUrl = slug
+        ? workspaceUrl("/dashboard", slug, existing.role)
+        : appUrl("/dashboard", request).toString();
+      const response = NextResponse.redirect(dashboardUrl);
       setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
       clearOAuthContextCookie(response);
       return response;
@@ -270,8 +270,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         scheduleWelcomeEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name });
         sendGettingStartedGuideEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name }).catch(() => {});
 
-        const dashPath = created.workspace.slug ? workspacePath("/dashboard", created.workspace.slug, created.user.role) : "/dashboard";
-        const response = NextResponse.redirect(appUrl(dashPath, request));
+        const dashUrl = created.workspace.slug ? workspaceUrl("/dashboard", created.workspace.slug, created.user.role) : appUrl("/dashboard", request).toString();
+        const response = NextResponse.redirect(dashUrl);
         setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
         clearOAuthContextCookie(response);
         return response;
@@ -374,10 +374,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     const newSlug = created.workspace.slug;
-    const newDashPath = newSlug
-      ? workspacePath("/dashboard", newSlug, created.user.role)
-      : "/dashboard";
-    const response = NextResponse.redirect(appUrl(newDashPath, request));
+    const newDashUrl = newSlug
+      ? workspaceUrl("/dashboard", newSlug, created.user.role)
+      : appUrl("/dashboard", request).toString();
+    const response = NextResponse.redirect(newDashUrl);
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
     clearOAuthContextCookie(response);
     return response;
