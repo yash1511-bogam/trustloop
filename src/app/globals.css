@@ -780,6 +780,24 @@ summary:focus-visible {
   border-color: rgba(239, 68, 68, 0.2) !important;
 }
 
+/* Dodo Payments inline checkout isolation — prevent global dark-theme
+   overrides from bleeding into the payment form rendered by the SDK. */
+#billing-inline-checkout {
+  color-scheme: light;
+}
+
+#billing-inline-checkout iframe {
+  color-scheme: light;
+  background-color: #ffffff;
+  border-radius: 12px;
+}
+
+#billing-inline-checkout *:not(iframe) {
+  color: revert !important;
+  background-color: revert !important;
+  border-color: revert !important;
+}
+
 details > summary::-webkit-details-marker {
   display: none;
 }
