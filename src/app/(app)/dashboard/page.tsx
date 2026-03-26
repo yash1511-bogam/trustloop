@@ -101,7 +101,7 @@ export default async function DashboardPage() {
             <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium mb-2">Customer updates (30d)</p>
             <p className="text-3xl font-light text-slate-100">{snapshot?.customerUpdateCoveragePct ?? 0}<span className="text-lg text-neutral-500 ml-1">%</span></p>
           </div>
-          <div className="group relative p-5 rounded-2xl border border-red-500/20 bg-red-500/5 transition-colors hover:border-red-500/30">
+          <div className="group relative p-5 rounded-2xl border border-red-500/20 bg-red-500/5 transition-colors hover:border-red-500/30" style={{ boxShadow: (snapshot?.p1OpenIncidents ?? 0) > 0 ? "0 0 40px rgba(239, 68, 68, 0.08)" : "none" }}>
             <p className="text-[10px] uppercase tracking-widest text-red-400 font-medium mb-2">P1 currently open</p>
             <p className="text-3xl font-light text-red-400">{snapshot?.p1OpenIncidents ?? 0}</p>
           </div>
