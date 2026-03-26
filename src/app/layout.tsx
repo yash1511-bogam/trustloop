@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import Script from "next/script";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { THEME_COOKIE_NAME, normalizeTheme } from "@/lib/theme";
 import "./globals.css";
 
-const display = Inter({
+const display = DM_Sans({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
