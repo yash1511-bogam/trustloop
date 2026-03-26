@@ -1,16 +1,17 @@
-FROM node:22-alpine
-
+# ── Stage 1: Install dependencies ─────────────────────────────────────────────
+FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
-
-RUN addgroup -S app && adduser -S app -G app
-
 WORKDIR /app
-
-RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
-
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
+# ── Stage 2: Build the application ───────────────────────────────────────────
+FROM node:22-alpine AS builder
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Build-time placeholders — real values injected at runtime via ECS + Secrets Manager
@@ -39,20 +40,25 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build" \
 RUN pnpm run prisma:generate
 RUN pnpm run build
 
-# Clear build-time placeholders
-ENV DATABASE_URL="" \
-    REDIS_URL="" \
-    STYTCH_SECRET="" \
-    KEY_ENCRYPTION_SECRET="" \
-    RESEND_API_KEY="" \
-    DODO_PAYMENTS_API_KEY="" \
-    DODO_PAYMENTS_WEBHOOK_KEY=""
+# ── Stage 3: Production runner ───────────────────────────────────────────────
+FROM node:22-alpine AS runner
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
 
-RUN chown -R app:app /app
-
-USER app
+RUN addgroup -S app && adduser -S app -G app
 
 ENV NODE_ENV=production
-EXPOSE 3000
 
-CMD ["pnpm", "run", "start"]
+# Copy only what's needed to run
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+RUN chown -R app:app /app
+USER app
+
+EXPOSE 3000
+CMD ["node", "server.js"]

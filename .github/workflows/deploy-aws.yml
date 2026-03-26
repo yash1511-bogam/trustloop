@@ -13,7 +13,7 @@ env:
   AWS_REGION: us-east-1
   PROJECT_NAME: trustloop
   NODE_VERSION: "22"
-  PNPM_VERSION: "10.30.3"
+  PNPM_VERSION: "10.33.0"
 
 jobs:
   # ── Stage 1: Validate code quality and build ────────────────────────────────
@@ -89,8 +89,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - uses: hashicorp/setup-terraform@v4
@@ -172,8 +171,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Verify AWS identity
@@ -191,8 +189,8 @@ jobs:
         run: |
           terraform plan \
             -var="image_tag=${{ github.sha }}" \
-            -var="acm_certificate_arn=arn:aws:acm:us-east-1:448049831890:certificate/8d33e617-0870-42c9-912d-dd46490afdf3" \
-            -var="public_app_url_override=https://trustloop.yashbogam.me" \
+            -var="acm_certificate_arn=${{ secrets.PROD_ACM_CERT_ARN }}" \
+            -var="public_app_url_override=${{ vars.PROD_APP_URL }}" \
             -out=tfplan
 
       - name: Terraform Apply

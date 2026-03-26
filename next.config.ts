@@ -6,6 +6,7 @@ const withMDX = createMDX({
 });
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   reactCompiler: true,
   rewrites: async () => {
     // Path-based workspace routing for MANAGER/AGENT: /<slug>/dashboard → /dashboard
