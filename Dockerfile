@@ -40,13 +40,12 @@ ENV DATABASE_URL="postgresql://build:build@localhost:5432/build" \
 RUN pnpm run prisma:generate
 RUN pnpm run build
 
-# Flatten prisma CLI + engines into a known location for the runner stage
-# pnpm uses symlinks; cp -rL dereferences them. @prisma/engines lives inside
-# prisma's own pnpm scope, not at the top-level node_modules.
-RUN mkdir -p /prisma-cli/node_modules/@prisma && \
-    cp -rL node_modules/prisma /prisma-cli/node_modules/prisma && \
-    ENGINES_DIR=$(node -e "const p=require('path');console.log(p.resolve(p.dirname(require.resolve('prisma/package.json')),'../@prisma/engines'))") && \
-    cp -rL "$ENGINES_DIR" /prisma-cli/node_modules/@prisma/engines
+# Create a self-contained prisma CLI install for migrations in the runner.
+# npm (not pnpm) produces a flat node_modules that survives Docker COPY.
+RUN PRISMA_VER=$(node -e "console.log(require('./node_modules/prisma/package.json').version)") && \
+    mkdir /prisma-cli && cd /prisma-cli && \
+    echo "{\"dependencies\":{\"prisma\":\"$PRISMA_VER\"}}" > package.json && \
+    npm install --omit=dev
 
 # ── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:22-alpine AS runner
@@ -62,8 +61,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /prisma-cli/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /prisma-cli/node_modules/@prisma/engines ./node_modules/@prisma/engines
+COPY --from=builder /prisma-cli/node_modules ./node_modules
 
 RUN chown -R app:app /app
 USER app
