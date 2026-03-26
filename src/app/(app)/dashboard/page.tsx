@@ -52,7 +52,7 @@ export default async function DashboardPage() {
 
       <section className="pb-10 border-b border-white/5">
         <h3 className="text-xl font-medium text-slate-100 mb-8">Live metrics</h3>
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6" style={{ fontVariantNumeric: "tabular-nums" }}>
           <div className="space-y-1">
             <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Total incidents</p>
             <p className="text-2xl font-light text-slate-100">{counts.total}</p>
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
           </span>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3" style={{ fontVariantNumeric: "tabular-nums" }}>
           <div className="group relative p-5 rounded-2xl border border-white/5 bg-white/5 transition-colors hover:border-white/10">
             <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium mb-2">Triage coverage (30d)</p>
             <p className="text-3xl font-light text-slate-100">{snapshot?.triageCoveragePct ?? 0}<span className="text-lg text-neutral-500 ml-1">%</span></p>
