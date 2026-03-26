@@ -211,7 +211,24 @@ export function DashboardIncidentQueue() {
       </div>
 
       <div className="flex flex-col gap-2">
-        {items.map((incident) => (
+        {loading && items.length === 0
+          ? Array.from({ length: 5 }).map((_, i) => (
+              <div className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl animate-pulse" key={`skel-${i}`}>
+                <div className="flex-1 min-w-0 pr-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-5 w-10 rounded bg-white/5" />
+                    <div className="h-4 w-16 rounded bg-white/5" />
+                  </div>
+                  <div className="h-5 w-64 rounded bg-white/5" />
+                </div>
+                <div className="mt-3 md:mt-0 flex items-center gap-8">
+                  <div className="h-4 w-20 rounded bg-white/5" />
+                  <div className="h-4 w-8 rounded bg-white/5" />
+                  <div className="h-4 w-16 rounded bg-white/5" />
+                </div>
+              </div>
+            ))
+          : items.map((incident) => (
           <div className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all" key={incident.id}>
             <div className="flex-1 min-w-0 pr-4">
               <div className="flex items-center gap-3 mb-1">
