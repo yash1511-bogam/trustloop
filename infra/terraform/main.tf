@@ -236,6 +236,22 @@ resource "aws_ecr_repository" "app" {
   }
 }
 
+resource "aws_ecr_lifecycle_policy" "app" {
+  repository = aws_ecr_repository.app.name
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep only the 10 most recent images"
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 10
+      }
+      action = { type = "expire" }
+    }]
+  })
+}
+
 resource "aws_cloudwatch_log_group" "app" {
   name              = "/ecs/${local.name}"
   retention_in_days = 30
@@ -423,6 +439,13 @@ resource "aws_ecs_service" "web" {
   desired_count   = var.web_desired_count
   launch_type     = "FARGATE"
 
+  force_new_deployment = true
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   network_configuration {
     subnets          = [aws_subnet.private_a.id, aws_subnet.private_b.id]
     security_groups  = [aws_security_group.ecs.id]
@@ -444,6 +467,13 @@ resource "aws_ecs_service" "worker" {
   task_definition = aws_ecs_task_definition.worker.arn
   desired_count   = var.worker_desired_count
   launch_type     = "FARGATE"
+
+  force_new_deployment = true
+
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
 
   network_configuration {
     subnets          = [aws_subnet.private_a.id, aws_subnet.private_b.id]

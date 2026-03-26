@@ -150,6 +150,11 @@ jobs:
       - name: Smoke test staging
         working-directory: infra/terraform
         run: |
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          echo "Waiting for staging services to stabilize..."
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "trustloop-staging-web" "trustloop-staging-worker"
+          echo "All staging services stable"
+
           APP_URL=$(terraform output -raw app_url)
           for ep in /api/health /login; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL$ep" || echo "000")
@@ -255,8 +260,8 @@ jobs:
         run: |
           CLUSTER=$(terraform output -raw ecs_cluster_name)
           echo "Waiting for web service to stabilize..."
-          aws ecs wait services-stable --cluster "$CLUSTER" --services "${PROJECT_NAME}-web"
-          echo "Web service is stable"
+          aws ecs wait services-stable --cluster "$CLUSTER" --services "${PROJECT_NAME}-web" "${PROJECT_NAME}-worker"
+          echo "All services stable"
 
       - name: Smoke test
         working-directory: infra/terraform
