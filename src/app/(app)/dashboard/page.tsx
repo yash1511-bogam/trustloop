@@ -80,7 +80,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="section-enter pb-10 border-b border-white/5">
+      <section className="section-enter below-fold pb-10 border-b border-white/5">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-medium text-slate-100">Executive read-model snapshot</h3>
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="section-enter pb-10 border-b border-white/5">
+      <section className="section-enter below-fold pb-10 border-b border-white/5">
         <h3 className="mb-1 text-xl font-medium text-slate-100">Create incident</h3>
         <p className="mb-6 text-sm text-neutral-500">
           Log customer-facing AI failures and trigger ownership immediately.

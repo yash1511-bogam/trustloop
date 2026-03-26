@@ -901,3 +901,9 @@ details > summary::-webkit-details-marker {
     scroll-behavior: auto !important;
   }
 }
+
+/* Skip rendering for off-screen sections until they approach the viewport */
+.below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
+}
