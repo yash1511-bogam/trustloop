@@ -128,10 +128,17 @@ body {
   color: var(--ink);
   font-family: var(--font-display), sans-serif;
   background-color: var(--bg-base);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
   background-image: 
     radial-gradient(ellipse at 15% 0%, var(--bg-radial-a) 0%, transparent 50%),
     radial-gradient(ellipse at 85% 100%, var(--bg-radial-b) 0%, transparent 50%);
-  background-attachment: fixed;
+  pointer-events: none;
 }
 
 
