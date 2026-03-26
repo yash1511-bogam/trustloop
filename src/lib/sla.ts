@@ -94,11 +94,16 @@ export async function markIncidentCustomerUpdateDelivered(
   const executor = tx ?? prisma;
   const now = new Date();
 
+  const incident = await executor.incident.findUniqueOrThrow({
+    where: { id: incidentId },
+    select: { firstCustomerUpdateAt: true },
+  });
+
   await executor.incident.update({
     where: { id: incidentId },
     data: {
       lastCustomerUpdateAt: now,
-      firstCustomerUpdateAt: now,
+      ...(incident.firstCustomerUpdateAt == null && { firstCustomerUpdateAt: now }),
       customerUpdateCount: { increment: 1 },
     },
   });

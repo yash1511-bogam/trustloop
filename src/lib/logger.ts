@@ -15,6 +15,25 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { AsyncLocalStorage } from "node:async_hooks";
+
+// ─── Request context (correlation ID) ─────────────────────────────────────────
+
+interface RequestContext {
+  requestId: string;
+}
+
+const requestContext = new AsyncLocalStorage<RequestContext>();
+
+/** Run `fn` with a correlation ID attached to every log call inside it. */
+export function withRequestId<T>(requestId: string, fn: () => T): T {
+  return requestContext.run({ requestId }, fn);
+}
+
+/** Return the current request's correlation ID, if any. */
+export function getRequestId(): string | undefined {
+  return requestContext.getStore()?.requestId;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,6 +138,7 @@ function write(level: LogLevel, channel: LogChannel, msg: string, meta?: Record<
     level,
     channel,
     msg,
+    ...(requestContext.getStore()?.requestId && { requestId: requestContext.getStore()!.requestId }),
     ...meta,
   };
 

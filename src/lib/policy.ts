@@ -115,27 +115,25 @@ async function ensureQuotaPolicy(workspaceId: string): Promise<QuotaPolicy> {
 
 async function loadDailyUsage(workspaceId: string): Promise<DailyUsage> {
   const usageDate = startOfUtcDay();
-  const usage = await prisma.workspaceDailyUsage.upsert({
-    where: {
-      workspaceId_usageDate: {
-        workspaceId,
-        usageDate,
-      },
-    },
-    create: {
-      workspaceId,
-      usageDate,
-    },
-    update: {},
-    select: {
-      incidentsCreated: true,
-      triageRuns: true,
-      customerUpdates: true,
-      reminderEmailsSent: true,
-    },
-  });
+  const select = {
+    incidentsCreated: true,
+    triageRuns: true,
+    customerUpdates: true,
+    reminderEmailsSent: true,
+  } as const;
 
-  return usage;
+  const existing = await prisma.workspaceDailyUsage.findUnique({
+    where: { workspaceId_usageDate: { workspaceId, usageDate } },
+    select,
+  });
+  if (existing) return existing;
+
+  return prisma.workspaceDailyUsage.upsert({
+    where: { workspaceId_usageDate: { workspaceId, usageDate } },
+    create: { workspaceId, usageDate },
+    update: {},
+    select,
+  });
 }
 
 export async function enforceWorkspaceRateLimit(workspaceId: string): Promise<{

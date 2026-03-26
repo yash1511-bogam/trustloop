@@ -4,6 +4,7 @@ import { AuthContext, getAuth } from "@/lib/auth";
 import { ApiKeyIdentity, authenticateApiKeyRequest } from "@/lib/api-key-auth";
 import { enforceWorkspaceRateLimit } from "@/lib/policy";
 import { applyRateLimitHeaders, forbidden, tooManyRequests, unauthorized } from "@/lib/http";
+import { randomUUID } from "crypto";
 
 export type ApiAccessContext =
   | {
@@ -52,9 +53,10 @@ export async function requireApiAuthAndRateLimit(
   request?: NextRequest,
   options?: RequireOptions,
 ): Promise<
-  | { auth: ApiAccessContext; response: null; rateLimit: ApiRateLimitState }
-  | { auth: null; response: NextResponse; rateLimit: null }
+  | { auth: ApiAccessContext; response: null; rateLimit: ApiRateLimitState; requestId: string }
+  | { auth: null; response: NextResponse; rateLimit: null; requestId: string }
 > {
+  const requestId = request?.headers.get("x-request-id") || randomUUID();
   let access: ApiAccessContext | null = null;
 
   if (options?.allowApiKey && request) {
@@ -76,6 +78,7 @@ export async function requireApiAuthAndRateLimit(
       auth: null,
       response: unauthorized(),
       rateLimit: null,
+      requestId,
     };
   }
 
@@ -87,6 +90,7 @@ export async function requireApiAuthAndRateLimit(
       auth: null,
       response: forbidden(),
       rateLimit: null,
+      requestId,
     };
   }
 
@@ -113,6 +117,7 @@ export async function requireApiAuthAndRateLimit(
         rateLimit,
       ),
       rateLimit: null,
+      requestId,
     };
   }
 
@@ -120,6 +125,7 @@ export async function requireApiAuthAndRateLimit(
     auth: access,
     response: null,
     rateLimit,
+    requestId,
   };
 }
 
