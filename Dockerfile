@@ -45,7 +45,9 @@ RUN pnpm run build
 RUN PRISMA_VER=$(node -e "console.log(require('./node_modules/prisma/package.json').version)") && \
     mkdir /prisma-cli && cd /prisma-cli && \
     echo "{\"dependencies\":{\"prisma\":\"$PRISMA_VER\"}}" > package.json && \
-    npm install --omit=dev
+    npm install --omit=dev && \
+    cp -r /app/prisma /prisma-cli/prisma && \
+    cp /app/prisma.config.ts /prisma-cli/prisma.config.ts
 
 # ── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:22-alpine AS runner
