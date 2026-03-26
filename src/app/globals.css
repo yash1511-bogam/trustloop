@@ -639,6 +639,25 @@ summary:focus-visible {
   }
 }
 
+/* Staggered section entrances — each child enters with a cascade delay */
+.section-enter {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.section-enter:nth-child(2) { transition-delay: 60ms; }
+.section-enter:nth-child(3) { transition-delay: 120ms; }
+.section-enter:nth-child(4) { transition-delay: 180ms; }
+.section-enter:nth-child(5) { transition-delay: 240ms; }
+.section-enter:nth-child(6) { transition-delay: 300ms; }
+
 .surface table {
   width: 100%;
   border-collapse: collapse;

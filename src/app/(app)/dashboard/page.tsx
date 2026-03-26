@@ -31,7 +31,7 @@ export default async function DashboardPage() {
     <div className="space-y-16 pt-8">
       <OnboardingChecklist />
 
-      <section className="flex flex-wrap items-start justify-between gap-4">
+      <section className="section-enter flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="kicker">Incident operations</p>
           <h2 className="mt-2 text-3xl font-semibold text-slate-100">Command dashboard</h2>
@@ -50,7 +50,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
+      <section className="section-enter pb-10 border-b border-white/5">
         <h3 className="text-xl font-medium text-slate-100 mb-8">Live metrics</h3>
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
           <div className="space-y-1">
@@ -80,7 +80,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
+      <section className="section-enter pb-10 border-b border-white/5">
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-medium text-slate-100">Executive read-model snapshot</h3>
@@ -108,7 +108,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
+      <section className="section-enter pb-10 border-b border-white/5">
         <h3 className="mb-1 text-xl font-medium text-slate-100">Create incident</h3>
         <p className="mb-6 text-sm text-neutral-500">
           Log customer-facing AI failures and trigger ownership immediately.
