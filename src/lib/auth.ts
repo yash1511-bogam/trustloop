@@ -1,4 +1,5 @@
 
+import { cache } from "react";
 import { createHash } from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -132,13 +133,13 @@ export async function invalidateSessionAuthCache(sessionToken: string): Promise<
   await redisDelete(sessionCacheKey(sessionToken));
 }
 
-export async function requireAuth(): Promise<AuthContext> {
+export const requireAuth: () => Promise<AuthContext> = cache(async () => {
   const auth = await getAuth();
   if (!auth) {
     redirect("/login");
   }
   return auth;
-}
+});
 
 export function hasRole(auth: AuthContext, allowedRoles: Role[]): boolean {
   return allowedRoles.includes(auth.user.role);
