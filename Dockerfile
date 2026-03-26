@@ -41,9 +41,12 @@ RUN pnpm run prisma:generate
 RUN pnpm run build
 
 # Flatten prisma CLI + engines into a known location for the runner stage
+# pnpm uses symlinks; cp -rL dereferences them. @prisma/engines lives inside
+# prisma's own pnpm scope, not at the top-level node_modules.
 RUN mkdir -p /prisma-cli/node_modules/@prisma && \
     cp -rL node_modules/prisma /prisma-cli/node_modules/prisma && \
-    cp -rL node_modules/@prisma/engines /prisma-cli/node_modules/@prisma/engines
+    ENGINES_DIR=$(node -e "const p=require('path');console.log(p.resolve(p.dirname(require.resolve('prisma/package.json')),'../@prisma/engines'))") && \
+    cp -rL "$ENGINES_DIR" /prisma-cli/node_modules/@prisma/engines
 
 # ── Stage 3: Production runner ───────────────────────────────────────────────
 FROM node:22-alpine AS runner
