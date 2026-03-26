@@ -368,6 +368,18 @@ summary:focus-visible {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.1);
   font-weight: 500;
+  position: relative;
+}
+
+.app-nav-link-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--brand-accent);
 }
 
 .app-nav-link-icon {
