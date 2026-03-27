@@ -73,8 +73,11 @@ const normalizedDatabaseUrl = normalizeDatabaseUrlForProject(rawDatabaseUrl);
 process.env.DATABASE_URL = normalizedDatabaseUrl;
 normalizePgSslModeForProject(normalizedDatabaseUrl);
 
+const poolSize = parseInt(process.env.DATABASE_POOL_SIZE ?? "", 10) || undefined;
+
 const adapter = new PrismaPg({
   connectionString: normalizedDatabaseUrl,
+  ...(poolSize ? { max: poolSize } : {}),
 });
 
 export const prisma =

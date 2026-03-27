@@ -7,6 +7,7 @@ import { recordAuditForAccess } from "@/lib/audit";
 import { applyWorkspacePlan } from "@/lib/billing-plan-server";
 import { sendTrialStartedEmail } from "@/lib/email";
 import { badRequest, forbidden } from "@/lib/http";
+import { fireAndForget } from "@/lib/fire-and-forget";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
@@ -74,14 +75,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   await applyWorkspacePlan({ prisma, workspaceId: workspace.id, planTier: plan });
 
-  recordAuditForAccess({
-    access: auth,
-    request,
-    action: "billing.trial_started",
-    targetType: "WorkspaceBilling",
-    targetId: workspace.id,
-    summary: `Trial started for ${plan} plan`,
-  }).catch(() => {});
+  fireAndForget(
+    recordAuditForAccess({
+      access: auth,
+      request,
+      action: "billing.trial_started",
+      targetType: "WorkspaceBilling",
+      targetId: workspace.id,
+      summary: `Trial started for ${plan} plan`,
+    }),
+    "billing.trial_started audit",
+  );
 
   try {
     await sendTrialStartedEmail({

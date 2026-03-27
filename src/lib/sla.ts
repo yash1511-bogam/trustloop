@@ -139,8 +139,15 @@ export async function runWorkspaceSlaAutomation(workspaceId?: string) {
   let resolutionBreaches = 0;
   let escalations = 0;
 
+  // Pre-fetch SLA policies for all distinct workspace IDs to avoid N+1 queries
+  const distinctWorkspaceIds = [...new Set(incidents.map((i) => i.workspaceId))];
+  const policyEntries = await Promise.all(
+    distinctWorkspaceIds.map(async (wsId) => [wsId, await ensureWorkspaceSlaPolicy(wsId)] as const),
+  );
+  const policyCache = new Map(policyEntries);
+
   for (const incident of incidents) {
-    const policy = await ensureWorkspaceSlaPolicy(incident.workspaceId);
+    const policy = policyCache.get(incident.workspaceId)!;
     const now = new Date();
     const firstResponseBreached =
       !incident.firstRespondedAt &&
@@ -202,7 +209,7 @@ export async function runWorkspaceSlaAutomation(workspaceId?: string) {
 
       if (shouldEscalate) {
         escalations += 1;
-        const nextPolicy = await ensureWorkspaceSlaPolicy(incident.workspaceId, tx);
+        const nextPolicy = policyCache.get(incident.workspaceId)!;
         await tx.incident.update({
           where: { id: incident.id },
           data: {

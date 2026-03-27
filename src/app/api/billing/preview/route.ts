@@ -8,6 +8,7 @@ import { recordAuditForAccess } from "@/lib/audit";
 import { buildBillingCheckoutPayload } from "@/lib/billing-checkout";
 import { dodoClient } from "@/lib/dodo";
 import { badRequest, forbidden } from "@/lib/http";
+import { fireAndForget } from "@/lib/fire-and-forget";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -57,7 +58,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const couponCode = parsed.data.couponCode?.trim() || null;
   const plan = parsed.data.plan as PreviewPlan;
 
-  recordAuditForAccess({ access: access.auth, request, action: "billing.preview", targetType: "billing", summary: `Billing preview for plan: ${plan}` }).catch(() => {});
+  fireAndForget(
+    recordAuditForAccess({ access: access.auth, request, action: "billing.preview", targetType: "billing", summary: `Billing preview for plan: ${plan}` }),
+    "billing.preview audit",
+  );
 
   try {
     const preview = await dodoClient().checkoutSessions.preview(

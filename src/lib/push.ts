@@ -178,30 +178,40 @@ export async function sendWorkspaceUserPushNotifications(input: {
   const disableIds: string[] = [];
   let failed = 0;
 
-  for (const subscription of subscriptions) {
-    try {
-      await webpush.sendNotification(
-        toWebPushSubscription({
-          endpoint: subscription.endpoint,
-          p256dh: subscription.p256dh,
-          auth: subscription.auth,
-        }),
-        encodedPayload,
-      );
-      succeeded.push(subscription.id);
-    } catch (error) {
+  const results = await Promise.allSettled(
+    subscriptions.map((subscription) =>
+      webpush
+        .sendNotification(
+          toWebPushSubscription({
+            endpoint: subscription.endpoint,
+            p256dh: subscription.p256dh,
+            auth: subscription.auth,
+          }),
+          encodedPayload,
+        )
+        .then(() => ({ subscription, ok: true as const }))
+        .catch((error: unknown) => ({ subscription, ok: false as const, error })),
+    ),
+  );
+
+  for (const result of results) {
+    const value = result.status === "fulfilled" ? result.value : { subscription: null, ok: false as const, error: result.reason };
+    if (!value.subscription) continue;
+    if (value.ok) {
+      succeeded.push(value.subscription.id);
+    } else {
       failed += 1;
-      const statusCode = extractPushErrorStatus(error);
+      const statusCode = extractPushErrorStatus(value.error);
       if (statusCode === 404 || statusCode === 410) {
-        disableIds.push(subscription.id);
+        disableIds.push(value.subscription.id);
       }
 
       log.worker.error("Push notification send failed", {
         workspaceId: input.workspaceId,
-        userId: subscription.userId,
-        endpoint: subscription.endpoint,
+        userId: value.subscription.userId,
+        endpoint: value.subscription.endpoint,
         statusCode,
-        error: error instanceof Error ? error.message : String(error),
+        error: value.error instanceof Error ? value.error.message : String(value.error),
       });
     }
   }

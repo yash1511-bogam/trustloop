@@ -7,6 +7,7 @@ import { recordAuditForAccess } from "@/lib/audit";
 import { buildBillingCheckoutPayload } from "@/lib/billing-checkout";
 import { badRequest, forbidden } from "@/lib/http";
 import { dodoClient, dodoProductIdForPlan } from "@/lib/dodo";
+import { fireAndForget } from "@/lib/fire-and-forget";
 import { prisma } from "@/lib/prisma";
 import { redisGetJson, redisSetJson } from "@/lib/redis";
 import { log } from "@/lib/logger";
@@ -103,7 +104,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         idempotencyKey,
         { checkoutUrl: session.checkout_url, sessionId: session.session_id },
         60,
-      ).catch(() => {});
+      ).catch((e: unknown) => {
+        log.billing.warn("Failed to cache checkout session", {
+          workspaceId: workspace.id,
+          error: e instanceof Error ? e.message : String(e),
+        });
+      });
     }
 
     await prisma.workspaceBilling.upsert({
@@ -124,14 +130,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    recordAuditForAccess({
-      access: auth,
-      request,
-      action: "billing.checkout_started",
-      targetType: "WorkspaceBilling",
-      targetId: workspace.id,
-      summary: `Checkout started for ${plan} plan`,
-    }).catch(() => {});
+    fireAndForget(
+      recordAuditForAccess({
+        access: auth,
+        request,
+        action: "billing.checkout_started",
+        targetType: "WorkspaceBilling",
+        targetId: workspace.id,
+        summary: `Checkout started for ${plan} plan`,
+      }),
+      "billing.checkout_started audit",
+    );
 
     return NextResponse.json({
       checkoutUrl: session.checkout_url,

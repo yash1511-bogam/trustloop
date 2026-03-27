@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { processDodoWebhookEvent } from "@/lib/billing";
 import { recordAuditLog } from "@/lib/audit";
 import { dodoClient } from "@/lib/dodo";
+import { fireAndForget } from "@/lib/fire-and-forget";
 import { log } from "@/lib/logger";
 
 function requiredHeader(request: NextRequest, name: string): string {
@@ -61,12 +62,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     if (processed.workspaceId) {
-      recordAuditLog({
-        workspaceId: processed.workspaceId,
-        action: `billing.${event.type}`,
-        targetType: "Billing",
-        summary: `Billing event ${event.type} processed: ${processed.status}`,
-      }).catch(() => {});
+      fireAndForget(
+        recordAuditLog({
+          workspaceId: processed.workspaceId,
+          action: `billing.${event.type}`,
+          targetType: "Billing",
+          summary: `Billing event ${event.type} processed: ${processed.status}`,
+        }),
+        `billing.${event.type} audit`,
+      );
     }
 
     return NextResponse.json({

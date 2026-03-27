@@ -4,6 +4,7 @@ import { hasRole } from "@/lib/auth";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { recordAuditForAccess } from "@/lib/audit";
 import { dodoClient } from "@/lib/dodo";
+import { fireAndForget } from "@/lib/fire-and-forget";
 import { forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 
@@ -44,7 +45,10 @@ export async function GET(
     return notFound("Billing session not found.");
   }
 
-  recordAuditForAccess({ access: access.auth, request, action: "billing.session_view", targetType: "billing", targetId: sessionId, summary: `Viewed billing session ${sessionId}` }).catch(() => {});
+  fireAndForget(
+    recordAuditForAccess({ access: access.auth, request, action: "billing.session_view", targetType: "billing", targetId: sessionId, summary: `Viewed billing session ${sessionId}` }),
+    "billing.session_view audit",
+  );
 
   try {
     const session = await dodoClient().checkoutSessions.retrieve(sessionId);
