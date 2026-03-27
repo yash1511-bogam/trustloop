@@ -98,12 +98,20 @@ export default async function ExecutivePage() {
           <article className="metric-card">
             <p className="metric-label">Triage coverage</p>
             <p className="metric-value">{snapshot?.triageCoveragePct ?? 0}%</p>
-            <p className="metric-meta">Incidents with AI-assisted triage</p>
+            <p className="metric-meta">
+              {(snapshot?.triageCoveragePct ?? 0) === 0
+                ? "Run AI triage on your first incident to improve this metric."
+                : "Incidents with AI-assisted triage"}
+            </p>
           </article>
           <article className="metric-card">
             <p className="metric-label">Customer updates</p>
             <p className="metric-value">{snapshot?.customerUpdateCoveragePct ?? 0}%</p>
-            <p className="metric-meta">Incidents with outbound customer comms</p>
+            <p className="metric-meta">
+              {(snapshot?.customerUpdateCoveragePct ?? 0) === 0
+                ? "Publish a customer update on an incident to start tracking."
+                : "Incidents with outbound customer comms"}
+            </p>
           </article>
         </div>
       </section>

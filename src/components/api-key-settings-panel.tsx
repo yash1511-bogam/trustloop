@@ -260,13 +260,19 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
         </div>
 
         <div className="space-y-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
-              Permissions
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-ghost)]">
-              These scopes are enforced when the key calls protected API routes.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
+                Permissions
+              </p>
+              <p className="mt-1 text-sm text-[var(--color-ghost)]">
+                These scopes are enforced when the key calls protected API routes.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button className="btn btn-ghost btn-sm text-xs" onClick={() => setSelectedScopes(API_KEY_ASSIGNABLE_SCOPE_OPTIONS.map(s => s.id))} type="button">Select all</button>
+              <button className="btn btn-ghost btn-sm text-xs" onClick={() => setSelectedScopes([])} type="button">Deselect all</button>
+            </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {API_KEY_ASSIGNABLE_SCOPE_OPTIONS.map((scope) => {

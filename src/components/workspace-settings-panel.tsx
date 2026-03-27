@@ -126,6 +126,20 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         </div>
       )}
 
+      {!workspace.slackTeamId && (
+        <div className="flex items-center gap-4 rounded-[var(--radius-md)] border border-[var(--color-rim)] bg-[var(--color-surface)] p-4">
+          <SlackIcon className="w-6 h-6 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-[var(--color-body)]">Connect Slack</p>
+            <p className="text-xs text-[var(--color-ghost)]">Keep responders aligned with alerting and approved status updates.</p>
+          </div>
+          <a className="btn btn-primary btn-sm" href={slackInstallUrl}>
+            <SlackIcon className="w-4 h-4" />
+            Connect
+          </a>
+        </div>
+      )}
+
       <div className="grid gap-8 md:grid-cols-2">
         <label className="block space-y-3">
           <span className="text-sm font-medium text-[var(--color-body)] flex items-center justify-between">

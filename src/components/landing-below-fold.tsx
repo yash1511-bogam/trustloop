@@ -242,7 +242,7 @@ export function LandingBelowFold() {
         <div className="mt-12 grid gap-5 lg:grid-cols-3">
           {problemCards.map((card) => (
             <framerMotion.article
-              className="marketing-card p-[28px_24px]"
+              className="marketing-card border border-[var(--color-rim)] bg-[var(--color-surface)] p-[28px_24px]"
               initial={{ opacity: 0, y: 16 }}
               key={card.title}
               transition={{ duration: 0.35 }}
@@ -260,7 +260,8 @@ export function LandingBelowFold() {
       </section>
 
       <section className="marketing-section scroll-mt-24" id="workflow">
-        <div className="grid gap-12">
+        <div className="relative grid gap-12">
+          <div aria-hidden className="absolute left-6 top-0 hidden h-full w-px bg-gradient-to-b from-[var(--color-rim)] via-[var(--color-signal)] to-[var(--color-rim)] opacity-30 lg:block" />
           {workflowSteps.map((step, index) => {
             const reverse = index % 2 === 1;
             return (
@@ -270,7 +271,12 @@ export function LandingBelowFold() {
                     {step.number}
                   </div>
                   <div className="relative z-10 max-w-[480px]">
-                    <p className="page-kicker text-[var(--color-signal)]">{step.label}</p>
+                    <div className="mb-3 flex items-center gap-3">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-signal)] bg-[var(--color-signal-dim)]">
+                        <step.icon color="var(--color-signal)" size={16} weight="duotone" />
+                      </span>
+                      <p className="page-kicker text-[var(--color-signal)]">{step.label}</p>
+                    </div>
                     <h3 className="mt-4 font-[var(--font-heading)] text-[24px] font-bold text-[var(--color-title)]">
                       {step.title}
                     </h3>
@@ -306,13 +312,13 @@ export function LandingBelowFold() {
           <h2 className="font-[var(--font-heading)] text-[36px] font-bold leading-[1.05] text-[var(--color-title)]">
             Pricing that makes sense.
           </h2>
-          <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] p-1">
-            <button className={annual ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"} onClick={() => setAnnual(false)} type="button">
+          <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] p-1.5">
+            <button className={annual ? "btn btn-ghost" : "btn btn-primary"} onClick={() => setAnnual(false)} type="button">
               Monthly
             </button>
-            <button className={annual ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"} onClick={() => setAnnual(true)} type="button">
+            <button className={annual ? "btn btn-primary" : "btn btn-ghost"} onClick={() => setAnnual(true)} type="button">
               Annual
-              <span className="text-[var(--color-body)]">save 20%</span>
+              <span className="ml-1 rounded-full bg-[var(--color-signal-dim)] px-2 py-0.5 text-[11px] text-[var(--color-signal)]">save 20%</span>
             </button>
           </div>
         </div>
@@ -320,7 +326,7 @@ export function LandingBelowFold() {
         <div className="mt-12 grid gap-5 lg:grid-cols-3">
           {plans.map((plan) => (
             <article
-              className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.featured ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
+              className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.featured ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : plan.monthly === null ? "bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)] border-[var(--color-muted)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
               key={plan.name}
             >
               {plan.featured ? (
@@ -368,14 +374,14 @@ export function LandingBelowFold() {
             Common questions.
           </h2>
         </div>
-        <div className="mx-auto mt-10 max-w-[760px]">
+        <div className="mx-auto mt-10 max-w-[760px] divide-y divide-[var(--color-rim)] border-y border-[var(--color-rim)]">
           {faqItems.map(([question, answer]) => (
-            <details className="group border-t border-[var(--color-rim)] py-4" key={question}>
+            <details className="group py-5" key={question}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium text-[var(--color-body)]">
                 {question}
-                <CaretDown className="faq-caret transition-transform group-open:rotate-180" size={16} weight="regular" />
+                <CaretDown className="flex-shrink-0 transition-transform group-open:rotate-180" size={16} weight="regular" />
               </summary>
-              <p className="pt-3 pr-10 text-[14px] leading-6 text-[var(--color-subtext)]">{answer}</p>
+              <p className="pt-3 pr-10 text-[14px] leading-7 text-[var(--color-subtext)]">{answer}</p>
             </details>
           ))}
         </div>
@@ -383,7 +389,7 @@ export function LandingBelowFold() {
 
       <section className="marketing-section">
         <div className="dot-grid-band rounded-[var(--radius-xl)] border border-[var(--color-rim)] px-6 py-16 text-center md:px-12">
-          <h2 className="font-[var(--font-display)] text-[52px] italic leading-none text-[var(--color-title)]">
+          <h2 className="font-[var(--font-heading)] text-[52px] font-extrabold leading-none text-[var(--color-title)]">
             One tool for your entire incident workflow.
           </h2>
           <p className="mx-auto mt-4 max-w-[520px] text-[16px] leading-7 text-[var(--color-subtext)]">
@@ -397,7 +403,7 @@ export function LandingBelowFold() {
       </section>
 
       <footer className="marketing-section border-t border-[var(--color-rim)] bg-[var(--color-surface)] px-6 py-16 md:px-8">
-        <div className="grid gap-10 md:grid-cols-4">
+        <div className="grid gap-12 md:grid-cols-4">
           <div className="grid gap-4">
             <TrustLoopLogo size={16} variant="full" />
             <p className="text-[13px] text-[var(--color-subtext)]">AI incident operations for teams that ship.</p>

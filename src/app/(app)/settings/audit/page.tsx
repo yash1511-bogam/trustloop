@@ -37,8 +37,8 @@ export default async function AuditLogPage() {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log) => (
-                <tr key={log.id}>
+              {logs.map((log, i) => (
+                <tr key={log.id} className={i % 2 === 1 ? "bg-[var(--color-void)]/50" : ""}>
                   <td className="whitespace-nowrap text-[var(--color-subtext)]">
                     {log.createdAt.toLocaleString()}
                   </td>

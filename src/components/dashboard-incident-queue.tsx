@@ -158,7 +158,7 @@ export function DashboardIncidentQueue() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-ghost btn-sm" onClick={() => void refreshReadModels()} type="button">
+          <button className="btn btn-ghost btn-sm" onClick={() => void refreshReadModels()} title="Refresh read models and recalculate metrics" type="button">
             <ArrowsClockwise size={16} weight="regular" />
             Sync models
           </button>

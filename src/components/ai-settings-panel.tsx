@@ -202,7 +202,7 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                 <div className="space-y-3">
                   <input
                     className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)] text-sm"
-                    placeholder={`Enter ${provider} API key`}
+                    placeholder={provider === "OPENAI" ? "sk-..." : provider === "GEMINI" ? "AIza..." : "sk-ant-..."}
                     type="password"
                     value={keyInputs[provider] ?? ""}
                     onChange={(event) =>
@@ -260,7 +260,11 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                 <div className="flex-1">
                   <p className="font-medium text-[var(--color-body)]">{workflowType}</p>
                   <p className="text-xs text-[var(--color-ghost)] mt-1">
-                    Route this specific task to a dedicated provider and model.
+                    {workflowType === "INCIDENT_TRIAGE"
+                      ? "Used when AI triage is triggered on an incident."
+                      : workflowType === "CUSTOMER_UPDATE"
+                        ? "Used when drafting customer-facing updates."
+                        : "Route this specific task to a dedicated provider and model."}
                   </p>
                 </div>
 

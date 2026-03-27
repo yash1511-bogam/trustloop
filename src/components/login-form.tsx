@@ -123,8 +123,17 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
     router.refresh();
   }
 
+  const [authTab, setAuthTab] = useState<"social" | "email">("social");
+
   return (
     <div className="space-y-4">
+      <div className="flex rounded-[var(--radius-sm)] border border-[var(--color-rim)] bg-[var(--color-void)] p-0.5">
+        <button className={`flex-1 rounded-[4px] py-1.5 text-sm font-medium transition-colors ${authTab === "social" ? "bg-[var(--color-raised)] text-[var(--color-bright)]" : "text-[var(--color-ghost)] hover:text-[var(--color-subtext)]"}`} onClick={() => setAuthTab("social")} type="button">Social Login</button>
+        <button className={`flex-1 rounded-[4px] py-1.5 text-sm font-medium transition-colors ${authTab === "email" ? "bg-[var(--color-raised)] text-[var(--color-bright)]" : "text-[var(--color-ghost)] hover:text-[var(--color-subtext)]"}`} onClick={() => setAuthTab("email")} type="button">Email Code</button>
+      </div>
+
+      {authTab === "social" ? (
+        <>
       <OAuthButtons
         mode="login"
         turnstileToken={turnstileToken}
@@ -141,7 +150,11 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
         <span>or use email OTP</span>
         <div className="h-px flex-1 bg-[var(--color-rim)]" />
       </div>
+        </>
+      ) : null}
 
+      {authTab === "email" ? (
+        <>
       <form className="space-y-4" onSubmit={startChallenge}>
         <div>
           <label className="sr-only" htmlFor="email">
@@ -201,6 +214,8 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
             {otpResend.label}
           </button>
         </form>
+      ) : null}
+        </>
       ) : null}
 
       {message ? (

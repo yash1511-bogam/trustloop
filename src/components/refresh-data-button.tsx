@@ -6,6 +6,7 @@ import { Loader2, RefreshCcw } from "@/components/icon-compat";
 export function RefreshDataButton() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
 
   async function refresh() {
     setLoading(true);
@@ -17,6 +18,7 @@ export function RefreshDataButton() {
         setError(body?.error ?? "Failed to refresh data.");
         return;
       }
+      setLastRefreshed(new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }));
       window.location.reload();
     } catch {
       setError("Network error. Please try again.");
@@ -27,6 +29,7 @@ export function RefreshDataButton() {
 
   return (
     <div className="flex items-center gap-2">
+      {lastRefreshed && <span className="text-xs text-[var(--color-ghost)]">Updated {lastRefreshed}</span>}
       <button
         className="btn btn-primary text-xs !min-h-[32px] px-4"
         disabled={loading}

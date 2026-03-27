@@ -109,7 +109,7 @@ export default async function RegisterPage({
   return (
     <main className="auth-shell">
       <div className="auth-grid">
-        <section className="auth-panel-muted surface">
+        <section className="auth-panel-muted surface dot-grid-band">
           <TrustLoopLogo size={18} variant="full" />
           <p className="page-kicker mt-8">Create workspace</p>
           <h1 className="mt-4 font-[var(--font-heading)] text-[36px] font-bold text-[var(--color-title)]">

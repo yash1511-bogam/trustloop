@@ -209,11 +209,12 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Webhook Endpoint</p>
-                  <div className="flex items-center gap-3 border-b border-[var(--color-rim)] pb-1.5 group/url">
+                  <div className="flex items-center gap-3 border-b border-[var(--color-rim)] pb-1.5">
                     <code className="text-sm text-[var(--color-signal)] truncate flex-1">{endpoints[type]}</code>
                     <button 
                       onClick={() => navigator.clipboard.writeText(endpoints[type])}
-                      className="opacity-0 group-hover/url:opacity-100 transition-opacity text-[var(--color-ghost)] hover:text-[var(--color-signal)]"
+                      className="flex-shrink-0 rounded p-1 text-[var(--color-ghost)] transition-colors hover:text-[var(--color-signal)]"
+                      title="Copy endpoint URL"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>

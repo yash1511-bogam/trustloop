@@ -106,7 +106,7 @@ export function OAuthButtons({
         {hrefs.map((provider) => (
           <button
             aria-disabled={disabled}
-            className={`btn btn-ghost h-[40px] w-full justify-center ${disabled ? "pointer-events-none opacity-60" : ""}`}
+            className={`btn btn-ghost h-[40px] w-full justify-center transition-all hover:bg-[var(--color-raised)] hover:shadow-[0_0_0_1px_var(--color-muted)] ${disabled ? "pointer-events-none opacity-60" : ""}`}
             key={provider.id}
             onClick={() => {
               window.location.assign(provider.href);

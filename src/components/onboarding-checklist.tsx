@@ -134,6 +134,7 @@ export function OnboardingChecklist() {
               setDismissed(true);
               localStorage.setItem(STORAGE_KEY, "1");
             }}
+            title="You can re-access this from Settings"
             type="button"
           >
             <X size={14} weight="regular" />

@@ -4,6 +4,7 @@ import { AIIncidentCategory, IncidentSeverity, IncidentStatus } from "@prisma/cl
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Sparkle } from "@phosphor-icons/react";
 import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 
@@ -189,76 +190,91 @@ export function IncidentActions({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-4">
-        <select
-          className="select"
-          value={currentStatus}
-          onChange={(event) =>
-            setCurrentStatus(event.target.value as IncidentStatus)
-          }
-        >
-          {Object.values(IncidentStatus).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+    <div className="space-y-5">
+      <div className="grid gap-4 grid-cols-2">
+        <label className="field">
+          <span className="field-label">Status</span>
+          <select
+            className="select"
+            value={currentStatus}
+            onChange={(event) =>
+              setCurrentStatus(event.target.value as IncidentStatus)
+            }
+          >
+            {Object.values(IncidentStatus).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
 
-        <select
-          className="select"
-          value={currentSeverity}
-          onChange={(event) =>
-            setCurrentSeverity(event.target.value as IncidentSeverity)
-          }
-        >
-          {Object.values(IncidentSeverity).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <label className="field">
+          <span className="field-label">Severity</span>
+          <select
+            className="select"
+            value={currentSeverity}
+            onChange={(event) =>
+              setCurrentSeverity(event.target.value as IncidentSeverity)
+            }
+          >
+            {Object.values(IncidentSeverity).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
 
-        <select
-          className="select"
-          value={currentCategory}
-          onChange={(event) =>
-            setCurrentCategory(
-              event.target.value
-                ? (event.target.value as AIIncidentCategory)
-                : "",
-            )
-          }
-        >
-          <option value="">Uncategorized</option>
-          {Object.values(AIIncidentCategory).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <label className="field">
+          <span className="field-label">Category</span>
+          <select
+            className="select"
+            value={currentCategory}
+            onChange={(event) =>
+              setCurrentCategory(
+                event.target.value
+                  ? (event.target.value as AIIncidentCategory)
+                  : "",
+              )
+            }
+          >
+            <option value="">Uncategorized</option>
+            {Object.values(AIIncidentCategory).map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
 
-        <select
-          className="select"
-          value={currentOwnerUserId}
-          onChange={(event) => setCurrentOwnerUserId(event.target.value)}
-        >
-          <option value="">Unassigned</option>
-          {owners.map((owner) => (
-            <option key={owner.id} value={owner.id}>
-              {owner.name} ({owner.role})
-            </option>
-          ))}
-        </select>
+        <label className="field">
+          <span className="field-label">Owner</span>
+          <select
+            className="select"
+            value={currentOwnerUserId}
+            onChange={(event) => setCurrentOwnerUserId(event.target.value)}
+          >
+            <option value="">Unassigned</option>
+            {owners.map((owner) => (
+              <option key={owner.id} value={owner.id}>
+                {owner.name} ({owner.role})
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {(currentStatus !== status || currentSeverity !== severity || currentCategory !== (category ?? "") || currentOwnerUserId !== (ownerUserId ?? "")) && (
+          <span className="text-xs text-[var(--color-warning)]">Unsaved changes</span>
+        )}
         <button className="btn btn-primary" disabled={saving} onClick={saveMeta} type="button">
           Save fields
         </button>
         {hasAiKeys ? (
           <>
-            <button className="btn btn-ghost" disabled={saving} onClick={runTriage} type="button">
+            <button className="btn btn-primary" disabled={saving} onClick={runTriage} type="button">
               Run AI triage
             </button>
             <button className="btn btn-ghost" disabled={saving} onClick={generateCustomerUpdate} type="button">
@@ -272,26 +288,37 @@ export function IncidentActions({
         )}
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--color-rim)] bg-[var(--color-void)] p-4">
+        <p className="kicker">Internal notes</p>
         <textarea
           className="textarea min-h-[84px]"
           placeholder="Add internal note"
           value={note}
           onChange={(event) => setNote(event.target.value)}
         />
-        <button className="btn btn-ghost" disabled={saving} onClick={addNote} type="button">
+        <button className="btn btn-ghost btn-sm" disabled={saving} onClick={addNote} type="button">
           Add note
         </button>
       </div>
 
-      <div className="space-y-1">
-        <p className="kicker">Customer update</p>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="kicker">Customer update</p>
+          {hasAiKeys && (
+            <button className="btn btn-ghost btn-sm text-[var(--color-signal)]" disabled={saving} onClick={generateCustomerUpdate} type="button">
+              <Sparkle size={14} weight="duotone" /> Generate with AI
+            </button>
+          )}
+        </div>
         <textarea
           className="textarea min-h-[120px]"
           placeholder="Write or generate a customer-facing update before publishing."
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
         />
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-[var(--color-ghost)]">{draft.length} characters</span>
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             className="btn btn-primary"

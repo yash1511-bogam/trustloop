@@ -82,7 +82,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
         })}
       </div>
 
-      {compact ? null : <div className="app-nav-group-label">Settings</div>}
+      {compact ? null : <div className="mt-2 border-t border-[var(--color-rim)] pt-3"><span className="app-nav-group-label font-medium">Settings</span></div>}
 
       <div className="app-nav-group">
         {settingsItems.map((item) => {

@@ -78,13 +78,13 @@ export default function PricingPage() {
           Every plan starts with a 14-day trial. Shift from scattered response work to one operational system.
         </p>
 
-        <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] p-1">
-          <button className={annual ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"} onClick={() => setAnnual(false)} type="button">
+        <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] p-1.5">
+          <button className={annual ? "btn btn-ghost" : "btn btn-primary"} onClick={() => setAnnual(false)} type="button">
             Monthly
           </button>
-          <button className={annual ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"} onClick={() => setAnnual(true)} type="button">
+          <button className={annual ? "btn btn-primary" : "btn btn-ghost"} onClick={() => setAnnual(true)} type="button">
             Annual
-            <span className="text-[var(--color-body)]">save 20%</span>
+            <span className="ml-1 rounded-full bg-[var(--color-signal-dim)] px-2 py-0.5 text-[11px] text-[var(--color-signal)]">save 20%</span>
           </button>
         </div>
       </section>
@@ -92,7 +92,7 @@ export default function PricingPage() {
       <section className="grid gap-5 lg:grid-cols-3">
         {plans.map((plan) => (
           <article
-            className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.highlighted ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
+            className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.highlighted ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : plan.monthly === null ? "bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)] border-[var(--color-muted)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
             key={plan.name}
           >
             {plan.highlighted ? (

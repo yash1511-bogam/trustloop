@@ -14,6 +14,7 @@ import {
 } from "framer-motion";
 import {
   ArrowRight,
+  ArrowUp,
   List,
   X,
 } from "@phosphor-icons/react";
@@ -81,6 +82,8 @@ export function MarketingLanding() {
     { scope },
   );
 
+  const showBackToTop = useTransform(scrollY, [600, 601], [0, 1]);
+
   return (
     <div ref={scope} className="relative overflow-clip bg-[var(--color-void)]">
       <framerMotion.div
@@ -111,11 +114,11 @@ export function MarketingLanding() {
             <nav className="hidden items-center gap-8 text-[14px] text-[var(--color-subtext)] md:flex">
               {navLinks.map((item) => (
                 item.href.startsWith("/") ? (
-                  <HoverLink className="transition-colors hover:text-[var(--color-bright)]" href={item.href} key={item.label}>
+                  <HoverLink className="rounded-md px-2 py-1 transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)]" href={item.href} key={item.label}>
                     {item.label}
                   </HoverLink>
                 ) : (
-                  <a className="transition-colors hover:text-[var(--color-bright)]" href={item.href} key={item.label}>
+                  <a className="rounded-md px-2 py-1 transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)]" href={item.href} key={item.label}>
                     {item.label}
                   </a>
                 )
@@ -143,7 +146,7 @@ export function MarketingLanding() {
         {mobileNavOpen ? (
           <framerMotion.div
             animate={{ opacity: 1 }}
-            className="fixed inset-0 z-[70] bg-[var(--color-void)] px-6 py-8 md:hidden"
+            className="fixed inset-0 z-[70] bg-[var(--color-void)]/95 px-6 py-8 backdrop-blur-md md:hidden"
             exit={{ opacity: 0 }}
             initial={{ opacity: 0 }}
           >
@@ -186,7 +189,7 @@ export function MarketingLanding() {
             <p className="page-kicker">AI Incident Operations</p>
             <framerMotion.h1
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 font-[var(--font-display)] text-[length:var(--text-hero-size)] italic leading-[var(--text-hero-line)] text-[var(--color-title)]"
+              className="mt-6 font-[var(--font-heading)] text-[length:var(--text-hero-size)] font-extrabold leading-[var(--text-hero-line)] text-[var(--color-title)]"
               initial={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
             >
@@ -206,25 +209,42 @@ export function MarketingLanding() {
               <HoverLink className="btn btn-primary btn-lg" href="/register">
                 Start free trial
               </HoverLink>
-              <a className="btn btn-ghost btn-lg" href="#workflow">
+              <a className="btn btn-ghost btn-lg group" href="#workflow">
                 See how it works
-                <ArrowRight size={16} weight="regular" />
+                <ArrowRight className="transition-transform group-hover:translate-x-1" size={16} weight="regular" />
               </a>
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4 text-[12px] text-[var(--color-ghost)]">
-              <span>Trusted by teams shipping production AI</span>
-              {["ACME AI", "CORE ML", "VANTAGE", "NEXUS"].map((logo) => (
-                <span className="font-[var(--font-mono)] tracking-[0.14em]" key={logo}>{logo}</span>
-              ))}
+            <div className="mt-10">
+              <p className="mb-4 text-[12px] text-[var(--color-ghost)]">Trusted by teams shipping production AI</p>
+              <div className="flex flex-wrap items-center justify-center gap-6">
+                {["ACME AI", "CORE ML", "VANTAGE", "NEXUS"].map((logo) => (
+                  <span className="inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--color-rim)] bg-[var(--color-surface)] px-4 py-2 font-[var(--font-mono)] text-[12px] tracking-[0.14em] text-[var(--color-ghost)]" key={logo}>{logo}</span>
+                ))}
+              </div>
             </div>
           </div>
 
+          <div className="mt-6 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] px-3 py-1 font-[var(--font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--color-ghost)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-resolve)]" />
+              Live Preview
+            </span>
+          </div>
           <HeroIllustration />
         </section>
 
         <LandingBelowFold />
       </main>
+
+      <framerMotion.a
+        aria-label="Back to top"
+        className="fixed bottom-6 right-6 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] text-[var(--color-subtext)] shadow-lg transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)]"
+        href="#top"
+        style={{ opacity: showBackToTop }}
+      >
+        <ArrowUp size={16} weight="regular" />
+      </framerMotion.a>
     </div>
   );
 }

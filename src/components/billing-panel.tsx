@@ -798,6 +798,12 @@ export function BillingPanel({
           </span>
         </div>
 
+        {!billing?.lastPaymentAt && (
+          <p className="mt-4 rounded-[var(--radius-sm)] border border-[rgba(14,165,233,0.24)] bg-[rgba(14,165,233,0.06)] p-3 text-sm text-[var(--color-info)]">
+            Your trial is active. Complete your first payment to activate your plan.
+          </p>
+        )}
+
         <div className="mt-8 grid gap-12 md:grid-cols-2 xl:grid-cols-4">
           <div>
             <p className="text-sm tracking-wide text-[var(--color-ghost)]">Current plan</p>
@@ -831,7 +837,7 @@ export function BillingPanel({
           </span>
         </div>
 
-        <div className="mt-8 grid gap-8 xl:grid-cols-3">
+        <div className="mt-8 grid gap-8 md:grid-cols-3">
           {availablePlans.map((plan) => {
             const isSelected = plan.id === selectedPlan;
             const isCurrent = plan.id === planTier;
@@ -1028,20 +1034,24 @@ export function BillingPanel({
               { label: "Triage runs", used: usage.triageRuns, limit: quota.triageRunsPerDay },
               { label: "Customer updates", used: usage.customerUpdates, limit: quota.customerUpdatesPerDay },
               { label: "Reminder emails", used: usage.reminderEmailsSent, limit: quota.reminderEmailsPerDay },
-            ].map((row) => (
+            ].map((row) => {
+              const pct = percent(row.used, row.limit);
+              const barColor = pct >= 90 ? "var(--color-danger)" : pct >= 70 ? "var(--color-warning)" : "var(--color-resolve)";
+              return (
               <div key={row.label}>
                 <div className="flex items-center justify-between text-sm mb-2">
                   <span className="text-[var(--color-body)]">{row.label}</span>
                   <span className="text-[var(--color-ghost)]">{row.used} / {row.limit}</span>
                 </div>
-                <div className="h-0.5 w-full bg-[var(--color-surface)] overflow-hidden">
+                <div className="h-1.5 w-full rounded-full bg-[var(--color-surface)] overflow-hidden">
                   <div
-                    className="h-full bg-[var(--color-signal)] transition-all duration-1000 ease-out"
-                    style={{ width: `${percent(row.used, row.limit)}%` }}
+                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                    style={{ width: `${pct}%`, backgroundColor: barColor }}
                   />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
         {billing?.paymentFailedAt && (

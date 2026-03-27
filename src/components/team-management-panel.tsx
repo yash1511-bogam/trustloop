@@ -227,7 +227,14 @@ export function TeamManagementPanel({
 
       {/* Active Members Minimal List */}
       <div>
-        <p className="text-sm tracking-wide text-[var(--color-ghost)] mb-4 uppercase">Active Members ({members.length})</p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium tracking-wide text-[var(--color-body)] uppercase">Active Members ({members.length})</p>
+          {canManageRoles && (
+            <button className="btn btn-ghost btn-sm" onClick={() => document.querySelector<HTMLInputElement>('input[type="email"]')?.focus()} type="button">
+              Invite member
+            </button>
+          )}
+        </div>
         {members.length <= 1 ? (
           <div className="mb-4 rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)]">
             <EmptyState

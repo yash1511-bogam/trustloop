@@ -55,7 +55,7 @@ export function DashboardPageClient({
             Open executive view
             <ArrowRight size={16} weight="regular" />
           </Link>
-          <button className="btn btn-primary" onClick={() => setDrawerOpen(true)} type="button">
+          <button className="btn btn-primary" onClick={() => setDrawerOpen(true)} title="Create new incident (N)" type="button">
             <Plus size={16} weight="regular" />
             New Incident
           </button>

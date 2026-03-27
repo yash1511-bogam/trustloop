@@ -73,11 +73,15 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
         </label>
         
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-[var(--color-body)]">Work email</span>
+          <span className="text-sm font-medium text-[var(--color-body)] flex items-center gap-2">
+            Work email
+            <span className="text-xs text-[var(--color-ghost)]" title="Email cannot be changed. It is linked to your authentication provider.">ⓘ</span>
+          </span>
           <input 
             className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-subtext)] focus:outline-none opacity-60 cursor-not-allowed" 
             value={profile.email} 
-            disabled 
+            disabled
+            title="Email cannot be changed. It is linked to your authentication provider."
           />
         </label>
 
@@ -98,7 +102,7 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
               disabled={loading}
             />
             <p className="text-xs text-[var(--color-ghost)] mt-2">
-              Used exclusively for high-severity P1 incident escalations. Keep this up to date to ensure you never miss critical alerts.
+              Get P1 SMS alerts when incidents escalate. Used exclusively for high-severity incident escalations.
             </p>
           </label>
         </UpgradeGate>
@@ -109,7 +113,7 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
           {hasChanges ? "You have unsaved changes." : "Profile is up to date."}
         </p>
         <button 
-          className="btn btn-primary" 
+          className={`btn btn-primary ${hasChanges ? "animate-pulse shadow-[0_0_12px_rgba(232,87,42,0.3)]" : ""}`} 
           disabled={loading || !hasChanges} 
           onClick={save} 
           type="button"

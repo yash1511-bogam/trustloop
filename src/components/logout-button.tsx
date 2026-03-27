@@ -18,7 +18,7 @@ export function LogoutButton({ compact }: { compact?: boolean }) {
 
   return (
     <button 
-      className={compact ? "app-sidebar-toggle mx-auto" : "btn btn-ghost w-full justify-start"} 
+      className={compact ? "app-sidebar-toggle mx-auto" : "btn w-full justify-start border-[rgba(232,66,66,0.18)] text-[var(--color-subtext)] hover:border-[rgba(232,66,66,0.3)] hover:bg-[rgba(232,66,66,0.06)] hover:text-[var(--color-danger)]"} 
       disabled={loading} 
       onClick={onLogout}
       type="button"

@@ -66,10 +66,10 @@ export function DocsShell({ children }: { children: ReactNode }) {
           collapsible: true,
           defaultOpenLevel: 1,
           footer: (
-            <div className="text-xs text-fd-muted-foreground">
-              <p className="mb-1 font-medium text-fd-foreground">Need product access?</p>
-              <Link className="underline underline-offset-4" href="/register">
-                Launch a workspace
+            <div className="rounded-[8px] border border-[var(--color-rim)] bg-[var(--color-surface)] p-3">
+              <p className="text-xs font-medium text-fd-foreground">Need product access?</p>
+              <Link className="mt-1 inline-flex text-xs text-[var(--color-signal)] underline underline-offset-4" href="/register">
+                Launch a workspace →
               </Link>
             </div>
           ),

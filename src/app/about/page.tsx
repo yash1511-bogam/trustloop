@@ -29,11 +29,19 @@ export default function AboutPage() {
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {["Product Design", "Infrastructure", "Response Systems"].map((role) => (
-            <article className="surface p-5" key={role}>
-              <div className="mb-4 h-16 w-16 rounded-full border border-[var(--color-rim)] bg-[linear-gradient(135deg,var(--color-raised),var(--color-void))]" />
-              <h3 className="font-[var(--font-heading)] text-[20px] font-semibold text-[var(--color-title)]">{role}</h3>
-              <p className="mt-2 text-[14px] text-[var(--color-subtext)]">Placeholder profile for the founding team surface.</p>
+          {[
+            { role: "Product Design", desc: "Shapes the interface, interaction patterns, and visual language that responders rely on under pressure." },
+            { role: "Infrastructure", desc: "Builds the data layer, queue systems, and deployment pipelines that keep TrustLoop reliable at scale." },
+            { role: "Response Systems", desc: "Designs the triage, escalation, and communication workflows that drive incident resolution." },
+          ].map((member) => (
+            <article className="surface p-5" key={member.role}>
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[linear-gradient(135deg,var(--color-raised),var(--color-void))]">
+                <span className="font-[var(--font-heading)] text-[20px] font-bold text-[var(--color-ghost)]">
+                  {member.role.charAt(0)}
+                </span>
+              </div>
+              <h3 className="font-[var(--font-heading)] text-[20px] font-semibold text-[var(--color-title)]">{member.role}</h3>
+              <p className="mt-2 text-[14px] text-[var(--color-subtext)]">{member.desc}</p>
             </article>
           ))}
         </div>
