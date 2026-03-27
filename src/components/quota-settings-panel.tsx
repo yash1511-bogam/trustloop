@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, RefreshCcw } from "@/components/icon-compat";
 import { UpgradeGate } from "@/components/upgrade-gate";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 
@@ -87,7 +87,7 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
   return (
     <div className="space-y-12 max-w-4xl">
       {(message || error) && (
-        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
           {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
           <span>{error || message}</span>
         </div>
@@ -95,12 +95,12 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
 
       <div className="grid gap-8 md:grid-cols-2">
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">
+          <span className="text-sm font-medium text-[var(--color-body)]">
             API requests / minute
-            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.apiRequestsPerMinute.toLocaleString()})</span>}
+            {planLimits && <span className="text-xs text-[var(--color-ghost)] ml-2">(max {planLimits.apiRequestsPerMinute.toLocaleString()})</span>}
           </span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             type="number"
             min={1}
             max={planLimits?.apiRequestsPerMinute ?? 1000000}
@@ -111,12 +111,12 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">
+          <span className="text-sm font-medium text-[var(--color-body)]">
             Incidents / day
-            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.incidentsPerDay.toLocaleString()})</span>}
+            {planLimits && <span className="text-xs text-[var(--color-ghost)] ml-2">(max {planLimits.incidentsPerDay.toLocaleString()})</span>}
           </span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             type="number"
             min={1}
             max={planLimits?.incidentsPerDay ?? 1000000}
@@ -127,12 +127,12 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">
+          <span className="text-sm font-medium text-[var(--color-body)]">
             AI triage runs / day
-            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.triageRunsPerDay.toLocaleString()})</span>}
+            {planLimits && <span className="text-xs text-[var(--color-ghost)] ml-2">(max {planLimits.triageRunsPerDay.toLocaleString()})</span>}
           </span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             type="number"
             min={1}
             max={planLimits?.triageRunsPerDay ?? 1000000}
@@ -143,12 +143,12 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">
+          <span className="text-sm font-medium text-[var(--color-body)]">
             Customer update drafts / day
-            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.customerUpdatesPerDay.toLocaleString()})</span>}
+            {planLimits && <span className="text-xs text-[var(--color-ghost)] ml-2">(max {planLimits.customerUpdatesPerDay.toLocaleString()})</span>}
           </span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             type="number"
             min={1}
             max={planLimits?.customerUpdatesPerDay ?? 1000000}
@@ -159,12 +159,12 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
         </label>
 
         <label className="block space-y-3 md:col-span-2">
-          <span className="text-sm font-medium text-slate-300">
+          <span className="text-sm font-medium text-[var(--color-body)]">
             Reminder emails / day
-            {planLimits && <span className="text-xs text-neutral-500 ml-2">(max {planLimits.reminderEmailsPerDay.toLocaleString()})</span>}
+            {planLimits && <span className="text-xs text-[var(--color-ghost)] ml-2">(max {planLimits.reminderEmailsPerDay.toLocaleString()})</span>}
           </span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             type="number"
             min={1}
             max={planLimits?.reminderEmailsPerDay ?? 1000000}
@@ -175,9 +175,9 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">P1 reminder interval (hours)</span>
+          <span className="text-sm font-medium text-[var(--color-body)]">P1 reminder interval (hours)</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             type="number"
             min={1}
             max={168}
@@ -188,9 +188,9 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">P2 reminder interval (hours)</span>
+          <span className="text-sm font-medium text-[var(--color-body)]">P2 reminder interval (hours)</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             type="number"
             min={1}
             max={336}
@@ -201,12 +201,12 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
         </label>
       </div>
 
-      <div className="py-6 border-y border-white/5 space-y-8">
+      <div className="py-6 border-y border-[var(--color-rim)] space-y-8">
         <UpgradeGate allowed={isFeatureAllowed(planTier, "on_call")} planLabel="Pro">
           <div className="space-y-8">
             <label className="flex items-center gap-3 cursor-pointer group">
               <input
-                className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+                className="h-4 w-4 rounded border-[var(--color-rim)] bg-transparent text-[var(--color-signal)] focus:ring-[var(--color-signal)] focus:ring-offset-0"
                 checked={quota.onCallRotationEnabled}
                 onChange={(event) =>
                   setQuota((prev) => ({
@@ -216,17 +216,17 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
                 }
                 type="checkbox"
               />
-              <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">
+              <span className="text-sm text-[var(--color-subtext)] group-hover:text-[var(--color-body)] transition-colors">
                 Enable on-call rotation for P1 SMS escalations
               </span>
             </label>
 
             {quota.onCallRotationEnabled && (
-              <div className="grid gap-8 md:grid-cols-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="grid gap-8 md:grid-cols-2">
                 <label className="block space-y-3">
-                  <span className="text-sm font-medium text-slate-300">Rotation interval (hours)</span>
+                  <span className="text-sm font-medium text-[var(--color-body)]">Rotation interval (hours)</span>
                   <input
-                    className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+                    className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
                     type="number"
                     min={1}
                     max={168}
@@ -237,13 +237,13 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
                 </label>
 
                 <div className="space-y-3">
-                  <span className="text-sm font-medium text-slate-300 block">Rotation anchor</span>
-                  <div className="flex items-center justify-between gap-4 border-b border-white/20 pb-1.5">
-                    <span className="text-sm text-slate-100">
+                  <span className="text-sm font-medium text-[var(--color-body)] block">Rotation anchor</span>
+                  <div className="flex items-center justify-between gap-4 border-b border-[var(--color-rim)] pb-1.5">
+                    <span className="text-sm text-[var(--color-title)]">
                       {new Date(quota.onCallRotationAnchorAt).toLocaleString("en-US")}
                     </span>
                     <button
-                      className="text-[10px] uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1"
+                      className="text-[10px] uppercase tracking-wider text-[var(--color-signal)] hover:text-[var(--color-signal)] transition-colors flex items-center gap-1"
                       type="button"
                       onClick={() =>
                         setQuota((prev) => ({
@@ -263,7 +263,7 @@ export function QuotaSettingsPanel({ initialQuota, planTier, planLimits }: Props
       </div>
 
       <div className="flex items-center justify-between pt-4">
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-[var(--color-ghost)]">
           {hasChanges ? "Changes not yet applied." : "Quotas are current."}
         </p>
         <button 

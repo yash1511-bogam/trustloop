@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Circle, ChevronDown, ChevronUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  CheckCircle,
+  Plug,
+  Robot,
+  Siren,
+  SlackLogo,
+  X,
+} from "@phosphor-icons/react";
 
 type ChecklistItem = {
   id: string;
   label: string;
   description: string;
   href: string;
+  icon: typeof Siren;
   check: () => Promise<boolean>;
 };
 
@@ -18,8 +26,9 @@ const items: ChecklistItem[] = [
   {
     id: "create_incident",
     label: "Create your first incident",
-    description: "Log an incident manually or via webhook.",
+    description: "Log an incident manually or route one in from a webhook.",
     href: "/dashboard",
+    icon: Siren,
     check: async () => {
       const res = await fetch("/api/incidents?limit=1");
       const data = await res.json();
@@ -29,19 +38,21 @@ const items: ChecklistItem[] = [
   {
     id: "run_triage",
     label: "Run AI triage",
-    description: "Let AI classify severity and suggest next steps.",
+    description: "Let the system propose severity, owner, and safe next steps.",
     href: "/dashboard",
+    icon: Robot,
     check: async () => {
       const res = await fetch("/api/incidents?limit=10");
       const data = await res.json();
-      return data.incidents?.some((i: { triagedAt: string | null }) => i.triagedAt) ?? false;
+      return data.incidents?.some((incident: { triagedAt: string | null }) => incident.triagedAt) ?? false;
     },
   },
   {
     id: "configure_ai",
     label: "Add an AI provider key",
-    description: "Configure OpenAI, Gemini, or Anthropic in Settings.",
+    description: "Connect OpenAI, Gemini, or Anthropic before the next incident lands.",
     href: "/settings/ai",
+    icon: Robot,
     check: async () => {
       const res = await fetch("/api/settings/ai-keys");
       const data = await res.json();
@@ -51,22 +62,23 @@ const items: ChecklistItem[] = [
   {
     id: "connect_slack",
     label: "Connect Slack",
-    description: "Get incident alerts in your Slack workspace.",
+    description: "Keep responders aligned with alerting and approved status updates.",
     href: "/settings/workspace",
-    check: async () => false, // Checked server-side via workspace.slackTeamId
+    icon: SlackLogo,
+    check: async () => false,
   },
   {
     id: "add_webhook",
     label: "Set up a webhook integration",
-    description: "Connect Datadog, Sentry, PagerDuty, or others.",
+    description: "Accept incidents from Datadog, Sentry, PagerDuty, or custom sources.",
     href: "/settings/workspace",
+    icon: Plug,
     check: async () => false,
   },
 ];
 
 export function OnboardingChecklist() {
   const [completed, setCompleted] = useState<Record<string, boolean>>({});
-  const [collapsed, setCollapsed] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
     if (typeof window === "undefined") {
       return false;
@@ -80,74 +92,88 @@ export function OnboardingChecklist() {
     }
 
     items.forEach((item) => {
-        item.check().then((done) => {
-          if (done) setCompleted((prev) => ({ ...prev, [item.id]: true }));
-        }).catch(() => {});
+      item.check().then((done) => {
+        if (done) {
+          setCompleted((prev) => ({ ...prev, [item.id]: true }));
+        }
+      }).catch(() => null);
     });
   }, [dismissed]);
 
-  if (dismissed) return null;
+  if (dismissed) {
+    return null;
+  }
 
   const doneCount = Object.values(completed).filter(Boolean).length;
   const allDone = doneCount === items.length;
 
   return (
-    <div className="surface mb-6 rounded-xl p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-semibold text-slate-100">
-            Getting Started {doneCount}/{items.length}
-          </h3>
-          <div className="mt-1 h-1.5 w-40 rounded-full bg-neutral-800">
+    <div className="surface section-enter p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="section-heading">
+          <p className="page-kicker">Onboarding</p>
+          <h2 className="section-title">Operational readiness checklist</h2>
+          <p className="section-description">
+            Complete the essentials before your first customer-facing AI incident hits the queue.
+          </p>
+          <div className="mt-1 h-1.5 w-48 rounded-full bg-[var(--color-rim)]">
             <div
-              className="h-full rounded-full bg-blue-500 transition-all"
+              className="h-full rounded-full bg-[var(--color-signal)] transition-all"
               style={{ width: `${(doneCount / items.length) * 100}%` }}
             />
           </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setCollapsed(!collapsed)} className="text-neutral-500 hover:text-neutral-300">
-            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          </button>
+
+        <div className="flex items-center gap-3">
+          <div className="badge badge-info">
+            {doneCount}/{items.length} complete
+          </div>
           <button
-            onClick={() => { setDismissed(true); localStorage.setItem(STORAGE_KEY, "1"); }}
-            className="text-xs text-neutral-500 hover:text-neutral-300"
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              setDismissed(true);
+              localStorage.setItem(STORAGE_KEY, "1");
+            }}
+            type="button"
           >
+            <X size={14} weight="regular" />
             Dismiss
           </button>
         </div>
       </div>
 
-      {!collapsed && (
-        <ul className="mt-4 space-y-2">
-          {items.map((item) => (
+      <ul className="mt-5 grid gap-3 lg:grid-cols-2 xl:grid-cols-5">
+        {items.map((item) => {
+          const complete = Boolean(completed[item.id]);
+
+          return (
             <li key={item.id}>
               <Link
+                className="surface-clickable flex h-full items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-rim)] bg-[var(--color-void)] p-4"
                 href={item.href}
-                className="flex items-start gap-3 rounded-lg p-2 hover:bg-neutral-800/50"
               >
-                {completed[item.id] ? (
-                  <Check className="mt-0.5 h-4 w-4 text-green-500" />
+                {complete ? (
+                  <CheckCircle color="var(--color-resolve)" size={18} weight="duotone" />
                 ) : (
-                  <Circle className="mt-0.5 h-4 w-4 text-neutral-600" />
+                  <item.icon color="var(--color-subtext)" size={18} weight="duotone" />
                 )}
-                <div>
-                  <p className={`text-sm ${completed[item.id] ? "text-neutral-500 line-through" : "text-slate-200"}`}>
+                <div className="grid gap-1">
+                  <p className={`text-sm ${complete ? "text-[var(--color-ghost)] line-through" : "text-[var(--color-body)]"}`}>
                     {item.label}
                   </p>
-                  <p className="text-xs text-neutral-500">{item.description}</p>
+                  <p className="text-xs text-[var(--color-subtext)]">{item.description}</p>
                 </div>
               </Link>
             </li>
-          ))}
-        </ul>
-      )}
+          );
+        })}
+      </ul>
 
-      {allDone && !collapsed && (
-        <p className="mt-3 text-center text-sm text-green-400">
-          🎉 All done! You&apos;re ready to go.
+      {allDone ? (
+        <p className="mt-4 text-sm text-[var(--color-resolve)]">
+          All clear. Your workspace is ready for live incident response.
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

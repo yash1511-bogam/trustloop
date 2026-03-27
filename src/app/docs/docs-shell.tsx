@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
-import { BookOpenText, House } from "lucide-react";
+import { BookOpenText, House } from "@/components/icon-compat";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import { docsSource } from "@/lib/docs-source";
@@ -17,12 +17,12 @@ export function DocsShell({ children }: { children: ReactNode }) {
   if (!mounted) {
     return (
       <div className="min-h-screen px-6 py-8 md:px-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-neutral-800 bg-neutral-900/70 px-5 py-4 backdrop-blur-sm">
-          <span className="inline-flex items-center gap-2 text-sm font-semibold text-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)] px-5 py-4 backdrop-blur-sm">
+          <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-bright)]">
             <BookOpenText className="h-4 w-4" />
             TrustLoop Docs
           </span>
-          <Link className="text-sm text-neutral-400 transition-colors hover:text-white" href="/">
+          <Link className="text-sm text-[var(--color-subtext)] transition-colors hover:text-[var(--color-bright)]" href="/">
             Product Home
           </Link>
         </div>

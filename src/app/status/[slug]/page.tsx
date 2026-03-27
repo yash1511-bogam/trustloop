@@ -12,10 +12,10 @@ function statusTone(status: IncidentStatus): string {
 }
 
 function componentHealth(incidents: { status: IncidentStatus }[]): { label: string; className: string } {
-  if (incidents.length === 0) return { label: "Operational", className: "text-emerald-400" };
+  if (incidents.length === 0) return { label: "Operational", className: "text-[var(--color-resolve)]" };
   const hasActive = incidents.some((i) => i.status !== IncidentStatus.RESOLVED && i.status !== IncidentStatus.MITIGATED);
-  if (hasActive) return { label: "Degraded", className: "text-red-400" };
-  return { label: "Recovering", className: "text-amber-400" };
+  if (hasActive) return { label: "Degraded", className: "text-[var(--color-danger)]" };
+  return { label: "Recovering", className: "text-[var(--color-warning)]" };
 }
 
 export default async function PublicStatusPage({
@@ -73,11 +73,11 @@ export default async function PublicStatusPage({
   }
 
   return (
-    <main className="container-shell fade-in py-8">
+    <main className="container-shell py-8">
       <section className="surface p-6">
         <p className="kicker">Public status</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">{workspace.name}</h1>
-        <p className="mt-2 text-sm text-neutral-400">Customer-facing incident communication stream.</p>
+        <h1 className="mt-2 text-3xl font-bold text-[var(--color-bright)]">{workspace.name}</h1>
+        <p className="mt-2 text-sm text-[var(--color-subtext)]">Customer-facing incident communication stream.</p>
         <div className="mt-4">
           <StatusSubscribeForm slug={slug} turnstileSiteKey={siteKey} />
         </div>
@@ -90,7 +90,7 @@ export default async function PublicStatusPage({
             const health = componentHealth(incidents);
             return (
               <div key={name} className="panel-card flex items-center justify-between p-3">
-                <span className="text-sm font-medium text-white">{name}</span>
+                <span className="text-sm font-medium text-[var(--color-bright)]">{name}</span>
                 <span className={`text-xs font-medium ${health.className}`}>{health.label}</span>
               </div>
             );
@@ -107,7 +107,7 @@ export default async function PublicStatusPage({
               window.endsAt.getTime() >= now.getTime();
             return (
               <article className="panel-card p-4" key={window.id}>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-ghost)]">
                   <span className={inProgress ? "badge badge-p2" : "badge"}>
                     {inProgress ? "In progress" : "Scheduled"}
                   </span>
@@ -115,13 +115,13 @@ export default async function PublicStatusPage({
                   <span>→</span>
                   <time>{window.endsAt.toLocaleString()}</time>
                 </div>
-                <p className="mt-2 font-semibold text-white">{window.title}</p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-300">{window.body}</p>
+                <p className="mt-2 font-semibold text-[var(--color-bright)]">{window.title}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--color-body)]">{window.body}</p>
               </article>
             );
           })}
           {maintenanceWindows.length === 0 ? (
-            <p className="text-sm text-neutral-400">No scheduled maintenance windows.</p>
+            <p className="text-sm text-[var(--color-subtext)]">No scheduled maintenance windows.</p>
           ) : null}
         </div>
       </section>
@@ -136,10 +136,10 @@ export default async function PublicStatusPage({
                 <span className={statusTone(incident.status)}>{incident.status}</span>
               </div>
               <p className="mt-2 font-semibold">{incident.title}</p>
-              <p className="text-xs text-neutral-500">Updated {incident.updatedAt.toLocaleString()}</p>
+              <p className="text-xs text-[var(--color-ghost)]">Updated {incident.updatedAt.toLocaleString()}</p>
             </article>
           ))}
-          {openIncidents.length === 0 ? <p className="text-sm text-neutral-400">No active incidents.</p> : null}
+          {openIncidents.length === 0 ? <p className="text-sm text-[var(--color-subtext)]">No active incidents.</p> : null}
         </div>
       </section>
 
@@ -148,17 +148,17 @@ export default async function PublicStatusPage({
         <div className="mt-4 space-y-4">
           {updates.map((update) => (
             <article className="panel-card p-4" key={update.id}>
-              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-neutral-500">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--color-ghost)]">
                 <span className="badge">{update.incident.severity}</span>
                 <span>{update.incident.title}</span>
                 <span>•</span>
                 <time>{update.publishedAt.toLocaleString()}</time>
               </div>
-              <p className="whitespace-pre-wrap text-sm text-white">{update.body}</p>
+              <p className="whitespace-pre-wrap text-sm text-[var(--color-bright)]">{update.body}</p>
             </article>
           ))}
           {updates.length === 0 ? (
-            <p className="text-sm text-neutral-400">No public updates published yet.</p>
+            <p className="text-sm text-[var(--color-subtext)]">No public updates published yet.</p>
           ) : null}
         </div>
       </section>

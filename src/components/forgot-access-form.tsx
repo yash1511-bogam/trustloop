@@ -144,8 +144,9 @@ export function ForgotAccessForm({ turnstileSiteKey }: ForgotAccessFormProps) {
         </form>
       ) : null}
 
-      {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {message ? <p className="text-sm text-[var(--color-resolve)]">{message}</p> : null}
+      {message ? <p className="text-sm text-[var(--color-resolve)]">{message}</p> : null}
+      {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
     </div>
   );
 }

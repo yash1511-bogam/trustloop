@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Phone, PhoneOff, UserCheck } from "lucide-react";
+import { Loader2, Phone, PhoneOff, UserCheck } from "@/components/icon-compat";
 
 type ScheduleEntry = {
   userId: string;
@@ -33,7 +33,7 @@ export function OnCallPanel() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-neutral-500 py-8">
+      <div className="flex items-center gap-2 text-sm text-[var(--color-ghost)] py-8">
         <Loader2 className="w-4 h-4 animate-spin" /> Loading on-call schedule…
       </div>
     );
@@ -41,7 +41,7 @@ export function OnCallPanel() {
 
   if (!data?.enabled) {
     return (
-      <p className="text-sm text-neutral-500 py-4">
+      <p className="text-sm text-[var(--color-ghost)] py-4">
         On-call rotation is disabled. Enable it in the Quotas settings page.
       </p>
     );
@@ -51,16 +51,16 @@ export function OnCallPanel() {
     <div className="space-y-6">
       <div className="flex flex-wrap gap-6 text-sm">
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Rotation interval</p>
-          <p className="text-slate-200">{data.intervalHours}h</p>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Rotation interval</p>
+          <p className="text-[var(--color-body)]">{data.intervalHours}h</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Anchor</p>
-          <p className="text-slate-200">{data.anchorAt ? new Date(data.anchorAt).toLocaleString("en-US") : "—"}</p>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Anchor</p>
+          <p className="text-[var(--color-body)]">{data.anchorAt ? new Date(data.anchorAt).toLocaleString("en-US") : "—"}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Pool size</p>
-          <p className="text-slate-200">{data.schedule.length}</p>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Pool size</p>
+          <p className="text-[var(--color-body)]">{data.schedule.length}</p>
         </div>
       </div>
 
@@ -78,21 +78,21 @@ export function OnCallPanel() {
             {data.schedule.map((entry) => (
               <tr key={entry.userId}>
                 <td className="font-medium">{entry.name}</td>
-                <td className="text-neutral-400">{entry.email}</td>
+                <td className="text-[var(--color-subtext)]">{entry.email}</td>
                 <td>
                   {entry.hasPhone ? (
-                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                    <Phone className="w-3.5 h-3.5 text-[var(--color-resolve)]" />
                   ) : (
-                    <PhoneOff className="w-3.5 h-3.5 text-neutral-600" />
+                    <PhoneOff className="w-3.5 h-3.5 text-[var(--color-ghost)]" />
                   )}
                 </td>
                 <td>
                   {entry.isOnCall ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-resolve)]">
                       <UserCheck className="w-3.5 h-3.5" /> On call
                     </span>
                   ) : (
-                    <span className="text-xs text-neutral-500">Off duty</span>
+                    <span className="text-xs text-[var(--color-ghost)]">Off duty</span>
                   )}
                 </td>
               </tr>

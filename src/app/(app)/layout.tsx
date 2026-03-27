@@ -1,5 +1,6 @@
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { requireAuth } from "@/lib/auth";
+import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
 import { prisma } from "@/lib/prisma";
 import { listUserWorkspaceMemberships } from "@/lib/workspace-membership";
 
@@ -9,7 +10,7 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const auth = await requireAuth();
-  const [workspace, memberships] = await Promise.all([
+  const [workspace, memberships, planTier] = await Promise.all([
     prisma.workspace.findUnique({
       where: { id: auth.user.workspaceId },
       select: {
@@ -17,6 +18,7 @@ export default async function AppLayout({
       },
     }),
     listUserWorkspaceMemberships(auth.user.id),
+    getWorkspacePlanTier(auth.user.workspaceId),
   ]);
 
   const currentMembership = memberships.find(
@@ -30,6 +32,7 @@ export default async function AppLayout({
       currentRole={auth.user.role}
       currentSlug={currentMembership?.workspace.slug ?? null}
       workspaceName={auth.user.workspaceName}
+      workspacePlanTier={planTier}
       workspaces={memberships.map((membership) => ({
         id: membership.workspace.id,
         name: membership.workspace.name,

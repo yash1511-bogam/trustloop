@@ -8,7 +8,16 @@ import {
   Role,
 } from "@prisma/client";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, ArrowRight, RefreshCcw, Download } from "lucide-react";
+import {
+  ArrowsClockwise,
+  ArrowRight,
+  CaretLeft,
+  CaretRight,
+  CheckCircle,
+  CircleNotch,
+  DownloadSimple,
+} from "@phosphor-icons/react";
+import { EmptyState } from "@/components/empty-state";
 
 type Member = {
   id: string;
@@ -34,9 +43,16 @@ type ApiPayload = {
 };
 
 function severityBadgeClass(severity: IncidentSeverity): string {
-  if (severity === IncidentSeverity.P1) return "text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border border-red-500/20 bg-red-500/10 text-red-400";
-  if (severity === IncidentSeverity.P2) return "text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400";
-  return "text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-400";
+  if (severity === IncidentSeverity.P1) return "badge badge-p1 badge-sm";
+  if (severity === IncidentSeverity.P2) return "badge badge-p2 badge-sm";
+  return "badge badge-p3 badge-sm";
+}
+
+function statusBadgeClass(status: IncidentStatus): string {
+  if (status === IncidentStatus.RESOLVED) return "badge badge-success badge-sm";
+  if (status === IncidentStatus.MITIGATED) return "badge badge-warning badge-sm";
+  if (status === IncidentStatus.NEW) return "badge badge-info badge-sm";
+  return "badge badge-danger badge-sm";
 }
 
 export function DashboardIncidentQueue() {
@@ -133,165 +149,197 @@ export function DashboardIncidentQueue() {
   }
 
   return (
-    <section className="pt-4">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <h2 className="text-xl font-medium text-slate-100">Incident queue</h2>
+    <section className="section-enter">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="section-heading">
+          <h2 className="section-title">Incident queue</h2>
+          <p className="section-description">
+            Primary responder view with live filters and severity-first sorting.
+          </p>
+        </div>
         <div className="flex gap-2">
-          <button className="btn btn-ghost text-xs !min-h-[32px] px-3" onClick={() => void refreshReadModels()} type="button">
-            <RefreshCcw className="w-3 h-3" /> Sync models
+          <button className="btn btn-ghost btn-sm" onClick={() => void refreshReadModels()} type="button">
+            <ArrowsClockwise size={16} weight="regular" />
+            Sync models
           </button>
-          <Link className="btn btn-ghost text-xs !min-h-[32px] px-3" href="/api/incidents/export?format=csv">
-            <Download className="w-3 h-3" /> CSV
+          <Link className="btn btn-ghost btn-sm" href="/api/incidents/export?format=csv">
+            <DownloadSimple size={16} weight="regular" />
+            Export CSV
           </Link>
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[auto_auto_auto_auto_1fr_auto] mb-8 items-end p-4 rounded-2xl bg-white/5 border border-white/5">
-        <label className="block space-y-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Status</span>
-          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={status} onChange={(event) => setStatus(event.target.value)}>
-            <option className="bg-slate-900" value="">All</option>
-            {Object.values(IncidentStatus).map((option) => (
-              <option className="bg-slate-900" key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
-        
-        <label className="block space-y-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Severity</span>
-          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={severity} onChange={(event) => setSeverity(event.target.value)}>
-            <option className="bg-slate-900" value="">All</option>
-            {Object.values(IncidentSeverity).map((option) => (
-              <option className="bg-slate-900" key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
+      <div className="surface mb-6 p-4">
+        <div className="grid gap-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_1.4fr_auto]">
+          <label className="field">
+            <span className="field-label">Status</span>
+            <select className="select" onChange={(event) => setStatus(event.target.value)} value={status}>
+              <option value="">All</option>
+              {Object.values(IncidentStatus).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
 
-        <label className="block space-y-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Category</span>
-          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={category} onChange={(event) => setCategory(event.target.value)}>
-            <option className="bg-slate-900" value="">All</option>
-            {Object.values(AIIncidentCategory).map((option) => (
-              <option className="bg-slate-900" key={option} value={option}>{option}</option>
-            ))}
-          </select>
-        </label>
+          <label className="field">
+            <span className="field-label">Severity</span>
+            <select className="select" onChange={(event) => setSeverity(event.target.value)} value={severity}>
+              <option value="">All</option>
+              {Object.values(IncidentSeverity).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
 
-        <label className="block space-y-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Owner</span>
-          <select className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6" value={owner} onChange={(event) => setOwner(event.target.value)}>
-            <option className="bg-slate-900" value="">All</option>
-            {members.map((member) => (
-              <option className="bg-slate-900" key={member.id} value={member.id}>{member.name}</option>
-            ))}
-          </select>
-        </label>
+          <label className="field">
+            <span className="field-label">Category</span>
+            <select className="select" onChange={(event) => setCategory(event.target.value)} value={category}>
+              <option value="">All</option>
+              {Object.values(AIIncidentCategory).map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
 
-        <label className="block space-y-1.5">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Search</span>
-          <input
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
-            placeholder="Search keywords or tickets..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-          />
-        </label>
+          <label className="field">
+            <span className="field-label">Owner</span>
+            <select className="select" onChange={(event) => setOwner(event.target.value)} value={owner}>
+              <option value="">All</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>{member.name}</option>
+              ))}
+            </select>
+          </label>
 
-        <div className="flex gap-2">
-          <button className="btn btn-primary !min-h-[32px] text-xs px-4" onClick={applyFilters} type="button">
-            Apply
-          </button>
-          {(status || severity || category || owner || search || appliedSearch) && (
-            <button className="btn btn-ghost !min-h-[32px] text-xs px-3" onClick={resetFilters} type="button">
-              Clear
+          <label className="field">
+            <span className="field-label">Search</span>
+            <input
+              className="input"
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={(event) => event.key === "Enter" && applyFilters()}
+              placeholder="Search incidents, tickets, or customers"
+              value={search}
+            />
+          </label>
+
+          <div className="flex items-end gap-2">
+            <button className="btn btn-primary btn-sm" onClick={applyFilters} type="button">
+              Apply
             </button>
-          )}
+            {(status || severity || category || owner || search || appliedSearch) ? (
+              <button className="btn btn-ghost btn-sm" onClick={resetFilters} type="button">
+                Clear
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
-        {loading && items.length === 0
-          ? Array.from({ length: 5 }).map((_, i) => (
-              <div className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl animate-pulse" key={`skel-${i}`}>
-                <div className="flex-1 min-w-0 pr-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-5 w-10 rounded bg-white/5" />
-                    <div className="h-4 w-16 rounded bg-white/5" />
-                  </div>
-                  <div className="h-5 w-64 rounded bg-white/5" />
-                </div>
-                <div className="mt-3 md:mt-0 flex items-center gap-8">
-                  <div className="h-4 w-20 rounded bg-white/5" />
-                  <div className="h-4 w-8 rounded bg-white/5" />
-                  <div className="h-4 w-16 rounded bg-white/5" />
-                </div>
-              </div>
-            ))
-          : items.map((incident) => (
-          <div className="group flex flex-col md:flex-row md:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all" key={incident.id}>
-            <div className="flex-1 min-w-0 pr-4">
-              <div className="flex items-center gap-3 mb-1">
-                <span className={severityBadgeClass(incident.severity)}>{incident.severity}</span>
-                <span className="text-xs font-medium text-slate-300">{incident.status}</span>
-                <span className="text-xs text-neutral-500">• {incident.category ?? "Uncategorized"}</span>
-              </div>
-              <Link className="text-base font-medium text-slate-100 hover:text-sky-400 transition-colors truncate block" href={`/incidents/${incident.id}`}>
-                {incident.title}
-              </Link>
-            </div>
+      {loading && items.length === 0 ? (
+        <div className="table-shell overflow-hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Title</th>
+                <th>AI category</th>
+                <th>Owner</th>
+                <th>Updated</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 5 }).map((_, index) => (
+                <tr key={`skel-${index}`}>
+                  <td><div className="h-5 w-12 rounded bg-[var(--color-rim)]" /></td>
+                  <td><div className="h-5 w-16 rounded bg-[var(--color-rim)]" /></td>
+                  <td><div className="h-4 w-56 rounded bg-[var(--color-rim)]" /></td>
+                  <td><div className="h-4 w-24 rounded bg-[var(--color-rim)]" /></td>
+                  <td><div className="h-4 w-20 rounded bg-[var(--color-rim)]" /></td>
+                  <td><div className="h-4 w-20 rounded bg-[var(--color-rim)]" /></td>
+                  <td><div className="h-4 w-4 rounded bg-[var(--color-rim)]" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="surface">
+          <EmptyState
+            action={appliedSearch || status || severity || category || owner ? { label: "Clear filters", onClick: resetFilters } : undefined}
+            description="No open incidents."
+            icon={CheckCircle}
+            title="All clear"
+          />
+        </div>
+      ) : (
+        <div className="table-shell overflow-hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Title</th>
+                <th>AI category</th>
+                <th>Owner</th>
+                <th>Updated</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((incident) => (
+                <tr
+                  key={incident.id}
+                  style={incident.severity === IncidentSeverity.P1 ? { boxShadow: "inset 0 0 0 1px var(--color-danger)", background: "rgba(232,66,66,0.04)" } : undefined}
+                >
+                  <td><span className={severityBadgeClass(incident.severity)}>{incident.severity}</span></td>
+                  <td><span className={statusBadgeClass(incident.status)}>{incident.status}</span></td>
+                  <td>
+                    <Link className="font-medium text-[var(--color-title)] transition-colors hover:text-[var(--color-bright)]" href={`/incidents/${incident.id}`}>
+                      {incident.title}
+                    </Link>
+                  </td>
+                  <td className="text-[var(--color-ghost)]">{incident.category ?? "Uncategorized"}</td>
+                  <td>{incident.owner?.name ?? "Unassigned"}</td>
+                  <td className="text-[var(--color-subtext)]">
+                    {new Date(incident.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </td>
+                  <td>
+                    <Link className="inline-flex items-center text-[var(--color-subtext)] transition-colors hover:text-[var(--color-bright)]" href={`/incidents/${incident.id}`}>
+                      <ArrowRight size={16} weight="regular" />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-            <div className="mt-3 md:mt-0 flex items-center gap-8 text-sm">
-              <div className="flex flex-col items-start md:items-end">
-                <span className="text-neutral-400">{incident.owner?.name ?? "Unassigned"}</span>
-                <span className="text-[10px] text-neutral-500">Owner</span>
-              </div>
-              
-              <div className="flex flex-col items-start md:items-end w-16">
-                <span className="text-neutral-300">{incident._count.events}</span>
-                <span className="text-[10px] text-neutral-500">Events</span>
-              </div>
-
-              <div className="flex flex-col items-start md:items-end w-28">
-                <span className="text-neutral-400">{new Date(incident.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                <span className="text-[10px] text-neutral-500">Updated</span>
-              </div>
-              
-              <Link className="opacity-0 group-hover:opacity-100 transition-opacity text-sky-400 hover:text-sky-300 p-2" href={`/incidents/${incident.id}`}>
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
-          </div>
-        ))}
-
-        {items.length === 0 && !loading ? (
-          <div className="p-8 text-center text-sm text-neutral-500 border border-dashed border-white/10 rounded-2xl">
-            No incidents match your criteria.
-          </div>
-        ) : null}
-      </div>
-
-      <div className="mt-6 flex items-center justify-between pt-6 border-t border-white/5">
+      <div className="mt-4 flex items-center justify-between gap-4">
         <button
-          className="text-sm font-medium text-sky-400 hover:text-sky-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="btn btn-ghost btn-sm"
           disabled={loading || cursorStack.length === 0}
           onClick={goPrevious}
           type="button"
         >
-          &larr; Previous Page
+          <CaretLeft size={14} weight="regular" />
+          Previous
         </button>
-        {loading && <Loader2 className="w-4 h-4 animate-spin text-sky-400" />}
+        {loading ? <CircleNotch className="animate-spin" color="var(--color-subtext)" size={16} weight="regular" /> : null}
         <button
-          className="text-sm font-medium text-sky-400 hover:text-sky-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="btn btn-ghost btn-sm"
           disabled={loading || !nextCursor}
           onClick={goNext}
           type="button"
         >
-          Next Page &rarr;
+          Next
+          <CaretRight size={14} weight="regular" />
         </button>
       </div>
 
-      {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[var(--color-danger)]">{error}</p> : null}
     </section>
   );
 }

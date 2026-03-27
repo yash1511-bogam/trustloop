@@ -25,11 +25,11 @@ export function CookieConsentBanner() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 inset-x-0 z-50 border-t border-white/10 bg-neutral-900/95 backdrop-blur p-4">
+    <div className="fixed bottom-0 inset-x-0 z-50 border-t border-[var(--color-rim)] bg-[var(--color-surface)] backdrop-blur p-4">
       <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-neutral-300">
+        <p className="text-sm text-[var(--color-body)]">
           We use cookies for essential functionality and analytics.{" "}
-          <a href="/privacy" className="underline text-white">Privacy Policy</a>
+          <a href="/privacy" className="underline text-[var(--color-bright)]">Privacy Policy</a>
         </p>
         <div className="flex gap-2">
           <button onClick={decline} className="btn btn-ghost text-sm">Decline</button>

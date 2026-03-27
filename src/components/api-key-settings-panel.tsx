@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Loader2, KeyRound, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { Key } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/empty-state";
+import { Loader2, KeyRound, X, CheckCircle2, AlertCircle } from "@/components/icon-compat";
 import {
   API_KEY_ASSIGNABLE_SCOPE_OPTIONS,
   API_KEY_EXPIRY_OPTIONS,
@@ -182,8 +184,8 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
         <div
           className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${
             error
-              ? "bg-red-500/10 border-red-500/20 text-red-400"
-              : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+              ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]"
+              : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"
           }`}
         >
           {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
@@ -191,20 +193,20 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
         </div>
       )}
 
-      <div className="space-y-6 rounded-3xl border border-white/10 bg-black/20 p-6">
+      <div className="space-y-6 rounded-3xl border border-[var(--color-rim)] bg-[var(--color-void)] p-6">
         <div>
-          <p className="text-sm font-medium text-slate-100">Create new key</p>
-          <p className="mt-1 text-sm text-neutral-500">
+          <p className="text-sm font-medium text-[var(--color-title)]">Create new key</p>
+          <p className="mt-1 text-sm text-[var(--color-ghost)]">
             Choose the permissions this key needs and how long it should stay valid.
           </p>
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs font-medium uppercase tracking-[0.24em] text-neutral-500">
+          <label className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
             Key name
           </label>
           <input
-            className="w-full max-w-xl rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400 placeholder:text-neutral-600"
+            className="w-full max-w-xl rounded-2xl border border-[var(--color-rim)] bg-[var(--color-void)] px-4 py-3 text-[var(--color-title)] outline-none transition focus:border-[var(--color-signal)] placeholder:text-[var(--color-ghost)]"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="e.g. CI/CD Pipeline"
@@ -214,10 +216,10 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
 
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-neutral-500">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
               Usage preset
             </p>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-[var(--color-ghost)]">
               Start from a recommended permission set, then adjust the individual scopes below if needed.
             </p>
           </div>
@@ -232,25 +234,25 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                   disabled={loading}
                   className={`rounded-2xl border p-4 text-left transition ${
                     isSelected
-                      ? "border-sky-400/50 bg-sky-400/10 text-slate-100"
-                      : "border-white/10 bg-black/20 text-slate-200 hover:border-white/20 hover:bg-white/5"
+                      ? "border-[rgba(232,87,42,0.28)] bg-[var(--color-signal-dim)] text-[var(--color-title)]"
+                      : "border-[var(--color-rim)] bg-[var(--color-void)] text-[var(--color-body)] hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)]"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium">{preset.label}</span>
                     {isSelected ? (
-                      <span className="rounded-full border border-sky-400/40 bg-sky-400/15 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-sky-200">
+                      <span className="rounded-full border border-[rgba(232,87,42,0.28)] bg-[var(--color-signal-dim)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-signal)]">
                         Selected
                       </span>
                     ) : null}
                   </div>
-                  <p className="mt-2 text-sm text-neutral-400">{preset.description}</p>
+                  <p className="mt-2 text-sm text-[var(--color-subtext)]">{preset.description}</p>
                 </button>
               );
             })}
           </div>
           {selectedPreset ? (
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-[var(--color-ghost)]">
               {selectedPreset.label} preset enables {selectedPreset.scopes.length} permission
               {selectedPreset.scopes.length === 1 ? "" : "s"} by default.
             </p>
@@ -259,10 +261,10 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
 
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-neutral-500">
+            <p className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
               Permissions
             </p>
-            <p className="mt-1 text-sm text-neutral-500">
+            <p className="mt-1 text-sm text-[var(--color-ghost)]">
               These scopes are enforced when the key calls protected API routes.
             </p>
           </div>
@@ -274,20 +276,20 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                   key={scope.id}
                   className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
                     checked
-                      ? "border-sky-400/40 bg-sky-400/10"
-                      : "border-white/10 bg-black/20 hover:border-white/20 hover:bg-white/5"
+                      ? "border-[rgba(232,87,42,0.24)] bg-[var(--color-signal-dim)]"
+                      : "border-[var(--color-rim)] bg-[var(--color-void)] hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)]"
                   }`}
                 >
                   <input
                     type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent text-sky-400 focus:ring-sky-400"
+                    className="mt-1 h-4 w-4 rounded border-[var(--color-rim)] bg-transparent text-[var(--color-signal)] focus:ring-[var(--color-signal)]"
                     checked={checked}
                     disabled={loading}
                     onChange={() => toggleScope(scope.id)}
                   />
                   <div>
-                    <p className="text-sm font-medium text-slate-100">{scope.label}</p>
-                    <p className="mt-1 text-sm text-neutral-500">{scope.description}</p>
+                    <p className="text-sm font-medium text-[var(--color-title)]">{scope.label}</p>
+                    <p className="mt-1 text-sm text-[var(--color-ghost)]">{scope.description}</p>
                   </div>
                 </label>
               );
@@ -299,13 +301,13 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
           <div className="space-y-2">
             <label
               htmlFor="api-key-expiry"
-              className="text-xs font-medium uppercase tracking-[0.24em] text-neutral-500"
+              className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]"
             >
               Expiry
             </label>
             <select
               id="api-key-expiry"
-              className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-slate-100 outline-none transition focus:border-sky-400"
+              className="w-full rounded-2xl border border-[var(--color-rim)] bg-[var(--color-void)] px-4 py-3 text-[var(--color-title)] outline-none transition focus:border-[var(--color-signal)]"
               value={expiryOption}
               onChange={(event) => setExpiryOption(event.target.value as ApiKeyExpiryOptionId)}
               disabled={loading}
@@ -317,11 +319,11 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
               ))}
             </select>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <p className="text-sm font-medium text-slate-100">
+          <div className="rounded-2xl border border-[var(--color-rim)] bg-[var(--color-void)] p-4">
+            <p className="text-sm font-medium text-[var(--color-title)]">
               {selectedExpiry?.label ?? "Custom expiry"}
             </p>
-            <p className="mt-2 text-sm text-neutral-500">
+            <p className="mt-2 text-sm text-[var(--color-ghost)]">
               {selectedExpiry?.description ?? "Set how long the key should remain active."}
             </p>
           </div>
@@ -351,17 +353,17 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
       </div>
 
       {revealedKey ? (
-        <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 animate-in fade-in slide-in-from-top-4">
-          <p className="text-sm font-medium text-amber-400 mb-2">One-time key reveal</p>
-          <p className="text-xs text-amber-200/70 mb-4">Copy this key now. It will not be shown again.</p>
+        <div className="rounded-2xl border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] p-6">
+          <p className="text-sm font-medium text-[var(--color-warning)] mb-2">One-time key reveal</p>
+          <p className="text-xs text-[var(--color-warning)] mb-4">Copy this key now. It will not be shown again.</p>
           <div className="flex items-center gap-4">
-            <code className="flex-1 block overflow-x-auto rounded-xl border border-amber-500/30 bg-black/40 p-4 text-sm text-slate-100 font-mono">
+            <code className="flex-1 block overflow-x-auto rounded-xl border border-[rgba(217,119,6,0.24)] bg-[var(--color-void)] p-4 text-sm text-[var(--color-title)] font-mono">
               {revealedKey}
             </code>
             <button
               onClick={() => navigator.clipboard.writeText(revealedKey)}
               type="button"
-              className="btn btn-ghost shrink-0 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+              className="btn btn-ghost shrink-0 border-[rgba(217,119,6,0.24)] text-[var(--color-warning)] hover:bg-[rgba(217,119,6,0.12)]"
             >
               Copy
             </button>
@@ -370,7 +372,7 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
       ) : null}
 
       <div className="pt-4">
-        <p className="text-sm tracking-wide text-neutral-500 mb-4 uppercase">
+        <p className="text-sm tracking-wide text-[var(--color-ghost)] mb-4 uppercase">
           Active & Revoked Keys ({keys.length})
         </p>
         <div className="flex flex-col gap-3">
@@ -388,8 +390,8 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
               <div
                 className={`group rounded-2xl border p-4 transition ${
                   key.isActive && !expired
-                    ? "border-white/5 bg-white/[0.02] hover:border-white/10"
-                    : "border-white/5 bg-white/[0.02] opacity-70"
+                    ? "border-[var(--color-rim)] bg-[var(--color-surface)] hover:border-[var(--color-rim)]"
+                    : "border-[var(--color-rim)] bg-[var(--color-surface)] opacity-70"
                 }`}
                 key={key.id}
               >
@@ -398,8 +400,8 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                     <div
                       className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
                         key.isActive && !expired
-                          ? "border-white/10 bg-white/5 text-slate-300"
-                          : "border-white/10 bg-white/5 text-neutral-500"
+                          ? "border-[var(--color-rim)] bg-[var(--color-surface)] text-[var(--color-body)]"
+                          : "border-[var(--color-rim)] bg-[var(--color-surface)] text-[var(--color-ghost)]"
                       }`}
                     >
                       <KeyRound className="h-4 w-4" />
@@ -408,28 +410,28 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                       <div className="flex flex-wrap items-center gap-2">
                         <p
                           className={`font-medium ${
-                            key.isActive ? "text-slate-200" : "text-neutral-500 line-through"
+                            key.isActive ? "text-[var(--color-body)]" : "text-[var(--color-ghost)] line-through"
                           }`}
                         >
                           {key.name}
                         </p>
                         {!key.isActive ? (
-                          <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-red-300">
+                          <span className="rounded-full border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-danger)]">
                             Revoked
                           </span>
                         ) : null}
                         {expired ? (
-                          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-amber-300">
+                          <span className="rounded-full border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-warning)]">
                             Expired
                           </span>
                         ) : null}
                       </div>
-                      <p className="text-sm text-neutral-500 font-mono">{key.keyPrefix}••••••••••••</p>
+                      <p className="text-sm text-[var(--color-ghost)] font-mono">{key.keyPrefix}••••••••••••</p>
                       <div className="flex flex-wrap gap-2">
                         {scopeSummary.map((scope) => (
                           <span
                             key={`${key.id}-${scope}`}
-                            className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-neutral-300"
+                            className="rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-body)]"
                           >
                             {scope}
                           </span>
@@ -439,7 +441,7 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                   </div>
 
                   <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                    <div className="min-w-[190px] text-sm text-neutral-400">
+                    <div className="min-w-[190px] text-sm text-[var(--color-subtext)]">
                       <p>Created {formatDate(key.createdAt)}</p>
                       <p className="mt-1">Last used: {key.lastUsedAt ? formatDate(key.lastUsedAt) : "Never"}</p>
                       <p className="mt-1">
@@ -450,7 +452,7 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                     <div className="w-10 flex justify-end">
                       {key.isActive ? (
                         <button
-                          className="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-red-400/10 hover:text-red-400 lg:opacity-0 lg:group-hover:opacity-100 lg:focus:opacity-100"
+                          className="rounded-lg p-2 text-[var(--color-ghost)] transition-colors hover:bg-[rgba(232,66,66,0.08)] hover:text-[var(--color-danger)] lg:opacity-0 lg:group-hover:opacity-100 lg:focus:opacity-100"
                           disabled={loading}
                           onClick={() => revokeKey(key.id)}
                           type="button"
@@ -466,8 +468,12 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
             );
           })}
           {keys.length === 0 ? (
-            <div className="p-8 text-center text-sm text-neutral-500 border border-dashed border-white/10 rounded-2xl">
-              No API keys created yet.
+            <div className="rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)]">
+              <EmptyState
+                icon={Key}
+                title="No API keys yet."
+                description="Create a scoped key when you need external systems to write into TrustLoop."
+              />
             </div>
           ) : null}
         </div>

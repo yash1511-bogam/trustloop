@@ -27,73 +27,96 @@ export default async function ExecutivePage() {
   const snapshot = dashboard.snapshot;
 
   return (
-    <div className="space-y-16 pt-8">
-      <section>
-        <p className="kicker">Executive visibility</p>
-        <h2 className="mt-2 text-3xl font-semibold text-slate-100">Reliability and response analytics</h2>
-        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
-          Tenant-scoped read models for incident operations, response coverage, and leadership reviews.
-        </p>
-      </section>
-
-      <section className="pb-10 border-b border-white/5">
-        <h3 className="text-xl font-medium text-slate-100 mb-8">Key metrics</h3>
-        <div className="grid gap-4 md:grid-cols-5">
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-amber-500/80 font-medium">Open incidents</p>
-            <p className="text-3xl font-light text-amber-400">{snapshot?.openIncidents ?? 0}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-red-400/80 font-medium">P1 open</p>
-            <p className="text-3xl font-light text-red-400">{snapshot?.p1OpenIncidents ?? 0}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Created (7d)</p>
-            <p className="text-3xl font-light text-slate-100">{snapshot?.incidentsCreatedLast7d ?? 0}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-emerald-500/80 font-medium">Resolved (7d)</p>
-            <p className="text-3xl font-light text-emerald-400">{snapshot?.incidentsResolvedLast7d ?? 0}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-red-400/80 font-medium">Failed reminders</p>
-            <p className="text-3xl font-light text-red-400">{failedReminders7d}</p>
-          </div>
+    <div className="page-stack">
+      <section className="page-header section-enter">
+        <div className="page-header-main">
+          <p className="page-kicker">Executive</p>
+          <h1 className="page-title">Reliability and response analytics</h1>
+          <p className="page-description">
+            Tenant-scoped read models for leadership reviews, responder coverage, and incident velocity.
+          </p>
+        </div>
+        <div className="page-header-actions">
+          <Link className="btn btn-ghost btn-sm" href="/api/incidents/export?format=csv">
+            Export CSV
+          </Link>
+          <RefreshDataButton />
         </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
-        <h3 className="mb-6 text-xl font-medium text-slate-100">Coverage and timing</h3>
-        <div className="grid gap-8 md:grid-cols-3">
-          <div className="group relative p-5 rounded-2xl border border-white/5 bg-white/5 transition-colors hover:border-white/10">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium mb-2">Avg resolution (hrs, 30d)</p>
-            <p className="text-3xl font-light text-slate-100">{snapshot?.avgResolutionHoursLast30d ?? 0}</p>
-          </div>
-          <div className="group relative p-5 rounded-2xl border border-white/5 bg-white/5 transition-colors hover:border-white/10">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium mb-2">Triage coverage (30d)</p>
-            <p className="text-3xl font-light text-slate-100">{snapshot?.triageCoveragePct ?? 0}<span className="text-lg text-neutral-500 ml-1">%</span></p>
-          </div>
-          <div className="group relative p-5 rounded-2xl border border-white/5 bg-white/5 transition-colors hover:border-white/10">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium mb-2">Customer updates (30d)</p>
-            <p className="text-3xl font-light text-slate-100">{snapshot?.customerUpdateCoveragePct ?? 0}<span className="text-lg text-neutral-500 ml-1">%</span></p>
-          </div>
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Current operating state</h2>
+          <p className="settings-section-description">
+            The metrics leadership needs first when a response is active.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <article className="metric-card">
+            <p className="metric-label">Open incidents</p>
+            <p className="metric-value">{snapshot?.openIncidents ?? 0}</p>
+            <p className="metric-meta">Currently active across the workspace</p>
+          </article>
+          <article className="metric-card metric-card-p1">
+            <p className="metric-label">P1 open</p>
+            <p className="metric-value">{snapshot?.p1OpenIncidents ?? 0}</p>
+            <p className="metric-meta">Highest-severity incidents in flight</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Created 7d</p>
+            <p className="metric-value">{snapshot?.incidentsCreatedLast7d ?? 0}</p>
+            <p className="metric-meta">New incidents over the last week</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Resolved 7d</p>
+            <p className="metric-value">{snapshot?.incidentsResolvedLast7d ?? 0}</p>
+            <p className="metric-meta">Closed incidents over the last week</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Failed reminders</p>
+            <p className="metric-value">{failedReminders7d}</p>
+            <p className="metric-meta">Reminder jobs that failed in seven days</p>
+          </article>
         </div>
       </section>
 
-      <section className="pb-10">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h3 className="text-xl font-medium text-slate-100">14-day analytics trend</h3>
-            <p className="text-sm text-neutral-500">Incident volume and severity patterns.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link className="btn btn-ghost text-xs !min-h-[32px] px-3" href="/api/incidents/export?format=csv">
-              Export CSV
-            </Link>
-            <RefreshDataButton />
-          </div>
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Coverage and timing</h2>
+          <p className="settings-section-description">
+            Response quality indicators across resolution, triage, and customer communications.
+          </p>
         </div>
-        <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-6">
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <article className="metric-card">
+            <p className="metric-label">Avg resolution</p>
+            <p className="metric-value">{snapshot?.avgResolutionHoursLast30d ?? 0}</p>
+            <p className="metric-meta">Hours across the last 30 days</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Triage coverage</p>
+            <p className="metric-value">{snapshot?.triageCoveragePct ?? 0}%</p>
+            <p className="metric-meta">Incidents with AI-assisted triage</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Customer updates</p>
+            <p className="metric-value">{snapshot?.customerUpdateCoveragePct ?? 0}%</p>
+            <p className="metric-meta">Incidents with outbound customer comms</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">14-day analytics trend</h2>
+          <p className="settings-section-description">
+            Incident volume and severity patterns for weekly review and board-level reporting.
+          </p>
+        </div>
+
+        <div className="surface p-6">
           <ExecutiveCharts data={dashboard.series} />
         </div>
       </section>

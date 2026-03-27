@@ -1,9 +1,29 @@
 import Link from "next/link";
-import { LifeBuoy, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  Lifebuoy,
+  ShieldCheck,
+  Sparkle,
+} from "@phosphor-icons/react/dist/ssr";
 import { redirect } from "next/navigation";
 import { ForgotAccessForm } from "@/components/forgot-access-form";
+import { TrustLoopLogo } from "@/components/trustloop-logo";
 import { getAuth } from "@/lib/auth";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
+
+const featurePoints = [
+  {
+    icon: ShieldCheck,
+    copy: "Security notification coverage whenever account recovery begins.",
+  },
+  {
+    icon: Lifebuoy,
+    copy: "Guided recovery flow without password resets or shared secrets.",
+  },
+  {
+    icon: Sparkle,
+    copy: "The same responder-focused auth path used for day-to-day access.",
+  },
+];
 
 export default async function ForgotAccessPage() {
   const auth = await getAuth();
@@ -13,43 +33,44 @@ export default async function ForgotAccessPage() {
   const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 
   return (
-    <main className="container-shell fade-in py-12 md:py-16">
-      <div className="mx-auto grid max-w-6xl gap-8 md:grid-cols-[0.94fr_1.06fr]">
-        <section className="surface p-8 md:p-10">
-          <p className="kicker">Recover access</p>
-          <h1 className="mt-2 text-3xl font-bold text-white">Restore workspace access safely</h1>
-          <p className="mt-2 text-sm text-neutral-400">
-            Request a recovery OTP on your work email and continue with secure verification.
+    <main className="auth-shell">
+      <div className="auth-grid">
+        <section className="auth-panel-muted surface">
+          <TrustLoopLogo size={18} variant="full" />
+          <p className="page-kicker mt-8">Recover access</p>
+          <h1 className="mt-4 font-[var(--font-heading)] text-[36px] font-bold text-[var(--color-title)]">
+            Restore workspace access safely.
+          </h1>
+          <p className="mt-4 text-[16px] leading-7 text-[var(--color-subtext)]">
+            Request a recovery OTP on your work email and continue with the same passwordless verification flow.
           </p>
 
-          <div className="mt-6 space-y-4">
-            <div className="flex items-start gap-2 text-sm text-neutral-400">
-              <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Security notification email whenever recovery starts
-            </div>
-            <div className="flex items-start gap-2 text-sm text-neutral-400">
-              <LifeBuoy className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Auto guidance with safe account recovery sequence
-            </div>
-            <div className="flex items-start gap-2 text-sm text-neutral-400">
-              <Sparkles className="mt-0.5 h-4 w-4 text-cyan-700" />
-              Same passwordless flow as standard workspace login
-            </div>
+          <div className="auth-feature-list">
+            {featurePoints.map(({ icon: Icon, copy }) => (
+              <div className="auth-feature-item" key={copy}>
+                <Icon color="var(--color-subtext)" size={18} weight="duotone" />
+                <span>{copy}</span>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="surface p-8">
-          <p className="kicker mb-2">Account recovery</p>
-          <h2 className="mb-1 text-3xl font-semibold">Reset your session</h2>
-          <p className="mb-6 text-sm text-neutral-400">
-            Enter your work email to get a recovery code and verify identity.
+        <section className="auth-panel surface">
+          <p className="page-kicker">Account recovery</p>
+          <h2 className="mt-3 font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">
+            Reset your session
+          </h2>
+          <p className="mt-3 text-[14px] leading-6 text-[var(--color-subtext)]">
+            Enter your work email to request a recovery code and verify identity.
           </p>
 
-          <ForgotAccessForm turnstileSiteKey={siteKey} />
+          <div className="mt-8">
+            <ForgotAccessForm turnstileSiteKey={siteKey} />
+          </div>
 
-          <p className="mt-6 text-sm text-neutral-400">
+          <p className="mt-8 text-sm text-[var(--color-subtext)]">
             Back to{" "}
-            <Link className="font-semibold text-cyan-700 underline" href="/login">
+            <Link className="text-[var(--color-title)] underline decoration-[var(--color-rim)] underline-offset-4" href="/login">
               sign in
             </Link>
             .

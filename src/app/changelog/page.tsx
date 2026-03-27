@@ -52,11 +52,11 @@ const entries: Entry[] = [
 
 export default function ChangelogPage() {
   return (
-    <main className="container-shell fade-in py-8">
+    <main className="container-shell py-8">
       <section className="surface p-6">
         <p className="kicker">Product updates</p>
-        <h1 className="mt-2 text-3xl font-bold text-white">Changelog</h1>
-        <p className="mt-2 text-sm text-neutral-400">What&apos;s new and improved in TrustLoop.</p>
+        <h1 className="mt-2 text-3xl font-bold text-[var(--color-bright)]">Changelog</h1>
+        <p className="mt-2 text-sm text-[var(--color-subtext)]">What&apos;s new and improved in TrustLoop.</p>
       </section>
 
       <div className="mt-6 space-y-6">
@@ -64,11 +64,11 @@ export default function ChangelogPage() {
           <article key={entry.version} className="surface p-6">
             <div className="flex items-center gap-3">
               <span className="badge">{entry.version}</span>
-              <time className="text-xs text-neutral-500">{entry.date}</time>
+              <time className="text-xs text-[var(--color-ghost)]">{entry.date}</time>
             </div>
             <ul className="mt-4 space-y-2">
               {entry.changes.map((change, i) => (
-                <li key={i} className="text-sm text-neutral-300">• {change}</li>
+                <li key={i} className="text-sm text-[var(--color-body)]">• {change}</li>
               ))}
             </ul>
           </article>

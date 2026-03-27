@@ -6,7 +6,7 @@ import {
   Loader2,
   ShieldCheck,
   ArrowRight,
-} from "lucide-react";
+} from "@/components/icon-compat";
 import { useCleanUrl } from "@/hooks/use-clean-url";
 import { PlanTier, planDefinitionFor } from "@/lib/billing-plan";
 
@@ -776,57 +776,57 @@ export function BillingPanel({
     FINAL_PAYMENT_STATUSES.has(sessionStatus.paymentStatus.toLowerCase());
 
   return (
-    <div className="space-y-16">
+    <div className="space-y-8">
       {billingNotice ? (
-        <div className="py-4 text-sm text-sky-400 border-l-2 border-sky-400 pl-4">
+        <div className="border-l-2 border-[var(--color-signal)] py-4 pl-4 text-sm text-[var(--color-signal)]">
           {billingNotice}
         </div>
       ) : null}
 
       {!canManageBilling ? (
-        <div className="py-4 text-sm text-amber-400 border-l-2 border-amber-400 pl-4">
+        <div className="py-4 text-sm text-[var(--color-warning)] border-l-2 border-[var(--color-warning)] pl-4">
           Billing changes are limited to workspace owners and managers. You can still review usage, plan details, and payment status here.
         </div>
       ) : null}
 
       {/* Overview Section */}
-      <section className="pb-10 border-b border-white/5">
+      <section className="pb-10 border-b border-[var(--color-rim)]">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h2 className="text-xl font-medium text-slate-100">Overview</h2>
-          <span className={`text-sm tracking-wide ${paymentStatusValue.includes("active") || paymentStatusValue.includes("paid") ? "text-emerald-400" : "text-neutral-400"}`}>
+          <h2 className="text-xl font-medium text-[var(--color-title)]">Overview</h2>
+          <span className={`text-sm tracking-wide ${paymentStatusValue.includes("active") || paymentStatusValue.includes("paid") ? "text-[var(--color-resolve)]" : "text-[var(--color-subtext)]"}`}>
             {paymentStatusLabel}
           </span>
         </div>
 
         <div className="mt-8 grid gap-12 md:grid-cols-2 xl:grid-cols-4">
           <div>
-            <p className="text-sm tracking-wide text-neutral-500">Current plan</p>
-            <p className="mt-2 text-2xl font-light text-slate-100">{planDefinitionFor(planTier).label}</p>
+            <p className="text-sm tracking-wide text-[var(--color-ghost)]">Current plan</p>
+            <p className="mt-2 text-2xl font-light text-[var(--color-title)]">{planDefinitionFor(planTier).label}</p>
           </div>
           <div>
-            <p className="text-sm tracking-wide text-neutral-500">Last payment</p>
-            <p className="mt-2 text-2xl font-light text-slate-100">
+            <p className="text-sm tracking-wide text-[var(--color-ghost)]">Last payment</p>
+            <p className="mt-2 text-2xl font-light text-[var(--color-title)]">
               {formatMoney(billing?.lastPaymentAmount, billing?.lastPaymentCurrency)}
             </p>
-            <p className="mt-1 text-sm text-neutral-400">{formatDateTime(billing?.lastPaymentAt)}</p>
+            <p className="mt-1 text-sm text-[var(--color-subtext)]">{formatDateTime(billing?.lastPaymentAt)}</p>
           </div>
           <div>
-            <p className="text-sm tracking-wide text-neutral-500">Renewal window</p>
-            <p className="mt-2 text-2xl font-light text-slate-100">{formatDateTime(billing?.currentPeriodEnd)}</p>
-            <p className="mt-1 text-sm text-neutral-400">Current period started {formatDateTime(billing?.currentPeriodStart)}</p>
+            <p className="text-sm tracking-wide text-[var(--color-ghost)]">Renewal window</p>
+            <p className="mt-2 text-2xl font-light text-[var(--color-title)]">{formatDateTime(billing?.currentPeriodEnd)}</p>
+            <p className="mt-1 text-sm text-[var(--color-subtext)]">Current period started {formatDateTime(billing?.currentPeriodStart)}</p>
           </div>
           <div>
-            <p className="text-sm tracking-wide text-neutral-500">Recovery reminders</p>
-            <p className="mt-2 text-2xl font-light text-slate-100">{billing?.failureReminderCount ?? 0}</p>
+            <p className="text-sm tracking-wide text-[var(--color-ghost)]">Recovery reminders</p>
+            <p className="mt-2 text-2xl font-light text-[var(--color-title)]">{billing?.failureReminderCount ?? 0}</p>
           </div>
         </div>
       </section>
 
       {/* Plan Selection */}
-      <section className="pb-10 border-b border-white/5">
+      <section className="pb-10 border-b border-[var(--color-rim)]">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h2 className="text-xl font-medium text-slate-100">Plan</h2>
-          <span className="text-sm text-neutral-500 tracking-wide">
+          <h2 className="text-xl font-medium text-[var(--color-title)]">Plan</h2>
+          <span className="text-sm text-[var(--color-ghost)] tracking-wide">
             {availablePlans.length} plans
           </span>
         </div>
@@ -844,16 +844,16 @@ export function BillingPanel({
                 onClick={() => setSelectedPlan(plan.id)}
               >
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-2xl font-light text-slate-100">{plan.label}</p>
-                  {isCurrent && <span className="text-xs tracking-wider text-sky-400">CURRENT</span>}
-                  {isSelected && !isCurrent && <span className="text-xs tracking-wider text-emerald-400">SELECTED</span>}
+                  <p className="text-2xl font-light text-[var(--color-title)]">{plan.label}</p>
+                  {isCurrent && <span className="text-xs tracking-wider text-[var(--color-signal)]">CURRENT</span>}
+                  {isSelected && !isCurrent && <span className="text-xs tracking-wider text-[var(--color-resolve)]">SELECTED</span>}
                 </div>
-                <p className="mt-2 text-sm text-neutral-400 leading-relaxed">{plan.description}</p>
+                <p className="mt-2 text-sm text-[var(--color-subtext)] leading-relaxed">{plan.description}</p>
                 <div className="mt-6 flex-grow">
-                  <ul className="space-y-3 text-sm text-neutral-300">
+                  <ul className="space-y-3 text-sm text-[var(--color-body)]">
                     {plan.bullets.map((bullet) => (
                       <li className="flex items-start gap-3" key={bullet}>
-                        <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-neutral-500" />
+                        <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-ghost)]" />
                         <span>{bullet}</span>
                       </li>
                     ))}
@@ -866,11 +866,11 @@ export function BillingPanel({
       </section>
 
       {/* Seamless Payment Flow */}
-      <section className="pb-10 border-b border-white/5">
+      <section className="pb-10 border-b border-[var(--color-rim)]">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h2 className="text-xl font-medium text-slate-100">Checkout</h2>
+          <h2 className="text-xl font-medium text-[var(--color-title)]">Checkout</h2>
           {previewLoading && (
-            <span className="text-sm tracking-wide text-neutral-500 flex items-center gap-2">
+            <span className="text-sm tracking-wide text-[var(--color-ghost)] flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin" /> Updating
             </span>
           )}
@@ -880,45 +880,45 @@ export function BillingPanel({
           {/* Left Column: Summary & Coupon */}
           <div className="space-y-10">
             <div>
-              <p className="text-3xl font-light text-slate-100 mb-6">
+              <p className="text-3xl font-light text-[var(--color-title)] mb-6">
                 {formatMoney(
                   effectiveCurrentBreakdown?.totalAmount,
                   effectiveCurrentBreakdown?.currency,
-                )} <span className="text-lg text-neutral-500">due today</span>
+                )} <span className="text-lg text-[var(--color-ghost)]">due today</span>
               </p>
 
-              <div className="space-y-4 text-sm text-neutral-300">
+              <div className="space-y-4 text-sm text-[var(--color-body)]">
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">Subtotal</span>
+                  <span className="text-[var(--color-ghost)]">Subtotal</span>
                   <span>{formatMoney(effectiveCurrentBreakdown?.subtotal, effectiveCurrentBreakdown?.currency)}</span>
                 </div>
                 {typeof effectiveCurrentBreakdown?.discount === "number" && effectiveCurrentBreakdown.discount > 0 && (
-                  <div className="flex justify-between text-emerald-400">
+                  <div className="flex justify-between text-[var(--color-resolve)]">
                     <span>Discount</span>
                     <span>-{formatMoney(effectiveCurrentBreakdown.discount, effectiveCurrentBreakdown.currency)}</span>
                   </div>
                 )}
                 <div className="flex justify-between">
-                  <span className="text-neutral-500">Tax</span>
+                  <span className="text-[var(--color-ghost)]">Tax</span>
                   <span>{formatMoney(effectiveCurrentBreakdown?.tax, effectiveCurrentBreakdown?.currency)}</span>
                 </div>
               </div>
 
               {preview?.recurringBreakdown && (
-                <div className="mt-8 pt-8 border-t border-white/5">
-                  <p className="text-sm text-neutral-500 mb-2">Recurring</p>
-                  <p className="text-sm text-neutral-300">
-                    Renews automatically at <span className="text-slate-100">{formatMoney(preview.recurringBreakdown.totalAmount, preview.currency)}</span> per billing cycle.
+                <div className="mt-8 pt-8 border-t border-[var(--color-rim)]">
+                  <p className="text-sm text-[var(--color-ghost)] mb-2">Recurring</p>
+                  <p className="text-sm text-[var(--color-body)]">
+                    Renews automatically at <span className="text-[var(--color-title)]">{formatMoney(preview.recurringBreakdown.totalAmount, preview.currency)}</span> per billing cycle.
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="pt-8 border-t border-white/5">
-              <label className="block text-sm text-neutral-500 mb-4">Promo code</label>
+            <div className="pt-8 border-t border-[var(--color-rim)]">
+              <label className="block text-sm text-[var(--color-ghost)] mb-4">Promo code</label>
               <div className="flex items-center gap-4">
                 <input
-                  className="bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors w-full placeholder:text-neutral-600"
+                  className="bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors w-full placeholder:text-[var(--color-ghost)]"
                   disabled={!canManageBilling}
                   onChange={(event) => setCouponCode(event.target.value.toUpperCase())}
                   placeholder="Enter code"
@@ -928,7 +928,7 @@ export function BillingPanel({
                 />
                 {(couponCode || previewCouponCode) && (
                   <button
-                    className="text-sm text-neutral-500 hover:text-slate-300 transition-colors"
+                    className="text-sm text-[var(--color-ghost)] hover:text-[var(--color-body)] transition-colors"
                     onClick={clearCoupon}
                     type="button"
                   >
@@ -937,11 +937,11 @@ export function BillingPanel({
                 )}
               </div>
               {previewDirty && (
-                <p className="mt-2 text-xs text-amber-400">Press enter to apply</p>
+                <p className="mt-2 text-xs text-[var(--color-warning)]">Press enter to apply</p>
               )}
             </div>
-            {previewError && <p className="text-sm text-red-400">{previewError}</p>}
-            {preview?.taxIdError && <p className="text-sm text-red-400">{preview.taxIdError}</p>}
+            {previewError && <p className="text-sm text-[var(--color-danger)]">{previewError}</p>}
+            {preview?.taxIdError && <p className="text-sm text-[var(--color-danger)]">{preview.taxIdError}</p>}
           </div>
 
           {/* Right Column: Inline Form */}
@@ -949,27 +949,27 @@ export function BillingPanel({
             {!checkoutSession ? (
               <div className="h-full flex flex-col justify-center">
                 <button
-                  className="group flex items-center justify-between w-full py-6 border-b border-white/10 hover:border-sky-400 transition-colors text-left"
+                  className="group flex w-full items-center justify-between border-b border-[var(--color-rim)] py-6 text-left transition-colors hover:border-[var(--color-signal)]"
                   disabled={!canManageBilling || checkoutLoading || previewLoading}
                   onClick={startCheckout}
                   type="button"
                 >
-                  <span className="text-2xl font-light text-slate-100">
+                  <span className="text-2xl font-light text-[var(--color-title)]">
                     {checkoutLoading ? "Preparing secure checkout..." : "Proceed to payment"}
                   </span>
-                  {!checkoutLoading && <ArrowRight className="h-6 w-6 text-neutral-500 group-hover:text-sky-400 transition-colors" />}
+                  {!checkoutLoading && <ArrowRight className="h-6 w-6 text-[var(--color-ghost)] group-hover:text-[var(--color-signal)] transition-colors" />}
                 </button>
-                <p className="mt-6 text-sm text-neutral-500 flex items-center gap-2">
+                <p className="mt-6 text-sm text-[var(--color-ghost)] flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4" /> Secure inline payment
                 </p>
               </div>
             ) : (
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="transition-opacity duration-200">
                 {checkoutHint && !checkoutFrameReady && (
-                  <p className="text-sm text-neutral-500 mb-6">{checkoutHint}</p>
+                  <p className="text-sm text-[var(--color-ghost)] mb-6">{checkoutHint}</p>
                 )}
                 {checkoutError && (
-                  <div className="mb-6 text-sm text-red-400 border-l-2 border-red-400 pl-4">
+                  <div className="mb-6 text-sm text-[var(--color-danger)] border-l-2 border-[var(--color-danger)] pl-4">
                     {checkoutError}
                   </div>
                 )}
@@ -977,8 +977,8 @@ export function BillingPanel({
                 <div className="min-h-[300px]" id={CHECKOUT_ELEMENT_ID} />
 
                 {sessionStatus && sessionFinalized && (
-                  <div className="mt-8 text-sm text-neutral-500">
-                    <button className="text-sky-400 hover:text-sky-300 transition-colors" onClick={startCheckout}>
+                  <div className="mt-8 text-sm text-[var(--color-ghost)]">
+                    <button className="text-[var(--color-signal)] hover:text-[var(--color-signal)] transition-colors" onClick={startCheckout}>
                       Start new payment session
                     </button>
                   </div>
@@ -991,23 +991,23 @@ export function BillingPanel({
 
       {/* Usage & Lifecycle Minimalist Grid */}
       <section className="pb-10">
-        <h2 className="text-xl font-medium text-slate-100 mb-8">Activity & Quotas</h2>
+        <h2 className="text-xl font-medium text-[var(--color-title)] mb-8">Activity & Quotas</h2>
         <div className="grid gap-16 md:grid-cols-2">
           <div className="space-y-8">
-            <h3 className="text-sm tracking-wide text-neutral-500 mb-6 uppercase">Lifecycle</h3>
+            <h3 className="text-sm tracking-wide text-[var(--color-ghost)] mb-6 uppercase">Lifecycle</h3>
             <div>
-              <p className="text-sm text-neutral-400 mb-1">Current period</p>
-              <p className="text-slate-200">{formatDateTime(billing?.currentPeriodStart)} - {formatDateTime(billing?.currentPeriodEnd)}</p>
+              <p className="text-sm text-[var(--color-subtext)] mb-1">Current period</p>
+              <p className="text-[var(--color-body)]">{formatDateTime(billing?.currentPeriodStart)} - {formatDateTime(billing?.currentPeriodEnd)}</p>
             </div>
             <div>
-              <p className="text-sm text-neutral-400 mb-1">Cancellation</p>
-              <p className="text-slate-200">{billing?.canceledAt ? formatDateTime(billing.canceledAt) : "Active"}</p>
-              <p className="text-sm text-neutral-500 mt-1">{billing?.cancelReason ?? "No cancellation scheduled."}</p>
+              <p className="text-sm text-[var(--color-subtext)] mb-1">Cancellation</p>
+              <p className="text-[var(--color-body)]">{billing?.canceledAt ? formatDateTime(billing.canceledAt) : "Active"}</p>
+              <p className="text-sm text-[var(--color-ghost)] mt-1">{billing?.cancelReason ?? "No cancellation scheduled."}</p>
             </div>
             {billing?.lastInvoiceUrl && (
               <div>
                 <a
-                  className="text-sm text-sky-400 hover:text-sky-300 transition-colors inline-flex items-center gap-2"
+                  className="text-sm text-[var(--color-signal)] hover:text-[var(--color-signal)] transition-colors inline-flex items-center gap-2"
                   href={billing.lastInvoiceUrl}
                   rel="noreferrer"
                   target="_blank"
@@ -1016,13 +1016,13 @@ export function BillingPanel({
                 </a>
               </div>
             )}
-            <a className="text-sm text-neutral-500 hover:text-slate-300 transition-colors inline-flex items-center gap-2" href="/billing-policy" rel="noreferrer" target="_blank">
+            <a className="text-sm text-[var(--color-ghost)] hover:text-[var(--color-body)] transition-colors inline-flex items-center gap-2" href="/billing-policy" rel="noreferrer" target="_blank">
               Refund policy
             </a>
           </div>
 
           <div className="space-y-8">
-            <h3 className="text-sm tracking-wide text-neutral-500 mb-6 uppercase">Today&apos;s Usage</h3>
+            <h3 className="text-sm tracking-wide text-[var(--color-ghost)] mb-6 uppercase">Today&apos;s Usage</h3>
             {[
               { label: "Incidents", used: usage.incidentsCreated, limit: quota.incidentsPerDay },
               { label: "Triage runs", used: usage.triageRuns, limit: quota.triageRunsPerDay },
@@ -1031,12 +1031,12 @@ export function BillingPanel({
             ].map((row) => (
               <div key={row.label}>
                 <div className="flex items-center justify-between text-sm mb-2">
-                  <span className="text-slate-200">{row.label}</span>
-                  <span className="text-neutral-500">{row.used} / {row.limit}</span>
+                  <span className="text-[var(--color-body)]">{row.label}</span>
+                  <span className="text-[var(--color-ghost)]">{row.used} / {row.limit}</span>
                 </div>
-                <div className="h-0.5 w-full bg-white/5 overflow-hidden">
+                <div className="h-0.5 w-full bg-[var(--color-surface)] overflow-hidden">
                   <div
-                    className="h-full bg-sky-400 transition-all duration-1000 ease-out"
+                    className="h-full bg-[var(--color-signal)] transition-all duration-1000 ease-out"
                     style={{ width: `${percent(row.used, row.limit)}%` }}
                   />
                 </div>
@@ -1045,7 +1045,7 @@ export function BillingPanel({
           </div>
         </div>
         {billing?.paymentFailedAt && (
-          <p className="mt-8 text-sm text-red-400">
+          <p className="mt-8 text-sm text-[var(--color-danger)]">
             Payment failure detected at {formatDateTime(billing.paymentFailedAt)}.
           </p>
         )}

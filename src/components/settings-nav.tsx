@@ -1,55 +1,88 @@
 "use client";
 
-import { HoverLink } from "./hover-link";
 import { usePathname } from "next/navigation";
-import { Blocks, Bot, Building2, CreditCard, ScrollText, Users } from "lucide-react";
+import {
+  Buildings,
+  CreditCard,
+  GearSix,
+  LinkSimple,
+  Notebook,
+  Robot,
+  ShieldCheck,
+  UsersThree,
+  Waves,
+} from "@phosphor-icons/react";
+import { HoverLink } from "@/components/hover-link";
 
-const items = [
-  { href: "/settings", label: "Overview", icon: Blocks },
-  { href: "/settings/ai", label: "AI & API Keys", icon: Bot },
-  { href: "/settings/workspace", label: "Workspace", icon: Building2 },
-  { href: "/settings/team", label: "Team", icon: Users },
-  { href: "/settings/billing", label: "Billing", icon: CreditCard },
-  { href: "/settings/audit", label: "Audit Log", icon: ScrollText },
+const groups = [
+  {
+    label: "Account",
+    items: [
+      { href: "/settings/profile", icon: GearSix, label: "Profile" },
+    ],
+  },
+  {
+    label: "Workspace",
+    items: [
+      { href: "/settings", icon: Buildings, label: "General" },
+      { href: "/settings/team", icon: UsersThree, label: "Team" },
+      { href: "/settings/billing", icon: CreditCard, label: "Billing" },
+    ],
+  },
+  {
+    label: "Integrations",
+    items: [
+      { href: "/settings/ai", icon: Robot, label: "AI & API Keys" },
+      { href: "/settings/workspace#integrations", icon: LinkSimple, label: "Webhooks & Integrations" },
+      { href: "/settings/workspace#on-call", icon: Waves, label: "On-Call" },
+    ],
+  },
+  {
+    label: "Security",
+    items: [
+      { href: "/settings/ai#api-keys", icon: ShieldCheck, label: "API Keys" },
+      { href: "/settings/audit", icon: Notebook, label: "Audit Log" },
+      { href: "/settings/workspace#security", icon: ShieldCheck, label: "SAML SSO" },
+    ],
+  },
 ] as const;
 
-function isActive(pathname: string, href: string): boolean {
-  if (href === "/settings") {
-    return pathname === href;
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
+function normalizeHref(href: string): string {
+  return href.split("#")[0];
 }
 
-type SettingsNavProps = {
-  compact?: boolean;
-};
+function isActive(pathname: string, href: string): boolean {
+  const normalized = normalizeHref(href);
+  if (normalized === "/settings") {
+    return pathname === normalized;
+  }
+  return pathname === normalized || pathname.startsWith(`${normalized}/`);
+}
 
-export function SettingsNav({ compact = false }: SettingsNavProps) {
+export function SettingsNav() {
   const pathname = usePathname();
 
   return (
-    <nav className={compact ? "settings-subnav" : "app-nav-links"} aria-label="Settings navigation">
-      {items.map((item) => {
-        const active = isActive(pathname, item.href);
-        const linkClass = compact
-          ? active
-            ? "settings-subnav-link settings-subnav-link-active"
-            : "settings-subnav-link"
-          : active
-            ? "app-nav-link app-nav-link-active"
-            : "app-nav-link";
+    <nav aria-label="Settings navigation">
+      {groups.map((group) => (
+        <div className="settings-sidebar-group" key={group.label}>
+          <div className="app-nav-group-label">{group.label}</div>
+          {group.items.map((item) => {
+            const active = isActive(pathname, item.href);
 
-        return (
-          <HoverLink
-            className={linkClass}
-            href={item.href}
-            key={item.href}
-          >
-            <item.icon className="h-4 w-4" />
-            <span>{item.label}</span>
-          </HoverLink>
-        );
-      })}
+            return (
+              <HoverLink
+                className={active ? "settings-link settings-link-active" : "settings-link"}
+                href={item.href}
+                key={item.href}
+              >
+                <item.icon size={18} weight="regular" />
+                <span>{item.label}</span>
+              </HoverLink>
+            );
+          })}
+        </div>
+      ))}
     </nav>
   );
 }

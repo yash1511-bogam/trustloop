@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, Bell, BellOff, Send } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Bell, BellOff, Send } from "@/components/icon-compat";
 
 type PushStatusPayload = {
   configured: boolean;
@@ -204,7 +204,7 @@ export function PushNotificationPanel() {
   return (
     <div className="space-y-8 max-w-4xl">
       {(message || error) && (
-        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
           {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
           <span>{error || message}</span>
         </div>
@@ -212,7 +212,7 @@ export function PushNotificationPanel() {
 
       <div className="grid gap-12 md:grid-cols-2">
         <div className="space-y-6">
-          <p className="text-sm text-neutral-400 leading-relaxed">
+          <p className="text-sm text-[var(--color-subtext)] leading-relaxed">
             Configure browser push notifications for reminder escalations and operational alerts. 
             This allows TrustLoop to reach you even when the dashboard isn&apos;t active.
           </p>
@@ -248,22 +248,22 @@ export function PushNotificationPanel() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 pt-4 border-t border-white/5 md:border-t-0 md:border-l md:pl-12">
+        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 pt-4 border-t border-[var(--color-rim)] md:border-t-0 md:border-l md:pl-12">
           <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Server support</p>
-            <p className={`text-sm font-medium ${status?.configured ? "text-emerald-400" : "text-amber-400"}`}>
+            <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Server support</p>
+            <p className={`text-sm font-medium ${status?.configured ? "text-[var(--color-resolve)]" : "text-[var(--color-warning)]"}`}>
               {status?.configured ? "Configured" : "Not configured"}
             </p>
           </div>
           <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Browser support</p>
-            <p className={`text-sm font-medium ${browserSupport ? "text-emerald-400" : "text-red-400"}`}>
+            <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Browser support</p>
+            <p className={`text-sm font-medium ${browserSupport ? "text-[var(--color-resolve)]" : "text-[var(--color-danger)]"}`}>
               {browserSupport ? "Available" : "Not supported"}
             </p>
           </div>
           <div className="space-y-1 md:col-span-2">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Active subscriptions</p>
-            <p className="text-2xl font-light text-slate-100">{status?.activeSubscriptions ?? 0}</p>
+            <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Active subscriptions</p>
+            <p className="text-2xl font-light text-[var(--color-title)]">{status?.activeSubscriptions ?? 0}</p>
           </div>
         </div>
       </div>

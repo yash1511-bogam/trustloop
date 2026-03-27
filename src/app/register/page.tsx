@@ -1,11 +1,31 @@
 import Link from "next/link";
-import { Bot, Building2, Sparkles } from "lucide-react";
+import {
+  Buildings,
+  Robot,
+  Sparkle,
+} from "@phosphor-icons/react/dist/ssr";
 import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/register-form";
+import { TrustLoopLogo } from "@/components/trustloop-logo";
 import { getAuth } from "@/lib/auth";
 import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
 import { prisma } from "@/lib/prisma";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
+
+const featurePoints = [
+  {
+    icon: Buildings,
+    copy: "Workspace-level controls, quotas, and team roles from day one.",
+  },
+  {
+    icon: Robot,
+    copy: "Bring your own provider keys and route workflows with precision.",
+  },
+  {
+    icon: Sparkle,
+    copy: "Executive trends, exports, and automation history built into the core product.",
+  },
+];
 
 const oauthErrorMessages: Record<string, string> = {
   oauth_not_configured:
@@ -87,66 +107,61 @@ export default async function RegisterPage({
   const inviteEmail = invite?.email ?? params.email ?? undefined;
 
   return (
-    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center justify-center px-6 py-12 md:py-16">
-      <div className="mx-auto grid w-full max-w-[1000px] gap-8 md:grid-cols-2">
-        <section className="flex flex-col justify-center rounded-2xl border border-neutral-800 bg-neutral-900/30 p-8 backdrop-blur-sm lg:p-12">
-          <p className="kicker">Create workspace</p>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl">Launch TrustLoop quickly</h1>
-          <p className="mt-4 text-base leading-relaxed text-neutral-400">
+    <main className="auth-shell">
+      <div className="auth-grid">
+        <section className="auth-panel-muted surface">
+          <TrustLoopLogo size={18} variant="full" />
+          <p className="page-kicker mt-8">Create workspace</p>
+          <h1 className="mt-4 font-[var(--font-heading)] text-[36px] font-bold text-[var(--color-title)]">
+            Launch TrustLoop quickly.
+          </h1>
+          <p className="mt-4 text-[16px] leading-7 text-[var(--color-subtext)]">
             Provision a workspace, verify team identity, and start structured AI incident response in minutes.
           </p>
 
-          <div className="mt-10 space-y-6">
-            <div className="flex items-start gap-4 text-sm text-neutral-400">
-              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
-                <Building2 className="h-3 w-3" />
-              </span>
-              <span>Workspace-level controls, quotas, and team roles from day one</span>
-            </div>
-            <div className="flex items-start gap-4 text-sm text-neutral-400">
-              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
-                <Bot className="h-3 w-3" />
-              </span>
-              <span>BYOK routing for OpenAI, Gemini, and Anthropic workflows</span>
-            </div>
-            <div className="flex items-start gap-4 text-sm text-neutral-400">
-              <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
-                <Sparkles className="h-3 w-3" />
-              </span>
-              <span>Executive trends, exports, and automation history included</span>
-            </div>
+          <div className="auth-feature-list">
+            {featurePoints.map(({ icon: Icon, copy }) => (
+              <div className="auth-feature-item" key={copy}>
+                <Icon color="var(--color-subtext)" size={18} weight="duotone" />
+                <span>{copy}</span>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 lg:p-12 shadow-2xl">
-          <p className="kicker mb-3">New workspace</p>
-          <h2 className="mb-2 text-3xl font-bold text-white">Create TrustLoop account</h2>
-          <p className="mb-8 text-sm text-neutral-400">
+        <section className="auth-panel surface">
+          <p className="page-kicker">New workspace</p>
+          <h2 className="mt-3 font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">
+            Create your account
+          </h2>
+          <p className="mt-3 text-[14px] leading-6 text-[var(--color-subtext)]">
             Start with Google, GitHub, SAML SSO, or verify ownership with one-time code.
           </p>
 
           {inviteToken && !invite ? (
-            <p className="mb-6 rounded-lg border border-red-900/50 bg-red-950/20 p-4 text-sm text-red-400">
+            <p className="mt-6 rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-4 text-sm text-[var(--color-danger)]">
               Invite link is invalid or expired. Request a new invite from your workspace owner.
             </p>
           ) : null}
           {errorMessage ? (
-            <p className="mb-6 rounded-lg border border-red-900/50 bg-red-950/20 p-4 text-sm text-red-400">
+            <p className="mt-6 rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-4 text-sm text-[var(--color-danger)]">
               {errorMessage}
             </p>
           ) : null}
 
-          <RegisterForm
-            initialEmail={inviteEmail}
-            initialWorkspaceName={invite?.workspace.name}
-            inviteToken={invite?.token}
-            initialInviteCode={params.invite_code}
-            turnstileSiteKey={siteKey}
-          />
+          <div className="mt-8">
+            <RegisterForm
+              initialEmail={inviteEmail}
+              initialWorkspaceName={invite?.workspace.name}
+              initialInviteCode={params.invite_code}
+              inviteToken={invite?.token}
+              turnstileSiteKey={siteKey}
+            />
+          </div>
 
-          <p className="mt-8 text-sm text-neutral-400">
+          <p className="mt-8 text-sm text-[var(--color-subtext)]">
             Already have an account?{" "}
-            <Link className="font-semibold text-white hover:underline" href="/login">
+            <Link className="text-[var(--color-title)] underline decoration-[var(--color-rim)] underline-offset-4" href="/login">
               Sign in
             </Link>
           </p>

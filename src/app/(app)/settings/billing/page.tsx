@@ -92,13 +92,15 @@ export default async function SettingsBillingPage({
   const clampedQuota = clampQuotaToPlan(quota, effectivePlanTier);
 
   return (
-    <div className="space-y-16 pt-8">
-      <section>
-        <p className="kicker">Billing and plans</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-100">Manage plan changes and payment</h1>
-        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
-          Review workspace usage, compare available plans, and move into payment only when you are ready.
-        </p>
+    <div className="page-stack">
+      <section className="page-header section-enter">
+        <div className="page-header-main">
+          <p className="page-kicker">Workspace</p>
+          <h1 className="page-title">Billing</h1>
+          <p className="page-description">
+            Review plan usage, compare tiers, and move into checkout only when you are ready.
+          </p>
+        </div>
       </section>
 
       <BillingPanel

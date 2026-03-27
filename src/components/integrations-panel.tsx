@@ -2,7 +2,9 @@
 
 import { WebhookIntegrationType } from "@prisma/client";
 import { useMemo, useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, RefreshCcw, Power, PowerOff, ShieldCheck, Copy } from "lucide-react";
+import { PlugsConnected } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/empty-state";
+import { Loader2, CheckCircle2, AlertCircle, RefreshCcw, Power, PowerOff, ShieldCheck, Copy } from "@/components/icon-compat";
 
 type Integration = {
   type: WebhookIntegrationType;
@@ -137,13 +139,13 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
   return (
     <div className="space-y-12 max-w-4xl">
       {(message || error) && (
-        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
           {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
           <span className="flex-1">{error || message}</span>
           {message?.includes("New secret:") && (
             <button 
               onClick={() => navigator.clipboard.writeText(message.split("New secret: ")[1])}
-              className="p-1.5 hover:bg-emerald-500/20 rounded-lg transition-colors"
+              className="rounded-lg p-1.5 transition-colors hover:bg-[var(--color-signal-dim)]"
             >
               <Copy className="w-4 h-4" />
             </button>
@@ -151,24 +153,34 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
         </div>
       )}
 
+      {integrations.length === 0 ? (
+        <div className="rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)]">
+          <EmptyState
+            icon={PlugsConnected}
+            title="No integrations connected."
+            description="Inbound endpoints are ready. Add a signing secret to activate monitoring sources."
+          />
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-8">
         {Object.values(WebhookIntegrationType).map((type) => {
           const record = byType.get(type);
           const isActive = record?.isActive ?? false;
 
           return (
-            <article className={`group relative p-6 rounded-2xl border transition-all ${isActive ? "border-white/5 bg-white/5" : "border-white/5 opacity-60 hover:opacity-100"}`} key={type}>
+            <article className={`group relative p-6 rounded-2xl border transition-all ${isActive ? "border-[var(--color-rim)] bg-[var(--color-surface)]" : "border-[var(--color-rim)] opacity-60 hover:opacity-100"}`} key={type}>
               <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-medium text-slate-100">{type}</h3>
-                    <span className={`text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border ${isActive ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-neutral-500/20 bg-neutral-500/10 text-neutral-500"}`}>
+                    <h3 className="text-lg font-medium text-[var(--color-title)]">{type}</h3>
+                    <span className={`text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border ${isActive ? "border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] text-[var(--color-resolve)]" : "border-[var(--color-rim)] bg-[var(--color-void)] text-[var(--color-ghost)]"}`}>
                       {isActive ? "Active" : "Disabled"}
                     </span>
                   </div>
                   {record && (
-                    <p className="mt-1 text-xs text-neutral-500">
-                      Secret ends in <span className="font-mono text-slate-300">{record.keyLast4}</span> • Updated {new Date(record.updatedAt).toLocaleDateString("en-US")}
+                    <p className="mt-1 text-xs text-[var(--color-ghost)]">
+                      Secret ends in <span className="font-mono text-[var(--color-body)]">{record.keyLast4}</span> • Updated {new Date(record.updatedAt).toLocaleDateString("en-US")}
                     </p>
                   )}
                 </div>
@@ -183,7 +195,7 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
                     <RefreshCcw className="w-3 h-3" /> Rotate
                   </button>
                   <button
-                    className={`btn !min-h-[32px] !py-1 text-xs ${isActive ? "btn-ghost text-red-400 hover:text-red-300" : "btn-primary"}`}
+                    className={`btn !min-h-[32px] !py-1 text-xs ${isActive ? "btn-danger" : "btn-primary"}`}
                     disabled={loading}
                     onClick={() => toggle(type, !isActive)}
                     type="button"
@@ -196,12 +208,12 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Webhook Endpoint</p>
-                  <div className="flex items-center gap-3 border-b border-white/10 pb-1.5 group/url">
-                    <code className="text-sm text-sky-400 truncate flex-1">{endpoints[type]}</code>
+                  <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Webhook Endpoint</p>
+                  <div className="flex items-center gap-3 border-b border-[var(--color-rim)] pb-1.5 group/url">
+                    <code className="text-sm text-[var(--color-signal)] truncate flex-1">{endpoints[type]}</code>
                     <button 
                       onClick={() => navigator.clipboard.writeText(endpoints[type])}
-                      className="opacity-0 group-hover/url:opacity-100 transition-opacity text-neutral-500 hover:text-sky-400"
+                      className="opacity-0 group-hover/url:opacity-100 transition-opacity text-[var(--color-ghost)] hover:text-[var(--color-signal)]"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
@@ -210,9 +222,9 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
 
                 <div className="grid gap-6 md:grid-cols-2 items-end">
                   <label className="block space-y-3">
-                    <span className="text-xs font-medium text-neutral-500 uppercase tracking-widest">Update secret</span>
+                    <span className="text-xs font-medium text-[var(--color-ghost)] uppercase tracking-widest">Update secret</span>
                     <input
-                      className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600 text-sm"
+                      className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)] text-sm"
                       placeholder={`Enter new ${type} secret`}
                       value={secretInputs[type] ?? ""}
                       onChange={(event) =>
@@ -233,11 +245,11 @@ export function IntegrationsPanel({ initialIntegrations, endpoints }: Props) {
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-white/5 flex items-center gap-4">
-                <p className="text-[10px] text-neutral-500 uppercase tracking-tight">Required Headers</p>
+              <div className="mt-6 pt-4 border-t border-[var(--color-rim)] flex items-center gap-4">
+                <p className="text-[10px] text-[var(--color-ghost)] uppercase tracking-tight">Required Headers</p>
                 <div className="flex flex-wrap gap-2">
                   {['x-trustloop-workspace', 'x-trustloop-signature', 'x-trustloop-timestamp'].map(header => (
-                    <code key={header} className="text-[10px] bg-white/5 px-2 py-0.5 rounded border border-white/5 text-neutral-400">{header}</code>
+                    <code key={header} className="text-[10px] bg-[var(--color-surface)] px-2 py-0.5 rounded border border-[var(--color-rim)] text-[var(--color-subtext)]">{header}</code>
                   ))}
                 </div>
               </div>

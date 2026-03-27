@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldCheck } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldCheck } from "@/components/icon-compat";
 
 const SlackIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -120,7 +120,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
   return (
     <div className="space-y-12 max-w-4xl">
       {(message || error) && (
-        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
           {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
           <span>{error || message}</span>
         </div>
@@ -128,16 +128,16 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
 
       <div className="grid gap-8 md:grid-cols-2">
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300 flex items-center justify-between">
+          <span className="text-sm font-medium text-[var(--color-body)] flex items-center justify-between">
             Public status slug
             {statusPageUrl && (
-              <a href={statusPageUrl} target="_blank" className="text-[10px] uppercase tracking-wider text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1">
+              <a href={statusPageUrl} target="_blank" className="text-[10px] uppercase tracking-wider text-[var(--color-signal)] hover:text-[var(--color-signal)] transition-colors flex items-center gap-1">
                 View page <ExternalLink className="w-2.5 h-2.5" />
               </a>
             )}
           </span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             value={form.slug}
             onChange={(event) =>
               setForm((prev) => ({
@@ -151,10 +151,10 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         </label>
 
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">Slack incident channel</span>
+          <span className="text-sm font-medium text-[var(--color-body)]">Slack incident channel</span>
           {workspace.slackTeamId && slackChannels.length > 0 ? (
             <select
-              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors"
+              className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors"
               value={form.slackChannelId}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -173,7 +173,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
             </select>
           ) : (
             <input
-              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+              className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
               value={form.slackChannelId}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -189,12 +189,12 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
 
         <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise">
           <label className="block space-y-3 md:col-span-2">
-            <span className="text-sm font-medium text-slate-300">
+            <span className="text-sm font-medium text-[var(--color-body)]">
               SAML metadata URL
               <PlanBadge allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise" />
             </span>
             <input
-              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+              className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
               value={form.samlMetadataUrl}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -209,10 +209,10 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         </UpgradeGate>
       </div>
 
-      <div className="flex flex-wrap items-center gap-8 py-4 border-y border-white/5">
+      <div className="flex flex-wrap items-center gap-8 py-4 border-y border-[var(--color-rim)]">
         <label className="flex items-center gap-3 cursor-pointer group">
           <input
-            className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+            className="h-4 w-4 rounded border-[var(--color-rim)] bg-transparent text-[var(--color-signal)] focus:ring-[var(--color-signal)] focus:ring-offset-0"
             checked={form.statusPageEnabled}
             onChange={(event) =>
               setForm((prev) => ({
@@ -222,13 +222,13 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
             }
             type="checkbox"
           />
-          <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable status page</span>
+          <span className="text-sm text-[var(--color-subtext)] group-hover:text-[var(--color-body)] transition-colors">Enable status page</span>
         </label>
 
         <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise">
           <label className="flex items-center gap-3 cursor-pointer group">
             <input
-              className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0"
+              className="h-4 w-4 rounded border-[var(--color-rim)] bg-transparent text-[var(--color-signal)] focus:ring-[var(--color-signal)] focus:ring-offset-0"
               checked={form.samlEnabled}
               onChange={(event) =>
                 setForm((prev) => ({
@@ -238,14 +238,14 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
               }
               type="checkbox"
             />
-            <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Enable SAML SSO</span>
+            <span className="text-sm text-[var(--color-subtext)] group-hover:text-[var(--color-body)] transition-colors">Enable SAML SSO</span>
           </label>
         </UpgradeGate>
 
         <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "compliance")} planLabel="Pro">
           <label className="flex items-center gap-3 cursor-pointer group">
             <input
-              className="w-4 h-4 rounded border-white/20 bg-transparent text-sky-500 focus:ring-sky-500 focus:ring-offset-0 disabled:opacity-50"
+              className="h-4 w-4 rounded border-[var(--color-rim)] bg-transparent text-[var(--color-signal)] focus:ring-[var(--color-signal)] focus:ring-offset-0 disabled:opacity-50"
               checked={form.complianceMode}
               disabled={workspace.complianceMode}
               onChange={(event) =>
@@ -257,9 +257,9 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
               type="checkbox"
             />
             <div className="flex flex-col">
-              <span className="text-sm text-neutral-400 group-hover:text-slate-200 transition-colors">Compliance mode</span>
+              <span className="text-sm text-[var(--color-subtext)] group-hover:text-[var(--color-body)] transition-colors">Compliance mode</span>
               {form.complianceMode && (
-                <span className="text-[10px] text-amber-500 font-medium uppercase tracking-tight">Locked</span>
+                <span className="text-[10px] text-[var(--color-warning)] font-medium uppercase tracking-tight">Locked</span>
               )}
             </div>
           </label>
@@ -267,8 +267,8 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
       </div>
 
       {form.complianceMode && !workspace.complianceMode && (
-        <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-xs text-amber-200/70 flex items-start gap-3">
-          <ShieldCheck className="w-4 h-4 shrink-0 text-amber-500" />
+        <div className="flex items-start gap-3 rounded-xl border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] p-4 text-xs text-[var(--color-warning)]">
+          <ShieldCheck className="w-4 h-4 shrink-0 text-[var(--color-warning)]" />
           <p>
             Enabling compliance mode prevents incident deletion and keeps historical records immutable. 
             Once saved, this setting <strong>cannot be disabled</strong>.
@@ -287,29 +287,29 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
           </a>
         </div>
         
-        <p className="text-xs text-neutral-500 italic">
+        <p className="text-xs text-[var(--color-ghost)] italic">
           Workspace ID: <span className="font-mono">{workspace.id}</span>
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 pt-12 border-t border-white/5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 pt-12 border-t border-[var(--color-rim)]">
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Current plan</p>
-          <p className="text-sm text-slate-200">{workspace.planTier}</p>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Current plan</p>
+          <p className="text-sm text-[var(--color-body)]">{workspace.planTier}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Slack status</p>
-          <p className="text-sm text-slate-200">{workspace.slackTeamId ? "Connected" : "Disconnected"}</p>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Slack status</p>
+          <p className="text-sm text-[var(--color-body)]">{workspace.slackTeamId ? "Connected" : "Disconnected"}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">SAML ready</p>
-          <p className="text-sm text-slate-200">
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">SAML ready</p>
+          <p className="text-sm text-[var(--color-body)]">
             {workspace.samlEnabled && workspace.samlMetadataUrl && workspace.samlConnectionId ? "Active" : "Not configured"}
           </p>
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Billing status</p>
-          <p className="text-sm text-slate-200 font-medium">{workspace.billing?.status ?? "NONE"}</p>
+          <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Billing status</p>
+          <p className="text-sm text-[var(--color-body)] font-medium">{workspace.billing?.status ?? "NONE"}</p>
         </div>
       </div>
     </div>

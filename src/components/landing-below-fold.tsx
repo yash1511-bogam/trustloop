@@ -1,368 +1,446 @@
 "use client";
 
-import { useRef, useState, type ComponentType } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { motion as framerMotion } from "framer-motion";
-import { motion as motionDev } from "motion/react";
 import {
-  BellRing,
-  Bot,
+  ArrowRight,
+  Broadcast,
+  CaretDown,
+  ChartBar,
+  ChartLineDown,
+  ChatCircle,
   Check,
-  ChevronDown,
-  Gauge,
-  Handshake,
-  LayoutDashboard,
-  MailCheck,
-  Minus,
-  ShieldCheck,
-  Sparkles,
-  Workflow,
-} from "lucide-react";
-import { HoverLink } from "./hover-link";
-import { FeatureIllustration } from "./feature-illustrations";
-import { EarlyAccessForm } from "./early-access-form";
+  Clock,
+  GithubLogo,
+  LinkedinLogo,
+  Notepad,
+  Robot,
+  Sparkle,
+  Warning,
+  X,
+  XLogo,
+} from "@phosphor-icons/react";
+import { FooterSubscribeForm } from "@/components/footer-subscribe-form";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { TrustLoopLogo } from "@/components/trustloop-logo";
 
-type Feature = {
-  title: string;
-  copy: string;
-  icon: ComponentType<{ className?: string }>;
-  illType: "workflow" | "bot" | "mail" | "dashboard" | "gauge" | "shield";
+const integrationWordmarks = [
+  "Datadog",
+  "PagerDuty",
+  "Sentry",
+  "Slack",
+  "Langfuse",
+  "Helicone",
+  "Arize Phoenix",
+  "Braintrust",
+];
+
+const problemCards = [
+  {
+    title: "Generic incident tools weren't built for AI failures",
+    body: "They don't understand hallucinations, bias drift, or model degradation. Your team wastes time translating.",
+    icon: Warning,
+    color: "var(--color-danger)",
+  },
+  {
+    title: "Status updates are written by hand under pressure",
+    body: "Copy-pasting from Slack to email to status pages while customers wait. One mistake reaches hundreds.",
+    icon: Clock,
+    color: "var(--color-warning)",
+  },
+  {
+    title: "Leadership has no visibility until it's too late",
+    body: "By the time the exec dashboard loads, the incident has already escalated beyond control.",
+    icon: ChartLineDown,
+    color: "var(--color-signal)",
+  },
+];
+
+const workflowSteps = [
+  {
+    number: "01",
+    label: "Detect",
+    title: "Incidents flow in from the systems you already trust.",
+    body: "Incidents flow in from Datadog, PagerDuty, Sentry, or your team and are automatically routed by severity and AI category.",
+    icon: Broadcast,
+  },
+  {
+    number: "02",
+    label: "Triage",
+    title: "Provider intelligence stays under your control.",
+    body: "Your AI provider analyzes the incident, suggests severity, root cause, and a customer-safe update using your key and your data.",
+    icon: Robot,
+  },
+  {
+    number: "03",
+    label: "Respond",
+    title: "Approval gates slow mistakes, not responders.",
+    body: "Draft, review, and approve customer communications with configurable approval gates. Nothing goes out unreviewed.",
+    icon: ChatCircle,
+  },
+  {
+    number: "04",
+    label: "Learn",
+    title: "Every incident becomes operational leverage.",
+    body: "Post-mortem generation, SLA breach reports, and executive analytics close the loop. The next response starts smarter.",
+    icon: Notepad,
+  },
+];
+
+const integrationCards = [
+  ["Datadog", "Infrastructure alerts and service health signals.", Broadcast],
+  ["PagerDuty", "Escalation entry points for urgent operational failures.", Warning],
+  ["Sentry", "Application errors and AI path regressions.", ChartBar],
+  ["Slack", "Outbound responder coordination and approved updates.", ChatCircle],
+  ["Langfuse", "LLM traces and observation context.", Robot],
+  ["Helicone", "Inference visibility and request-level latency.", Sparkle],
+  ["Arize Phoenix", "Evaluation drift and experiment monitoring.", ChartLineDown],
+  ["Braintrust", "Model quality instrumentation for production changes.", Notepad],
+  ["Custom Webhooks", "Bring your own internal signal sources.", ArrowRight],
+] as const;
+
+type MarketingPlan = {
+  name: string;
+  monthly: number | null;
+  annual: number | null;
+  description: string;
+  featured: boolean;
+  cta: {
+    href: string;
+    label: string;
+    primary: boolean;
+  };
+  features: Array<[string, boolean]>;
 };
 
-const features: Feature[] = [
-  { title: "Intake to owner in under 5 minutes", copy: "Capture incidents from support tickets, classify severity, and assign accountable owners instantly.", icon: Workflow, illType: "workflow" },
-  { title: "AI triage with provider routing", copy: "Route triage and draft generation to OpenAI, Gemini, or Anthropic per workflow in settings.", icon: Bot, illType: "bot" },
-  { title: "Safe customer communication", copy: "Generate customer-ready updates with approval controls and full timeline traceability.", icon: MailCheck, illType: "mail" },
-  { title: "Executive reliability view", copy: "Monitor incident trendlines, coverage, and response timings through workspace read models.", icon: LayoutDashboard, illType: "dashboard" },
-  { title: "Tenant-aware limits and quotas", copy: "Enforce per-workspace throttles and daily caps to protect reliability as usage scales.", icon: Gauge, illType: "gauge" },
-  { title: "Enterprise-grade key handling", copy: "Customer API keys are encrypted at rest, never logged, and used only server-side.", icon: ShieldCheck, illType: "shield" },
+const plans: MarketingPlan[] = [
+  {
+    name: "Starter",
+    monthly: 49,
+    annual: 39,
+    description: "For early-stage AI product teams handling customer incidents weekly.",
+    featured: false,
+    cta: { href: "/register", label: "Start trial", primary: false },
+    features: [
+      ["50 incidents/day", true],
+      ["100 triage runs/day", true],
+      ["Webhook integrations", true],
+      ["API keys", false],
+      ["SAML SSO", false],
+    ],
+  },
+  {
+    name: "Pro",
+    monthly: 149,
+    annual: 119,
+    description: "For teams running incident operations daily with tighter approval and reporting needs.",
+    featured: true,
+    cta: { href: "/register", label: "Start trial", primary: true },
+    features: [
+      ["200 incidents/day", true],
+      ["300 triage runs/day", true],
+      ["API keys", true],
+      ["On-call rotation", true],
+      ["SAML SSO", false],
+    ],
+  },
+  {
+    name: "Enterprise",
+    monthly: null,
+    annual: null,
+    description: "For regulated or high-throughput organizations with stricter access and governance requirements.",
+    featured: false,
+    cta: { href: "mailto:hello@trustloop.dev", label: "Talk to sales", primary: false },
+    features: [
+      ["Unlimited incidents", true],
+      ["Unlimited triage", true],
+      ["API keys", true],
+      ["On-call rotation", true],
+      ["SAML SSO", true],
+    ],
+  },
 ];
 
-const steps = [
-  { title: "Ingest", detail: "Support lead logs a customer-facing AI failure with ticket context and impact notes." },
-  { title: "Triage", detail: "TrustLoop runs AI triage, proposes severity + owner actions, and appends timeline events." },
-  { title: "Respond", detail: "Ops publishes approved customer updates while leadership monitors exposure and SLA risk." },
-  { title: "Learn", detail: "Read models summarize trends, recurrence patterns, and response quality for weekly review." },
+const faqItems = [
+  ["Do we need to use your AI keys?", "No. TrustLoop is built for bring-your-own-key workflows across OpenAI, Gemini, and Anthropic."],
+  ["How are API keys protected?", "Keys are encrypted at rest, never logged, and only used server-side inside workspace-scoped operations."],
+  ["Can we enforce quotas per workspace?", "Yes. Quotas, throughput caps, and automation limits are configurable per workspace."],
+  ["What AI models do you support?", "OpenAI, Anthropic, and Gemini are first-class. Custom provider routing fits enterprise workflows."],
+  ["Is this GDPR compliant?", "TrustLoop is designed for teams handling regulated data with BYOK, scoped access, and exportable audit trails."],
+  ["What happens after the trial?", "You can upgrade in-product, talk to sales for enterprise terms, or let the workspace expire without a forced card-on-file conversion."],
+  ["Do you have an API?", "Yes. Workspace API keys support automation, status update flows, and internal operational tooling."],
 ];
 
-const plans = [
-  { name: "Starter", monthly: "$49", annual: "$39", period: "/workspace/mo", description: "For early-stage AI product teams handling customer incidents weekly.", bullets: ["Up to 50 incidents / day", "100 AI triage runs / day", "Provider BYOK: OpenAI, Gemini, Anthropic", "Email reminders and executive trends"], cta: "Start Starter" },
-  { name: "Pro", monthly: "$149", annual: "$119", period: "/workspace/mo", description: "For multi-team SaaS organizations with daily AI incident operations.", bullets: ["Up to 200 incidents / day", "300 AI triage runs / day", "On-call rotation and compliance mode", "Advanced analytics, PDF export, and API keys"], cta: "Start Pro", featured: true },
-  { name: "Enterprise", monthly: "Custom", annual: "Custom", period: "", description: "For regulated and high-volume software companies with strict reliability targets.", bullets: ["Unlimited incidents and triage runs", "SAML SSO and custom retention", "Private networking and VPC options", "Dedicated onboarding and support"], cta: "Contact Sales" },
-];
+function WorkflowMockup({ index }: { index: number }) {
+  const cards = [
+    [
+      ["Inbound signal", "PagerDuty: inference quality regression"],
+      ["Severity", "P1 suggested"],
+      ["Category", "Hallucination drift"],
+    ],
+    [
+      ["Root cause", "Prompt package rollout"],
+      ["Owner", "Product reliability"],
+      ["Draft", "Customer-safe update ready"],
+    ],
+    [
+      ["Approval", "Comms lead review"],
+      ["Channel", "Status page + Slack"],
+      ["Next update", "12 minutes"],
+    ],
+    [
+      ["Post-mortem", "In progress"],
+      ["SLA risk", "Contained"],
+      ["Executive note", "Prepared"],
+    ],
+  ] as const;
 
-const faqs = [
-  { question: "Do we need to use your AI keys?", answer: "No. TrustLoop is built for BYOK. You configure your own OpenAI, Gemini, and Anthropic keys per workspace." },
-  { question: "How are API keys protected?", answer: "Keys are encrypted at rest, never returned in full after save, never logged, and only used in server-side workflows." },
-  { question: "Can we enforce quotas per workspace?", answer: "Yes. You can configure tenant-aware request-per-minute limits and daily quotas for incident automation workflows." },
-  { question: "Does it support executive reporting?", answer: "Yes. TrustLoop builds read models for incident trends, coverage, response timing, and workload summaries." },
-];
-
-const comparisonRows = [
-  { feature: "Price", starter: "$49/mo", pro: "$149/mo", enterprise: "Custom", starterAnnual: "$39/mo", proAnnual: "$119/mo", enterpriseAnnual: "Custom" },
-  { feature: "Incidents per day", starter: "50", pro: "200", enterprise: "Unlimited" },
-  { feature: "AI triage runs per day", starter: "100", pro: "300", enterprise: "Unlimited" },
-  { feature: "Customer updates per day", starter: "100", pro: "300", enterprise: "Unlimited" },
-  { feature: "Reminder emails per day", starter: "120", pro: "500", enterprise: "Unlimited" },
-  { feature: "BYOK (OpenAI, Gemini, Anthropic)", starter: "✓", pro: "✓", enterprise: "✓" },
-  { feature: "Webhook integrations", starter: "✓", pro: "✓", enterprise: "✓" },
-  { feature: "Slack integration", starter: "✓", pro: "✓", enterprise: "✓" },
-  { feature: "Public status page", starter: "✓", pro: "✓", enterprise: "✓" },
-  { feature: "Executive analytics", starter: "✓", pro: "✓", enterprise: "✓" },
-  { feature: "On-call rotation", starter: "—", pro: "✓", enterprise: "✓" },
-  { feature: "Compliance mode", starter: "—", pro: "✓", enterprise: "✓" },
-  { feature: "Incident PDF export", starter: "—", pro: "✓", enterprise: "✓" },
-  { feature: "Workspace API keys", starter: "—", pro: "✓", enterprise: "✓" },
-  { feature: "On-call phone escalation", starter: "—", pro: "✓", enterprise: "✓" },
-  { feature: "SAML SSO", starter: "—", pro: "—", enterprise: "✓" },
-  { feature: "Custom data retention", starter: "—", pro: "—", enterprise: "✓" },
-  { feature: "Dedicated onboarding", starter: "—", pro: "—", enterprise: "✓" },
-  { feature: "14-day free trial", starter: "✓", pro: "✓", enterprise: "✓" },
-];
-
-const LANDING_SHELL = "mx-auto w-full max-w-[1200px]";
-const LANDING_PADDED_SHELL = "mx-auto w-full max-w-[1248px] px-6";
+  return (
+    <div className="surface p-5">
+      <div className="grid gap-3">
+        {cards[index].map(([label, value]) => (
+          <div className="rounded-[var(--radius-sm)] border border-[var(--color-rim)] bg-[var(--color-void)] p-3" key={label}>
+            <p className="metric-label">{label}</p>
+            <p className="mt-2 text-sm text-[var(--color-title)]">{value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function LandingBelowFold() {
-  const comparisonRef = useRef<HTMLDivElement>(null);
-  const [showComparison, setShowComparison] = useState(false);
   const [annual, setAnnual] = useState(false);
 
   return (
     <>
-      {/* Live Incident Flow */}
-      <section className="mx-auto max-w-5xl pb-16 md:pb-24">
-        <framerMotion.aside
-          className="relative grid gap-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-8 shadow-2xl md:grid-cols-2 lg:p-12"
-          initial={{ opacity: 0, scale: 0.96, y: 16 }}
-          transition={{ duration: 0.6, delay: 0.12 }}
-          whileInView={{ opacity: 1, scale: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-        >
-          <div className="flex flex-col justify-center">
-            <p className="kicker">Live incident flow</p>
-            <h2 className="mt-4 text-3xl font-bold text-white">From detection to resolution in minutes.</h2>
-            <p className="mt-4 text-neutral-400">
-              12-second walkthrough: See how TrustLoop automates intake, AI triage, customer updates, and provides executive visibility.
-            </p>
-            <div className="mt-8 space-y-4">
-              {[
-                { title: "P1 hallucination spike detected", meta: "Support intake -> Customer: NovaBank", icon: BellRing },
-                { title: "Triage run completed", meta: "Suggested owner: Product Reliability", icon: Bot },
-                { title: "Customer update approved", meta: "Comms sent via status channel", icon: MailCheck },
-              ].map((item) => (
-                <article className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4 transition-colors hover:bg-neutral-800" key={item.title}>
-                  <div className="flex items-start gap-4">
-                    <span className="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-800 text-white">
-                      <item.icon className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-white">{item.title}</p>
-                      <p className="mt-1 text-xs text-neutral-400">{item.meta}</p>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+      <section className="marketing-section pt-12">
+        <div className="text-center">
+          <p className="page-kicker">Works with your monitoring stack</p>
+        </div>
+        <div className="mt-6 overflow-hidden border-y border-[var(--color-rim)] py-4">
+          <div className="logo-marquee-track flex min-w-max gap-8">
+            {[...integrationWordmarks, ...integrationWordmarks].map((logo, index) => (
+              <span className="font-[var(--font-mono)] text-[12px] uppercase tracking-[0.16em] text-[var(--color-ghost)]" key={`${logo}-${index}`}>
+                {logo}
+              </span>
+            ))}
           </div>
-          <div className="flex flex-col justify-center gap-6">
-            <div className="overflow-hidden rounded-xl border border-neutral-800 bg-black shadow-lg">
-              <video aria-label="TrustLoop explainer video" className="block h-auto w-full" controls playsInline poster="/videos/trustloop-how-it-works-poster.svg" preload="metadata">
-                <source src="/videos/trustloop-how-it-works.mp4" type="video/mp4" />
-                Your browser does not support embedded video playback.
-              </video>
-            </div>
-            <div className="rounded-lg border border-emerald-900/50 bg-emerald-950/20 px-4 py-4 text-sm text-emerald-400 backdrop-blur-sm">
-              <div className="flex items-center gap-2 font-semibold">
-                <Handshake className="h-4 w-4" />
-                SLA-safe update window met
-              </div>
-              <p className="mt-1 text-xs text-emerald-500/80">Incident owner responded in 6 minutes with customer-safe draft.</p>
-            </div>
-          </div>
-        </framerMotion.aside>
-      </section>
-
-      {/* Trusted by */}
-      <section className="mx-auto max-w-4xl pb-16 md:pb-24 text-center">
-        <p className="kicker mb-6">Trusted by AI product and support teams</p>
-        <div className="flex flex-wrap justify-center gap-3">
-          {["VectorCore", "CloudRidge", "DeltaStack", "PairSignal", "PromptLoop", "StackWorks"].map((logo) => (
-            <span className="rounded-full border border-neutral-800 bg-neutral-900 px-6 py-2.5 text-xs font-semibold tracking-wide text-neutral-400 shadow-sm" key={logo}>{logo}</span>
-          ))}
         </div>
       </section>
 
-      {/* Features */}
-      <section className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`} id="features">
-        <div className="mb-12 flex flex-col items-center text-center">
-          <p className="kicker">Core capabilities</p>
-          <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Built to run incident operations at production scale.</h2>
+      <section className="marketing-section scroll-mt-24" id="features">
+        <div className="mx-auto max-w-[680px] text-center">
+          <h2 className="font-[var(--font-heading)] text-[36px] font-bold leading-[1.05] text-[var(--color-title)]">
+            AI failures need a different playbook.
+          </h2>
+          <p className="mx-auto mt-4 max-w-[480px] text-[16px] text-[var(--color-subtext)]">
+            Standard incident tooling breaks down when the failure surface includes models, prompts, evaluation drift, and customer trust.
+          </p>
         </div>
-        <div className="grid gap-x-8 gap-y-16 md:grid-cols-2 xl:grid-cols-3">
-          {features.map((feature, index) => (
-            <framerMotion.article className="flex flex-col items-start" initial={{ opacity: 0, y: 16 }} key={feature.title} transition={{ delay: index * 0.03, duration: 0.4 }} viewport={{ once: true, amount: 0.4 }} whileInView={{ opacity: 1, y: 0 }}>
-              <FeatureIllustration type={feature.illType} />
-              <h3 className="text-xl font-semibold text-white">{feature.title}</h3>
-              <p className="mt-3 text-base leading-relaxed text-neutral-400">{feature.copy}</p>
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          {problemCards.map((card) => (
+            <framerMotion.article
+              className="marketing-card p-[28px_24px]"
+              initial={{ opacity: 0, y: 16 }}
+              key={card.title}
+              transition={{ duration: 0.35 }}
+              viewport={{ once: true, amount: 0.3 }}
+              whileInView={{ opacity: 1, y: 0 }}
+            >
+              <card.icon color={card.color} size={36} weight="duotone" />
+              <h3 className="mt-5 font-[var(--font-heading)] text-[20px] font-semibold text-[var(--color-title)]">
+                {card.title}
+              </h3>
+              <p className="mt-3 text-[15px] leading-7 text-[var(--color-subtext)]">{card.body}</p>
             </framerMotion.article>
           ))}
         </div>
       </section>
 
-      {/* Workflow */}
-      <section className={`${LANDING_SHELL} grid gap-16 pb-16 md:grid-cols-2 md:items-start md:pb-32 scroll-mt-24`} id="workflow">
-        <div className="flex flex-col">
-          <p className="kicker">Workflow</p>
-          <h3 className="mt-4 text-4xl font-bold text-white leading-tight">From alert to executive signal.</h3>
-          <div className="mt-12 space-y-10">
-            {steps.map((step, index) => (
-              <div className="flex gap-6" key={step.title}>
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-neutral-800 bg-neutral-900 text-sm font-bold text-white shadow-sm">{index + 1}</span>
-                <div>
-                  <p className="text-lg font-semibold text-white">{step.title}</p>
-                  <p className="mt-2 text-base leading-relaxed text-neutral-400">{step.detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex flex-col justify-center mt-12 md:mt-0 lg:pl-10">
-          <p className="kicker">What teams replace</p>
-          <h3 className="mt-4 text-4xl font-bold text-white leading-tight">Fragmented incident handling.</h3>
-          <ul className="mt-12 space-y-8">
-            {["Ticket threads with no single owner", "Manual cross-posting to customer channels", "No shared severity language across teams", "Executive reports built from stale exports"].map((item) => (
-              <li className="flex items-start gap-4 text-lg text-neutral-400" key={item}>
-                <span className="mt-1 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-900/30 text-cyan-500"><Check className="h-4 w-4" /></span>
-                {item}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-12 rounded-2xl border border-neutral-800 bg-neutral-900/30 p-8 backdrop-blur-sm">
-            <p className="text-base font-semibold text-white">Built for production</p>
-            <p className="mt-3 text-sm leading-relaxed text-neutral-400">Autoscaled workers, tenant-aware rate limits, encrypted key storage, and enterprise-grade access controls.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
-      <section className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`} id="pricing">
-        <div className="mb-12 flex flex-col items-center text-center">
-          <p className="kicker">Pricing</p>
-          <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Clear pricing for incident volume and operational maturity.</h2>
-          <div className="mt-6 inline-flex items-center gap-3 rounded-full border border-neutral-800 bg-neutral-900 p-1">
-            <button onClick={() => setAnnual(false)} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${!annual ? "bg-cyan-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`} type="button">Monthly</button>
-            <button onClick={() => setAnnual(true)} className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${annual ? "bg-cyan-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`} type="button">Annual <span className="text-xs text-emerald-400">Save 20%</span></button>
-          </div>
-        </div>
-        <div className="grid gap-6 lg:grid-cols-3">
-          {plans.map((plan, index) => {
-            const cardClass = plan.featured
-              ? "grainy-card rounded-lg border border-cyan-300 bg-neutral-900 p-8 text-white shadow-sm"
-              : "grainy-card rounded-lg border border-neutral-800 bg-neutral-900 p-8 shadow-sm";
-            const gradients = [
-              "linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(14, 165, 233, 0) 100%)",
-              "linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(124, 58, 237, 0) 100%)",
-              "linear-gradient(135deg, rgba(52, 211, 153, 0.15) 0%, rgba(16, 185, 129, 0) 100%)",
-            ];
+      <section className="marketing-section scroll-mt-24" id="workflow">
+        <div className="grid gap-12">
+          {workflowSteps.map((step, index) => {
+            const reverse = index % 2 === 1;
             return (
-              <motionDev.article className={`${cardClass} flex flex-col`} key={plan.name} style={{ "--grain-gradient": gradients[index] } as React.CSSProperties} transition={{ duration: 0.35 }}>
-                <p className="kicker text-inherit/80">{plan.name}</p>
-                <div className="mt-2 flex items-end gap-1">
-                  <span className="text-4xl font-black">{annual ? plan.annual : plan.monthly}</span>
-                  <span className="pb-1 text-sm opacity-85">{plan.period}</span>
+              <div className={`grid items-center gap-8 lg:grid-cols-2 ${reverse ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`} key={step.number}>
+                <div className="relative">
+                  <div className="pointer-events-none absolute left-0 top-[-18px] font-[var(--font-heading)] text-[120px] font-extrabold leading-none text-[rgba(92,92,102,0.06)]">
+                    {step.number}
+                  </div>
+                  <div className="relative z-10 max-w-[480px]">
+                    <p className="page-kicker text-[var(--color-signal)]">{step.label}</p>
+                    <h3 className="mt-4 font-[var(--font-heading)] text-[24px] font-bold text-[var(--color-title)]">
+                      {step.title}
+                    </h3>
+                    <p className="mt-4 text-[15px] leading-7 text-[var(--color-subtext)]">{step.body}</p>
+                  </div>
                 </div>
-                <p className="mt-2 text-sm opacity-90">{plan.description}</p>
-                <ul className="mt-4 space-y-2 text-sm">
-                  {plan.bullets.map((item) => (
-                    <li className="flex items-start gap-2" key={item}><Check className="mt-0.5 h-4 w-4" />{item}</li>
-                  ))}
-                </ul>
-                <div className="mt-auto pt-8">
-                  <HoverLink className={`btn w-full justify-center ${plan.featured ? "bg-white text-cyan-700 hover:bg-neutral-900" : "btn-primary"}`} href={plan.name === "Enterprise" ? "mailto:sales@trustloop.dev" : "/#early-access"}>{plan.cta}</HoverLink>
-                </div>
-              </motionDev.article>
+                <WorkflowMockup index={index} />
+              </div>
             );
           })}
         </div>
-        <div className="mt-10 flex justify-center">
-          <button className="btn btn-ghost btn-lg gap-2" onClick={() => setShowComparison((v) => { if (!v) setTimeout(() => comparisonRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); return !v; })} type="button">
-            {showComparison ? "Hide" : "Check"} Full Comparison
-            <ChevronDown className={`h-4 w-4 transition-transform ${showComparison ? "rotate-180" : ""}`} />
-          </button>
-        </div>
-        {showComparison && (
-          <div ref={comparisonRef} className="mt-10 overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b border-neutral-800 bg-neutral-900">
-                  <th className="px-6 py-4 text-left font-semibold text-white">Feature</th>
-                  <th className="px-6 py-4 text-center font-semibold text-white">Starter</th>
-                  <th className="px-6 py-4 text-center font-semibold text-cyan-400">Pro</th>
-                  <th className="px-6 py-4 text-center font-semibold text-white">Enterprise</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonRows.map((row) => {
-                  const vals = row.feature === "Price" && annual
-                    ? [(row as Record<string, string>).starterAnnual ?? row.starter, (row as Record<string, string>).proAnnual ?? row.pro, (row as Record<string, string>).enterpriseAnnual ?? row.enterprise]
-                    : [row.starter, row.pro, row.enterprise];
-                  return (
-                  <tr key={row.feature} className="border-b border-neutral-800/50 last:border-0">
-                    <td className="px-6 py-3 text-neutral-300">{row.feature}</td>
-                    {vals.map((val, i) => (
-                      <td key={i} className="px-6 py-3 text-center">
-                        {val === "✓" ? <Check className="mx-auto h-4 w-4 text-emerald-400" /> : val === "—" ? <Minus className="mx-auto h-4 w-4 text-neutral-600" /> : <span className="text-neutral-300">{val}</span>}
-                      </td>
-                    ))}
-                  </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </section>
 
-      {/* FAQ */}
-      <section className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`} id="faq">
-        <div className="mb-12 flex flex-col items-center text-center">
-          <p className="kicker">FAQ</p>
-          <h2 className="mt-4 max-w-2xl text-3xl font-bold tracking-tight text-white md:text-5xl">Everything needed to evaluate and launch quickly.</h2>
+      <section className="marketing-section scroll-mt-24" id="integrations">
+        <div className="mx-auto max-w-[620px] text-center">
+          <h2 className="font-[var(--font-heading)] text-[36px] font-bold leading-[1.05] text-[var(--color-title)]">
+            Connects to where failures happen.
+          </h2>
         </div>
-        <div className="space-y-4 max-w-4xl mx-auto">
-          {faqs.map((faq) => (
-            <details className="group rounded-lg border border-neutral-800 bg-neutral-900 p-6 shadow-sm" key={faq.question}>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-white">
-                {faq.question}
-                <span className="text-sm text-neutral-500 transition-transform group-open:rotate-45">+</span>
+        <div className="mt-12 grid gap-4 md:grid-cols-2">
+          {integrationCards.map(([name, description, Icon]) => (
+            <article className="surface p-5" key={name}>
+              <Icon color="var(--color-subtext)" size={28} weight="duotone" />
+              <h3 className="mt-4 font-[var(--font-heading)] text-[15px] font-semibold text-[var(--color-title)]">{name}</h3>
+              <p className="mt-2 text-[13px] text-[var(--color-subtext)]">{description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="marketing-section scroll-mt-24" id="pricing">
+        <div className="mx-auto max-w-[560px] text-center">
+          <h2 className="font-[var(--font-heading)] text-[36px] font-bold leading-[1.05] text-[var(--color-title)]">
+            Pricing that makes sense.
+          </h2>
+          <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] p-1">
+            <button className={annual ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"} onClick={() => setAnnual(false)} type="button">
+              Monthly
+            </button>
+            <button className={annual ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"} onClick={() => setAnnual(true)} type="button">
+              Annual
+              <span className="text-[var(--color-body)]">save 20%</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          {plans.map((plan) => (
+            <article
+              className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.featured ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
+              key={plan.name}
+            >
+              {plan.featured ? (
+                <span className="absolute left-6 top-[-12px] badge badge-info bg-[var(--color-signal-dim)] text-[var(--color-signal)] border-transparent">
+                  Most Popular
+                </span>
+              ) : null}
+              <h3 className="font-[var(--font-heading)] text-[16px] font-extrabold text-[var(--color-title)]">{plan.name}</h3>
+              <div className="mt-4 flex items-end gap-2">
+                <span className="font-[var(--font-heading)] text-[48px] font-extrabold leading-none text-[var(--color-bright)]">
+                  {plan.monthly === null ? "Custom" : `$${annual ? plan.annual : plan.monthly}`}
+                </span>
+                <span className="pb-2 text-[16px] text-[var(--color-subtext)]">
+                  {plan.monthly === null ? "" : "/mo"}
+                </span>
+              </div>
+              <p className="mt-4 max-w-[220px] text-[14px] leading-6 text-[var(--color-subtext)]">{plan.description}</p>
+              <div className="mt-6 h-px bg-[var(--color-rim)]" />
+              <ul className="mt-6 grid gap-3 text-[14px] text-[var(--color-body)]">
+                {plan.features.map(([feature, enabled]) => (
+                  <li className="flex items-center gap-2" key={feature}>
+                    {enabled ? (
+                      <Check color="var(--color-signal)" size={16} weight="regular" />
+                    ) : (
+                      <X color="var(--color-ghost)" size={16} weight="regular" />
+                    )}
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                className={`mt-8 inline-flex w-full justify-center ${plan.cta.primary ? "btn btn-primary" : "btn btn-ghost"}`}
+                href={plan.cta.href}
+              >
+                {plan.cta.label}
+              </Link>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="marketing-section scroll-mt-24" id="faq">
+        <div className="mx-auto max-w-[620px] text-center">
+          <h2 className="font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">
+            Common questions.
+          </h2>
+        </div>
+        <div className="mx-auto mt-10 max-w-[760px]">
+          {faqItems.map(([question, answer]) => (
+            <details className="group border-t border-[var(--color-rim)] py-4" key={question}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium text-[var(--color-body)]">
+                {question}
+                <CaretDown className="faq-caret transition-transform group-open:rotate-180" size={16} weight="regular" />
               </summary>
-              <p className="mt-4 text-sm leading-relaxed text-neutral-400">{faq.answer}</p>
+              <p className="pt-3 pr-10 text-[14px] leading-6 text-[var(--color-subtext)]">{answer}</p>
             </details>
           ))}
         </div>
       </section>
 
-      {/* CTA + Early Access */}
-      <section id="early-access" className={`${LANDING_SHELL} pb-16 md:pb-32 scroll-mt-24`}>
-        <framerMotion.div className="grid gap-8 rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-white shadow-2xl md:grid-cols-2 md:p-16" initial={{ opacity: 0, y: 14 }} transition={{ duration: 0.45 }} viewport={{ once: true, amount: 0.4 }} whileInView={{ opacity: 1, y: 0 }}>
-          <div className="flex flex-col justify-center">
-            <p className="kicker text-neutral-400">Ready to ship safer AI products?</p>
-            <h2 className="mt-6 text-3xl font-bold leading-tight text-white md:text-5xl">Move incident response from reactive chaos to a measurable operating system.</h2>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <HoverLink className="btn btn-primary btn-lg" href="/#early-access">Start free trial <span aria-hidden>→</span></HoverLink>
-              <HoverLink className="btn btn-ghost btn-lg" href="/login">Sign in</HoverLink>
-            </div>
+      <section className="marketing-section">
+        <div className="dot-grid-band rounded-[var(--radius-xl)] border border-[var(--color-rim)] px-6 py-16 text-center md:px-12">
+          <h2 className="font-[var(--font-display)] text-[52px] italic leading-none text-[var(--color-title)]">
+            One tool for your entire incident workflow.
+          </h2>
+          <p className="mx-auto mt-4 max-w-[520px] text-[16px] leading-7 text-[var(--color-subtext)]">
+            Structured detection, calm response coordination, and the reporting layer leadership actually needs.
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link className="btn btn-primary btn-lg" href="/register">Start 14-day trial</Link>
+            <a className="btn btn-ghost btn-lg" href="mailto:hello@trustloop.dev">Talk to us</a>
           </div>
-          <div className="flex flex-col justify-center">
-            <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-8">
-              <div className="mb-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-cyan-500">
-                <Sparkles className="h-4 w-4" />
-                Early Access
-              </div>
-              <h3 className="mb-2 text-2xl font-bold text-white">Request early access</h3>
-              <p className="mb-6 text-sm text-neutral-400">
-                Join the waitlist and we&apos;ll send you an invite code when your spot is ready.
-              </p>
-              <EarlyAccessForm />
-            </div>
-          </div>
-        </framerMotion.div>
+        </div>
       </section>
 
-      {/* Footer */}
-      <footer className="-mx-6 border-t border-neutral-800/50 bg-black/20 backdrop-blur-2xl">
-        <div className={LANDING_PADDED_SHELL}>
-          <div className="grid gap-10 py-16 md:grid-cols-4 md:py-24">
-            <div className="flex flex-col items-start">
-              <a className="flex items-center gap-3 text-sm font-bold tracking-wide text-white" href="#top">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-neutral-800 text-white shadow-sm">TL</span>
-                TrustLoop
-              </a>
-              <p className="mt-4 max-w-[240px] text-sm leading-relaxed text-neutral-400">Incident operations SaaS for software companies shipping AI to production.</p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Product</p>
-              <ul className="mt-4 space-y-3 text-sm text-neutral-400">
-                <li><a className="transition-colors hover:text-white" href="#features">Features</a></li>
-                <li><a className="transition-colors hover:text-white" href="#workflow">Workflow</a></li>
-                <li><a className="transition-colors hover:text-white" href="#pricing">Pricing</a></li>
-                <li><HoverLink className="transition-colors hover:text-white" href="/docs">Documentation</HoverLink></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Platform</p>
-              <ul className="mt-4 space-y-3 text-sm text-neutral-400">
-                <li className="flex items-center gap-3 transition-colors hover:text-white"><ShieldCheck className="h-4 w-4" /> BYOK encryption</li>
-                <li className="flex items-center gap-3 transition-colors hover:text-white"><Gauge className="h-4 w-4" /> Workspace quotas</li>
-                <li className="flex items-center gap-3 transition-colors hover:text-white"><Sparkles className="h-4 w-4" /> AI triage automation</li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white">Get Started</p>
-              <p className="mt-4 text-sm leading-relaxed text-neutral-400">Launch your workspace and connect provider keys in under 10 minutes.</p>
-              <HoverLink className="btn btn-primary mt-6 w-full justify-center" href="/#early-access">Create workspace</HoverLink>
-            </div>
+      <footer className="marketing-section border-t border-[var(--color-rim)] bg-[var(--color-surface)] px-6 py-16 md:px-8">
+        <div className="grid gap-10 md:grid-cols-4">
+          <div className="grid gap-4">
+            <TrustLoopLogo size={16} variant="full" />
+            <p className="text-[13px] text-[var(--color-subtext)]">AI incident operations for teams that ship.</p>
+            <p className="text-[12px] text-[var(--color-ghost)]">© 2026 TrustLoop. All rights reserved.</p>
+            <ThemeToggle />
           </div>
+
+          <div className="grid gap-3">
+            <p className="text-[13px] font-medium text-[var(--color-subtext)]">Product</p>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/changelog">Changelog</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/pricing">Pricing</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/docs">Docs</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/status">Status</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/api-docs">API Reference</Link>
+          </div>
+
+          <div className="grid gap-3">
+            <p className="text-[13px] font-medium text-[var(--color-subtext)]">Company</p>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/blog">Blog</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/terms">Terms</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/privacy">Privacy</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/dpa">DPA</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/billing-policy">Billing Policy</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/docs/guides/identity-and-access">Security</Link>
+          </div>
+
+          <div>
+            <p className="text-[13px] font-medium text-[var(--color-subtext)]">Stay in the loop</p>
+            <p className="mt-2 text-[12px] text-[var(--color-ghost)]">Product updates, incident best practices.</p>
+            <FooterSubscribeForm />
+          </div>
+        </div>
+
+        <div className="mt-12 flex items-center gap-4 border-t border-[var(--color-rim)] pt-6">
+          <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-subtext)]" href="https://x.com" rel="noreferrer" target="_blank">
+            <XLogo size={18} weight="regular" />
+          </a>
+          <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-subtext)]" href="https://github.com" rel="noreferrer" target="_blank">
+            <GithubLogo size={18} weight="regular" />
+          </a>
+          <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-subtext)]" href="https://linkedin.com" rel="noreferrer" target="_blank">
+            <LinkedinLogo size={18} weight="regular" />
+          </a>
         </div>
       </footer>
     </>

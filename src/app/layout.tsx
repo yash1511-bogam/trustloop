@@ -1,15 +1,33 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { DM_Sans, JetBrains_Mono } from "next/font/google";
+import {
+  Geist,
+  Instrument_Serif,
+  JetBrains_Mono,
+  Syne,
+} from "next/font/google";
 import Script from "next/script";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import { THEME_COOKIE_NAME, normalizeTheme } from "@/lib/theme";
 import "./globals.css";
 
-const display = DM_Sans({
+const display = Instrument_Serif({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  weight: ["400"],
+});
+
+const heading = Syne({
+  variable: "--font-heading",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+});
+
+const ui = Geist({
+  variable: "--font-ui",
+  subsets: ["latin"],
+  weight: ["400", "500"],
 });
 
 const mono = JetBrains_Mono({
@@ -23,7 +41,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#020203",
+  themeColor: "#0B0C0E",
 };
 
 export const metadata: Metadata = {
@@ -92,7 +110,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" data-theme={theme}>
-      <body className={`${display.variable} ${mono.variable} antialiased selection:bg-cyan-500/30`}>
+      <body className={`${display.variable} ${heading.variable} ${ui.variable} ${mono.variable} antialiased`}>
         {children}
         <CookieConsentBanner />
         <Script id="sw-register" strategy="afterInteractive">

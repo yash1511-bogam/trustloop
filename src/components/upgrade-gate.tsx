@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock } from "lucide-react";
+import { Lock } from "@/components/icon-compat";
 
 type Props = {
   allowed: boolean;
@@ -32,10 +32,10 @@ export function PlanBadge({ allowed, planLabel }: { allowed: boolean; planLabel:
   if (allowed) return null;
 
   return (
-    <span className="inline-flex items-center gap-1.5 ml-3 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-400 align-middle">
+    <span className="inline-flex items-center gap-1.5 ml-3 rounded-full border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] px-3 py-1 text-xs font-medium text-[var(--color-warning)] align-middle">
       <Lock className="h-3 w-3" />
       Requires {planLabel}
-      <Link href="/settings/billing" className="ml-1 underline underline-offset-2 hover:text-amber-300">
+      <Link href="/settings/billing" className="ml-1 underline underline-offset-2 hover:text-[var(--color-body)]">
         Upgrade
       </Link>
     </span>

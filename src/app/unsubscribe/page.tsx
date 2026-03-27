@@ -32,18 +32,18 @@ function UnsubscribeContent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#020203] px-4">
-      <div className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-950 p-8 text-center">
-        <h1 className="mb-2 text-xl font-bold text-white">TrustLoop</h1>
+      <div className="w-full max-w-md rounded-2xl border border-[var(--color-rim)] bg-[var(--color-void)] p-8 text-center">
+        <h1 className="mb-2 text-xl font-bold text-[var(--color-bright)]">TrustLoop</h1>
 
-        {state === "loading" && <p className="text-neutral-400">Loading…</p>}
+        {state === "loading" && <p className="text-[var(--color-subtext)]">Loading…</p>}
 
         {state === "confirm" && (
           <>
-            <p className="mb-1 text-neutral-300">Unsubscribe from TrustLoop emails?</p>
-            <p className="mb-6 text-sm text-neutral-500">{email}</p>
+            <p className="mb-1 text-[var(--color-body)]">Unsubscribe from TrustLoop emails?</p>
+            <p className="mb-6 text-sm text-[var(--color-ghost)]">{email}</p>
             <button
               onClick={confirm}
-              className="rounded-lg bg-cyan-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 transition"
+              className="rounded-lg bg-[var(--color-signal)] px-6 py-2.5 text-sm font-semibold text-[var(--color-bright)] hover:bg-[#cf4a22] transition"
             >
               Confirm unsubscribe
             </button>
@@ -51,11 +51,11 @@ function UnsubscribeContent() {
         )}
 
         {state === "done" && (
-          <p className="text-neutral-300">You have been unsubscribed. You will no longer receive non-critical emails from TrustLoop.</p>
+          <p className="text-[var(--color-body)]">You have been unsubscribed. You will no longer receive non-critical emails from TrustLoop.</p>
         )}
 
         {state === "error" && (
-          <p className="text-red-400">Invalid or expired unsubscribe link.</p>
+          <p className="text-[var(--color-danger)]">Invalid or expired unsubscribe link.</p>
         )}
       </div>
     </div>
@@ -64,7 +64,7 @@ function UnsubscribeContent() {
 
 export default function UnsubscribePage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#020203] text-neutral-400">Loading…</div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#020203] text-[var(--color-subtext)]">Loading…</div>}>
       <UnsubscribeContent />
     </Suspense>
   );

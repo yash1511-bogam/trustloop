@@ -1,9 +1,9 @@
 "use client";
 
 import { AIIncidentCategory, IncidentChannel, IncidentSeverity } from "@prisma/client";
+import { CircleNotch, Plus } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
 
 export function CreateIncidentForm() {
   const router = useRouter();
@@ -66,30 +66,30 @@ export function CreateIncidentForm() {
   }
 
   return (
-    <form className="space-y-6 max-w-4xl" onSubmit={onSubmit}>
-      <div className="grid gap-6 md:grid-cols-[1fr_auto]">
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Incident Title *</span>
+    <form className="field-grid max-w-4xl" onSubmit={onSubmit}>
+      <div className="grid gap-5 md:grid-cols-[1fr_180px]">
+        <label className="field">
+          <span className="field-label">Incident Title</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
-            placeholder="e.g. API latency spike on inference endpoint"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            required
+            className="input"
             disabled={loading}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="e.g. API latency spike on inference endpoint"
+            required
+            value={title}
           />
         </label>
-        
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Channel</span>
+
+        <label className="field">
+          <span className="field-label">Channel</span>
           <select
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6"
-            value={channel}
-            onChange={(event) => setChannel(event.target.value as IncidentChannel)}
+            className="select"
             disabled={loading}
+            onChange={(event) => setChannel(event.target.value as IncidentChannel)}
+            value={channel}
           >
             {Object.values(IncidentChannel).map((option) => (
-              <option className="bg-slate-900" key={option} value={option}>
+              <option key={option} value={option}>
                 {option}
               </option>
             ))}
@@ -97,104 +97,112 @@ export function CreateIncidentForm() {
         </label>
       </div>
 
-      <label className="block space-y-2">
-        <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Description *</span>
+      <label className="field">
+        <span className="field-label">Description</span>
         <textarea
-          className="w-full min-h-[80px] bg-white/5 border border-transparent rounded-xl p-4 text-sm text-slate-100 focus:outline-none focus:border-sky-500/50 focus:bg-white/10 transition-all placeholder:text-neutral-600 resize-y"
-          placeholder="What failed, who was impacted, and what customer-visible risk exists?"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          required
+          className="textarea min-h-[120px]"
           disabled={loading}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="What failed, who was impacted, and what customer-visible risk exists?"
+          required
+          value={description}
         />
+        <span className="field-help">
+          Be specific about customer impact. This record anchors the timeline and follow-up.
+        </span>
       </label>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Customer Name</span>
+      <div className="grid gap-5 md:grid-cols-2">
+        <label className="field">
+          <span className="field-label">Customer Name</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="input"
+            disabled={loading}
+            onChange={(event) => setCustomerName(event.target.value)}
             placeholder="e.g. Acme Corp"
             value={customerName}
-            onChange={(event) => setCustomerName(event.target.value)}
-            disabled={loading}
           />
         </label>
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Customer Email</span>
+        <label className="field">
+          <span className="field-label">Customer Email</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="input"
+            disabled={loading}
+            onChange={(event) => setCustomerEmail(event.target.value)}
             placeholder="support@acme.com"
             type="email"
             value={customerEmail}
-            onChange={(event) => setCustomerEmail(event.target.value)}
-            disabled={loading}
           />
         </label>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-4">
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Severity</span>
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <label className="field">
+          <span className="field-label">Severity</span>
           <select
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6"
-            value={severity}
-            onChange={(event) => setSeverity(event.target.value as IncidentSeverity)}
+            className="select"
             disabled={loading}
+            onChange={(event) => setSeverity(event.target.value as IncidentSeverity)}
+            value={severity}
           >
             {Object.values(IncidentSeverity).map((option) => (
-              <option className="bg-slate-900" key={option} value={option}>
+              <option key={option} value={option}>
                 {option}
               </option>
             ))}
           </select>
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">AI Category</span>
+        <label className="field">
+          <span className="field-label">AI Category</span>
           <select
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-300 focus:outline-none focus:border-sky-400 transition-colors cursor-pointer appearance-none pr-6"
-            value={category}
-            onChange={(event) => setCategory(event.target.value ? (event.target.value as AIIncidentCategory) : "")}
+            className="select"
             disabled={loading}
+            onChange={(event) => setCategory(event.target.value ? (event.target.value as AIIncidentCategory) : "")}
+            value={category}
           >
-            <option className="bg-slate-900" value="">Uncategorized</option>
+            <option value="">Uncategorized</option>
             {Object.values(AIIncidentCategory).map((option) => (
-              <option className="bg-slate-900" key={option} value={option}>
+              <option key={option} value={option}>
                 {option}
               </option>
             ))}
           </select>
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Model/Version</span>
+        <label className="field">
+          <span className="field-label">Model / Version</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="input"
+            disabled={loading}
+            onChange={(event) => setModelVersion(event.target.value)}
             placeholder="e.g. gpt-4o"
             value={modelVersion}
-            onChange={(event) => setModelVersion(event.target.value)}
-            disabled={loading}
           />
         </label>
 
-        <label className="block space-y-2">
-          <span className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Ticket Reference</span>
+        <label className="field">
+          <span className="field-label">Ticket Reference</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-1.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="input"
+            disabled={loading}
+            onChange={(event) => setSourceTicketRef(event.target.value)}
             placeholder="e.g. ZD-10293"
             value={sourceTicketRef}
-            onChange={(event) => setSourceTicketRef(event.target.value)}
-            disabled={loading}
           />
         </label>
       </div>
 
-      {error ? <p className="text-sm text-red-400 p-3 rounded-lg bg-red-500/10 border border-red-500/20">{error}</p> : null}
+      {error ? (
+        <p className="field-help field-error rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] px-3 py-2">
+          {error}
+        </p>
+      ) : null}
 
-      <div className="pt-2">
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <p className="field-help">No customer communication is sent automatically from this form.</p>
         <button className="btn btn-primary" disabled={loading} type="submit">
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+          {loading ? <CircleNotch className="animate-spin" size={16} /> : <Plus size={16} weight="regular" />}
           Create incident
         </button>
       </div>

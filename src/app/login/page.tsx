@@ -1,10 +1,30 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ShieldCheck,
+  Sparkle,
+  Warning,
+} from "@phosphor-icons/react/dist/ssr";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/login-form";
+import { TrustLoopLogo } from "@/components/trustloop-logo";
 import { getAuth } from "@/lib/auth";
 import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
+
+const featurePoints = [
+  {
+    icon: ShieldCheck,
+    copy: "Passwordless access backed by one-time verification and scoped sessions.",
+  },
+  {
+    icon: Sparkle,
+    copy: "One workspace for intake, response, and executive visibility.",
+  },
+  {
+    icon: Warning,
+    copy: "Designed for the moments where the blast radius is still changing.",
+  },
+];
 
 const oauthErrorMessages: Record<string, string> = {
   oauth_not_configured:
@@ -50,72 +70,62 @@ export default async function LoginPage({
   const errorMessage = params.error ? oauthErrorMessages[params.error] : null;
 
   return (
-    <main className="flex min-h-[calc(100vh-80px)] flex-col items-center justify-center px-6 py-12 md:py-16">
-      <div className="mx-auto grid w-full max-w-[1000px] gap-8 md:grid-cols-2">
-        <section className="flex flex-col justify-center rounded-2xl border border-neutral-800 bg-neutral-900/30 p-8 backdrop-blur-sm lg:p-12">
-          <p className="kicker">Welcome back</p>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white md:text-4xl">Resume incident operations</h1>
-          <p className="mt-4 text-base leading-relaxed text-neutral-400">
-            Sign in with your work email and continue triage, communication, and executive reporting.
+    <main className="auth-shell">
+      <div className="auth-grid">
+        <section className="auth-panel-muted surface">
+          <TrustLoopLogo size={18} variant="full" />
+          <p className="page-kicker mt-8">Welcome back</p>
+          <h1 className="mt-4 font-[var(--font-heading)] text-[36px] font-bold text-[var(--color-title)]">
+            Resume incident operations.
+          </h1>
+          <p className="mt-4 text-[16px] leading-7 text-[var(--color-subtext)]">
+            Continue triage, customer communication, and executive reporting without reassembling context.
           </p>
 
-          <div className="mt-10 space-y-6">
-            {[
-              "Secure OTP sign-in powered by Stytch",
-              "Workspace-scoped role and quota enforcement",
-              "No shared passwords or reset tickets",
-            ].map((item) => (
-              <div className="flex items-start gap-4 text-sm text-neutral-400" key={item}>
-                <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
-                  <ShieldCheck className="h-3 w-3" />
-                </span>
-                <span>{item}</span>
+          <div className="auth-feature-list">
+            {featurePoints.map(({ icon: Icon, copy }) => (
+              <div className="auth-feature-item" key={copy}>
+                <Icon color="var(--color-subtext)" size={18} weight="duotone" />
+                <span>{copy}</span>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-900 p-8 lg:p-12 shadow-2xl">
-          <p className="kicker mb-3">Sign in</p>
-          <h2 className="mb-2 text-3xl font-bold text-white">Access your workspace</h2>
-          <p className="mb-8 text-sm text-neutral-400">
+        <section className="auth-panel surface">
+          <p className="page-kicker">Sign in</p>
+          <h2 className="mt-3 font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">
+            Access your workspace
+          </h2>
+          <p className="mt-3 text-[14px] leading-6 text-[var(--color-subtext)]">
             Continue with Google, GitHub, SAML SSO, or one-time code verification.
           </p>
 
           {errorMessage ? (
-            <p className="mb-6 rounded-lg border border-red-900/50 bg-red-950/20 p-4 text-sm text-red-400">
+            <p className="mt-6 rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-4 text-sm text-[var(--color-danger)]">
               {errorMessage}
             </p>
           ) : null}
 
-          <LoginForm turnstileSiteKey={siteKey} />
+          <div className="mt-8">
+            <LoginForm turnstileSiteKey={siteKey} />
+          </div>
 
-          <div className="mt-8 space-y-2">
-            <p className="text-sm text-neutral-400">
+          <div className="mt-8 grid gap-2 text-sm text-[var(--color-subtext)]">
+            <p>
               Lost access?{" "}
-              <Link className="font-semibold text-white hover:underline" href="/forgot-access">
+              <Link className="text-[var(--color-title)] underline decoration-[var(--color-rim)] underline-offset-4" href="/forgot-access">
                 Recover account
               </Link>
             </p>
-
-            <p className="text-sm text-neutral-400">
+            <p>
               Need a workspace?{" "}
-              <Link className="font-semibold text-white hover:underline" href="/register">
+              <Link className="text-[var(--color-title)] underline decoration-[var(--color-rim)] underline-offset-4" href="/register">
                 Create one
               </Link>
             </p>
           </div>
         </section>
-      </div>
-
-      <div className="mx-auto mt-12 w-full max-w-[1000px] rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 text-xs text-neutral-400 backdrop-blur-sm">
-        <p className="flex items-center gap-3">
-          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
-            <Sparkles className="h-3.5 w-3.5" />
-          </span>
-          After sign-in, open dashboard workflows, incident queue filters, and automation settings.
-          <ArrowRight className="h-3.5 w-3.5 ml-auto" />
-        </p>
       </div>
     </main>
   );

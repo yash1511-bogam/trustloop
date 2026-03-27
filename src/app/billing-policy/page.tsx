@@ -14,16 +14,16 @@ export default function BillingPolicyPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col gap-6 px-6 py-16 md:px-10">
       <section className="surface p-8">
         <p className="kicker">TrustLoop policy</p>
-        <h1 className="mt-3 text-4xl font-semibold text-slate-100">Billing and refund policy</h1>
-        <p className="mt-4 max-w-3xl text-sm text-neutral-400">
+        <h1 className="mt-3 text-4xl font-semibold text-[var(--color-title)]">Billing and refund policy</h1>
+        <p className="mt-4 max-w-3xl text-sm text-[var(--color-subtext)]">
           This page explains how TrustLoop handles subscription renewals, plan changes, payment recovery,
           and refund review for workspace billing.
         </p>
       </section>
 
-      <section className="surface space-y-8 p-8 text-sm leading-7 text-neutral-300">
+      <section className="surface space-y-8 p-8 text-sm leading-7 text-[var(--color-body)]">
         <div>
-          <h2 className="text-xl font-semibold text-slate-100">Subscriptions and renewals</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-title)]">Subscriptions and renewals</h2>
           <p className="mt-3">
             Paid TrustLoop plans renew automatically until the subscription is canceled. The amount due,
             taxes, billing currency, and any discount applied are shown before payment is completed.
@@ -31,7 +31,7 @@ export default function BillingPolicyPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-slate-100">Plan changes</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-title)]">Plan changes</h2>
           <p className="mt-3">
             When you change plans, TrustLoop creates a fresh secure checkout session and applies the new
             plan after payment confirmation from the billing provider. If a payment does not complete,
@@ -40,7 +40,7 @@ export default function BillingPolicyPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-slate-100">Payment failures and recovery</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-title)]">Payment failures and recovery</h2>
           <p className="mt-3">
             If a renewal or plan-change payment fails, TrustLoop records the failure, sends reminder
             notifications to workspace billing contacts, and keeps a recovery window open so the payment
@@ -53,7 +53,7 @@ export default function BillingPolicyPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-slate-100">Refund review</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-title)]">Refund review</h2>
           <p className="mt-3">
             Charges for completed billing periods are generally non-refundable once service access has been
             provisioned, except where a refund is required by law. Duplicate charges, obvious billing
@@ -66,7 +66,7 @@ export default function BillingPolicyPage() {
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-slate-100">Questions about a charge</h2>
+          <h2 className="text-xl font-semibold text-[var(--color-title)]">Questions about a charge</h2>
           <p className="mt-3">
             If something looks wrong, contact the billing or onboarding contact associated with your TrustLoop
             workspace as soon as possible so the payment record can be reviewed against the provider event log.

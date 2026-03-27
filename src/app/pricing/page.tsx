@@ -1,151 +1,134 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { Check, X } from "lucide-react";
+import { useState } from "react";
+import { Check, X } from "@phosphor-icons/react";
 
-const plans = [
+const plans: Array<{
+  name: string;
+  monthly: number | null;
+  annual: number | null;
+  description: string;
+  highlighted: boolean;
+  cta: string;
+  href: string;
+  features: Array<[string, boolean]>;
+}> = [
   {
     name: "Starter",
     monthly: 49,
     annual: 39,
     description: "For smaller teams that need dependable incident coordination.",
-    cta: "Start 14-day trial",
-    ctaHref: "/#early-access",
     highlighted: false,
-    limits: ["50 incidents/day", "100 triage runs/day", "Unlimited members", "Email support"],
-    features: { aiKeys: true, webhooks: true, apiKeys: false, compliance: false, saml: false, onCall: false, postMortems: true, statusPage: true, slackIntegration: true },
+    cta: "Start 14-day trial",
+    href: "/register",
+    features: [
+      ["50 incidents/day", true],
+      ["100 triage runs/day", true],
+      ["Webhook integrations", true],
+      ["API keys", false],
+      ["SAML SSO", false],
+    ],
   },
   {
     name: "Pro",
     monthly: 149,
     annual: 119,
     description: "Balanced limits for teams running incident ops daily.",
-    cta: "Start 14-day trial",
-    ctaHref: "/#early-access",
     highlighted: true,
-    limits: ["200 incidents/day", "300 triage runs/day", "Unlimited members", "Priority support"],
-    features: { aiKeys: true, webhooks: true, apiKeys: true, compliance: true, saml: false, onCall: true, postMortems: true, statusPage: true, slackIntegration: true },
+    cta: "Start 14-day trial",
+    href: "/register",
+    features: [
+      ["200 incidents/day", true],
+      ["300 triage runs/day", true],
+      ["API keys", true],
+      ["On-call rotation", true],
+      ["SAML SSO", false],
+    ],
   },
   {
     name: "Enterprise",
-    monthly: 0,
-    annual: 0,
-    description: "For large or regulated teams needing high throughput and access controls.",
-    cta: "Contact Sales",
-    ctaHref: "mailto:sales@trustloop.dev",
+    monthly: null,
+    annual: null,
+    description: "For large or regulated teams needing higher throughput and access controls.",
     highlighted: false,
-    limits: ["Unlimited incidents", "Unlimited triage", "Unlimited members", "Dedicated support + SLA"],
-    features: { aiKeys: true, webhooks: true, apiKeys: true, compliance: true, saml: true, onCall: true, postMortems: true, statusPage: true, slackIntegration: true },
+    cta: "Contact sales",
+    href: "mailto:hello@trustloop.dev",
+    features: [
+      ["Unlimited incidents", true],
+      ["Unlimited triage", true],
+      ["API keys", true],
+      ["On-call rotation", true],
+      ["SAML SSO", true],
+    ],
   },
 ];
-
-const featureLabels: Record<string, string> = {
-  aiKeys: "BYOK AI Provider Keys",
-  webhooks: "Webhook Integrations",
-  apiKeys: "API Keys",
-  compliance: "Compliance Export",
-  saml: "SAML SSO",
-  onCall: "On-Call Rotation",
-  postMortems: "AI Post-Mortems",
-  statusPage: "Public Status Page",
-  slackIntegration: "Slack Integration",
-};
-
-function formatPrice(plan: typeof plans[number], annual: boolean): string {
-  if (plan.monthly === 0) return "Custom";
-  return annual ? `$${plan.annual}` : `$${plan.monthly}`;
-}
 
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);
 
   return (
-    <main className="mx-auto max-w-5xl px-6 py-20">
-      <div className="mb-16 text-center">
-        <h1 className="text-4xl font-bold text-slate-100">Simple, transparent pricing</h1>
-        <p className="mt-4 text-lg text-neutral-400">Every plan starts with a 14-day free trial. No credit card required.</p>
+    <main className="page-shell page-stack">
+      <section className="marketing-section !pt-12 text-center">
+        <p className="page-kicker">Pricing</p>
+        <h1 className="font-[var(--font-heading)] text-[40px] font-bold text-[var(--color-title)]">
+          Plans for AI incident operations teams.
+        </h1>
+        <p className="mx-auto mt-5 max-w-[520px] text-[16px] leading-7 text-[var(--color-subtext)]">
+          Every plan starts with a 14-day trial. Shift from scattered response work to one operational system.
+        </p>
 
-        <div className="mt-6 inline-flex items-center gap-3 rounded-full bg-neutral-800 p-1">
-          <button
-            onClick={() => setAnnual(false)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${!annual ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`}
-          >
+        <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] p-1">
+          <button className={annual ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"} onClick={() => setAnnual(false)} type="button">
             Monthly
           </button>
-          <button
-            onClick={() => setAnnual(true)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${annual ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-neutral-200"}`}
-          >
-            Annual <span className="text-xs text-green-400">Save 20%</span>
+          <button className={annual ? "btn btn-primary btn-sm" : "btn btn-ghost btn-sm"} onClick={() => setAnnual(true)} type="button">
+            Annual
+            <span className="text-[var(--color-body)]">save 20%</span>
           </button>
         </div>
-      </div>
+      </section>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <section className="grid gap-5 lg:grid-cols-3">
         {plans.map((plan) => (
-          <div
+          <article
+            className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.highlighted ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
             key={plan.name}
-            className={`surface flex flex-col rounded-xl p-6 ${plan.highlighted ? "ring-2 ring-blue-500" : ""}`}
           >
-            {plan.highlighted && (
-              <span className="mb-3 inline-block w-fit rounded-full bg-blue-500/20 px-3 py-1 text-xs font-medium text-blue-400">
+            {plan.highlighted ? (
+              <span className="absolute left-6 top-[-12px] badge badge-info bg-[var(--color-signal-dim)] text-[var(--color-signal)] border-transparent">
                 Most Popular
               </span>
-            )}
-            <h3 className="text-xl font-semibold text-slate-100">{plan.name}</h3>
-            <div className="mt-2">
-              <span className="text-3xl font-bold text-slate-100">{formatPrice(plan, annual)}</span>
-              {plan.monthly > 0 && <span className="text-neutral-500">/month</span>}
-              {annual && plan.monthly > 0 && (
-                <span className="ml-2 text-sm text-neutral-500 line-through">${plan.monthly}</span>
-              )}
+            ) : null}
+            <h2 className="font-[var(--font-heading)] text-[16px] font-extrabold text-[var(--color-title)]">{plan.name}</h2>
+            <div className="mt-4 flex items-end gap-2">
+              <span className="font-[var(--font-heading)] text-[48px] font-extrabold text-[var(--color-bright)]">
+                {plan.monthly === null ? "Custom" : `$${annual ? plan.annual : plan.monthly}`}
+              </span>
+              <span className="pb-2 text-[16px] text-[var(--color-subtext)]">
+                {plan.monthly === null ? "" : "/mo"}
+              </span>
             </div>
-            {annual && plan.monthly > 0 && (
-              <p className="mt-1 text-xs text-green-400">Billed ${plan.annual * 12}/year</p>
-            )}
-            <p className="mt-3 text-sm text-neutral-400">{plan.description}</p>
-
-            <Link
-              href={plan.ctaHref}
-              className={`mt-6 block rounded-lg px-4 py-2.5 text-center text-sm font-medium ${
-                plan.highlighted
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-neutral-800 text-slate-200 hover:bg-neutral-700"
-              }`}
-            >
-              {plan.cta}
-            </Link>
-
-            <ul className="mt-6 space-y-2 text-sm">
-              {plan.limits.map((limit) => (
-                <li key={limit} className="flex items-center gap-2 text-neutral-300">
-                  <Check className="h-4 w-4 text-green-500" />
-                  {limit}
+            <p className="mt-4 max-w-[240px] text-[14px] leading-6 text-[var(--color-subtext)]">{plan.description}</p>
+            <div className="mt-6 h-px bg-[var(--color-rim)]" />
+            <ul className="mt-6 grid gap-3 text-[14px] text-[var(--color-body)]">
+              {plan.features.map(([feature, enabled]) => (
+                <li className="flex items-center gap-2" key={feature}>
+                  {enabled ? (
+                    <Check color="var(--color-signal)" size={16} weight="regular" />
+                  ) : (
+                    <X color="var(--color-ghost)" size={16} weight="regular" />
+                  )}
+                  <span>{feature}</span>
                 </li>
               ))}
             </ul>
-
-            <div className="mt-6 border-t border-neutral-800 pt-4">
-              <p className="mb-2 text-xs font-medium uppercase text-neutral-500">Features</p>
-              <ul className="space-y-1.5 text-sm">
-                {Object.entries(plan.features).map(([key, enabled]) => (
-                  <li key={key} className="flex items-center gap-2">
-                    {enabled ? (
-                      <Check className="h-3.5 w-3.5 text-green-500" />
-                    ) : (
-                      <X className="h-3.5 w-3.5 text-neutral-600" />
-                    )}
-                    <span className={enabled ? "text-neutral-300" : "text-neutral-600"}>
-                      {featureLabels[key]}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+            <Link className={`mt-8 inline-flex w-full justify-center ${plan.highlighted ? "btn btn-primary" : "btn btn-ghost"}`} href={plan.href}>
+              {plan.cta}
+            </Link>
+          </article>
         ))}
-      </div>
+      </section>
     </main>
   );
 }

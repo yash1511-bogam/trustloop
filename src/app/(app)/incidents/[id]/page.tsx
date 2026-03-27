@@ -73,52 +73,52 @@ export default async function IncidentDetailPage({
           {incident.category ? <span className="badge">{incident.category}</span> : null}
         </div>
 
-        <h2 className="text-3xl font-semibold text-slate-100">{incident.title}</h2>
-        <p className="mt-4 max-w-4xl whitespace-pre-wrap leading-relaxed text-neutral-500">{incident.description}</p>
+        <h2 className="text-3xl font-semibold text-[var(--color-title)]">{incident.title}</h2>
+        <p className="mt-4 max-w-4xl whitespace-pre-wrap leading-relaxed text-[var(--color-ghost)]">{incident.description}</p>
 
-        <div className="mt-6 grid gap-2 text-sm text-neutral-500 md:grid-cols-2">
+        <div className="mt-6 grid gap-2 text-sm text-[var(--color-ghost)] md:grid-cols-2">
           <p>
-            <span className="font-semibold text-slate-300">Owner:</span> {incident.owner?.name ?? "Unassigned"}
+            <span className="font-semibold text-[var(--color-body)]">Owner:</span> {incident.owner?.name ?? "Unassigned"}
           </p>
           <p>
-            <span className="font-semibold text-slate-300">Customer:</span>{" "}
+            <span className="font-semibold text-[var(--color-body)]">Customer:</span>{" "}
             {incident.customerName || incident.customerEmail || "Unknown"}
           </p>
           <p>
-            <span className="font-semibold text-slate-300">Ticket ref:</span> {incident.sourceTicketRef ?? "-"}
+            <span className="font-semibold text-[var(--color-body)]">Ticket ref:</span> {incident.sourceTicketRef ?? "-"}
           </p>
           <p>
-            <span className="font-semibold text-slate-300">Model version:</span> {incident.modelVersion ?? "-"}
+            <span className="font-semibold text-[var(--color-body)]">Model version:</span> {incident.modelVersion ?? "-"}
           </p>
         </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="surface p-6">
-          <h3 className="mb-4 text-lg font-semibold text-slate-100">Timeline</h3>
+          <h3 className="mb-4 text-lg font-semibold text-[var(--color-title)]">Timeline</h3>
           <div className="space-y-4">
             {incident.events.map((event) => (
               <article className="panel-card p-4" key={event.id}>
-                <div className="mb-1 flex items-center justify-between gap-2 text-xs text-neutral-500">
+                <div className="mb-1 flex items-center justify-between gap-2 text-xs text-[var(--color-ghost)]">
                   <span>
                     {event.eventType}
                     {event.actor?.name ? ` • ${event.actor.name}` : ""}
                   </span>
                   <span>{event.createdAt.toLocaleString()}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-slate-300">{event.body}</p>
+                <p className="whitespace-pre-wrap text-sm text-[var(--color-body)]">{event.body}</p>
               </article>
             ))}
 
             {incident.events.length === 0 ? (
-              <p className="text-sm text-neutral-500">No timeline events yet.</p>
+              <p className="text-sm text-[var(--color-ghost)]">No timeline events yet.</p>
             ) : null}
           </div>
         </section>
 
         <aside className="space-y-6">
           <section className="surface p-6">
-            <h3 className="mb-4 text-lg font-semibold text-slate-100">Actions</h3>
+            <h3 className="mb-4 text-lg font-semibold text-[var(--color-title)]">Actions</h3>
             <IncidentActions
               incidentId={incident.id}
               status={incident.status}
@@ -132,7 +132,7 @@ export default async function IncidentDetailPage({
           </section>
 
           <section className="surface p-6">
-            <h3 className="mb-4 text-lg font-semibold text-slate-100">Post-Mortem</h3>
+            <h3 className="mb-4 text-lg font-semibold text-[var(--color-title)]">Post-Mortem</h3>
             {incident.postMortem ? (
               <div>
                 <div className="mb-2 flex items-center gap-2">
@@ -140,20 +140,20 @@ export default async function IncidentDetailPage({
                     {incident.postMortem.status}
                   </span>
                   {incident.postMortem.author ? (
-                    <span className="text-xs text-neutral-500">by {incident.postMortem.author.name}</span>
+                    <span className="text-xs text-[var(--color-ghost)]">by {incident.postMortem.author.name}</span>
                   ) : null}
                 </div>
-                <h4 className="mb-2 text-sm font-semibold text-slate-200">{incident.postMortem.title}</h4>
-                <div className="prose prose-invert prose-sm max-h-80 overflow-y-auto text-neutral-400">
+                <h4 className="mb-2 text-sm font-semibold text-[var(--color-body)]">{incident.postMortem.title}</h4>
+                <div className="prose prose-invert prose-sm max-h-80 overflow-y-auto text-[var(--color-subtext)]">
                   <ReactMarkdown>{incident.postMortem.body}</ReactMarkdown>
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-neutral-500">
+              <p className="text-sm text-[var(--color-ghost)]">
                 No post-mortem yet.{" "}
                 {aiKeyCount > 0
                   ? "Use the \"Generate Post-Mortem\" action to create one with AI."
-                  : <Link className="text-amber-400 hover:underline" href="/settings/ai">Add an AI key</Link>}
+                  : <Link className="text-[var(--color-warning)] hover:underline" href="/settings/ai">Add an AI key</Link>}
               </p>
             )}
           </section>

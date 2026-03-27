@@ -1,8 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2 } from "lucide-react";
+import { Buildings } from "@phosphor-icons/react";
 
 export default function CompleteRegistrationPage() {
   const router = useRouter();
@@ -12,8 +13,8 @@ export default function CompleteRegistrationPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!session) {
       setError("Invalid session. Start registration again.");
       return;
@@ -42,38 +43,43 @@ export default function CompleteRegistrationPage() {
 
   if (!session) {
     return (
-      <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6">
-        <p className="text-neutral-400">Invalid registration link. <a href="/register" className="text-white underline">Start over</a></p>
+      <main className="auth-shell">
+        <p className="text-[var(--color-subtext)]">
+          Invalid registration link.{" "}
+          <Link className="text-[var(--color-title)] underline decoration-[var(--color-rim)] underline-offset-4" href="/register">
+            Start over
+          </Link>
+        </p>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6 py-12">
-      <section className="w-full max-w-md rounded-2xl border border-neutral-800 bg-neutral-900 p-8 shadow-2xl">
+    <main className="auth-shell">
+      <section className="auth-panel surface w-full max-w-md">
         <div className="mb-6 flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-950/30 text-cyan-500">
-            <Building2 className="h-5 w-5" />
+          <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[var(--color-void)]">
+            <Buildings color="var(--color-subtext)" size={18} weight="duotone" />
           </span>
           <div>
-            <h1 className="text-xl font-bold text-white">One more step</h1>
-            <p className="text-sm text-neutral-400">Enter your company name to create your workspace.</p>
+            <h1 className="font-[var(--font-heading)] text-[24px] font-bold text-[var(--color-title)]">One more step</h1>
+            <p className="text-sm text-[var(--color-subtext)]">Enter your company name to create the workspace.</p>
           </div>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
+          <div className="field">
             <label className="sr-only" htmlFor="company-name">Company name</label>
             <input
-              id="company-name"
-              className="input"
-              placeholder="Company name"
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-              minLength={2}
-              maxLength={80}
               autoFocus
+              className="input"
+              id="company-name"
+              maxLength={80}
+              minLength={2}
+              onChange={(event) => setCompanyName(event.target.value)}
+              placeholder="Company name"
               required
+              value={companyName}
             />
           </div>
 
@@ -82,11 +88,11 @@ export default function CompleteRegistrationPage() {
           </button>
         </form>
 
-        {error && (
-          <p className="mt-4 rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-400">
+        {error ? (
+          <p className="mt-4 rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-3 text-sm text-[var(--color-danger)]">
             {error}
           </p>
-        )}
+        ) : null}
       </section>
     </main>
   );

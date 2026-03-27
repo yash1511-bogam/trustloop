@@ -53,47 +53,53 @@ export default async function SettingsTeamPage() {
   ]);
 
   return (
-    <div className="space-y-16 pt-8">
-      <section>
-        <p className="kicker">Team operations</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-100">Membership and on-call profile</h1>
-        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
-          Invite teammates, assign roles safely, and keep contact data current for high-severity response workflows.
-        </p>
-      </section>
-
-      <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100">Team management</h2>
-        <p className="mt-1 text-sm text-neutral-500">Invite teammates, assign roles, and remove members.</p>
-        <div className="mt-8">
-          <TeamManagementPanel
-            canManageRoles={auth.user.role === "OWNER"}
-            currentUserId={auth.user.id}
-            invites={invites.map((invite) => ({
-              ...invite,
-              createdAt: invite.createdAt.toISOString(),
-              expiresAt: invite.expiresAt.toISOString(),
-            }))}
-            members={members.map((member) => ({
-              id: member.user.id,
-              name: member.user.name,
-              email: member.user.email,
-              phone: member.user.phone,
-              role: member.role,
-              createdAt: member.user.createdAt.toISOString(),
-            }))}
-          />
+    <div className="page-stack">
+      <section className="page-header section-enter">
+        <div className="page-header-main">
+          <p className="page-kicker">Workspace</p>
+          <h1 className="page-title">Team</h1>
+          <p className="page-description">
+            Invite responders, manage roles, and keep the on-call contact layer current.
+          </p>
         </div>
       </section>
 
-      <section className="pb-10">
-        <h2 className="text-xl font-medium text-slate-100">Profile & on-call</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Keep personal contact details up to date for urgent P1 notifications.
-        </p>
-        <div className="mt-8">
-          <ProfileSettingsPanel profile={profile} planTier={planTier} />
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Team management</h2>
+          <p className="settings-section-description">
+            Invite teammates, assign roles, and remove members without leaving the workspace context.
+          </p>
         </div>
+
+        <TeamManagementPanel
+          canManageRoles={auth.user.role === "OWNER"}
+          currentUserId={auth.user.id}
+          invites={invites.map((invite) => ({
+            ...invite,
+            createdAt: invite.createdAt.toISOString(),
+            expiresAt: invite.expiresAt.toISOString(),
+          }))}
+          members={members.map((member) => ({
+            id: member.user.id,
+            name: member.user.name,
+            email: member.user.email,
+            phone: member.user.phone,
+            role: member.role,
+            createdAt: member.user.createdAt.toISOString(),
+          }))}
+        />
+      </section>
+
+      <section className="settings-section section-enter" id="profile">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Profile & on-call</h2>
+          <p className="settings-section-description">
+            Keep personal contact details accurate so P1 escalations reach the right person immediately.
+          </p>
+        </div>
+
+        <ProfileSettingsPanel profile={profile} planTier={planTier} />
       </section>
     </div>
   );

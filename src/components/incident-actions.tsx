@@ -266,7 +266,7 @@ export function IncidentActions({
             </button>
           </>
         ) : (
-          <Link className="btn btn-ghost text-amber-400 border-amber-500/30" href="/settings/ai">
+          <Link className="btn btn-ghost text-[var(--color-warning)] border-[rgba(217,119,6,0.24)]" href="/settings/ai">
             Add AI key to enable triage & drafts
           </Link>
         )}
@@ -314,8 +314,8 @@ export function IncidentActions({
         </div>
       </div>
 
-      {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      {message ? <p className="text-sm text-[var(--color-resolve)]">{message}</p> : null}
+      {error ? <p className="text-sm text-[var(--color-danger)]">{error}</p> : null}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle } from "@/components/icon-compat";
 import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 
@@ -55,7 +55,7 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
   return (
     <div className="space-y-8 max-w-2xl">
       {(message || error) && (
-        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
           {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
           <span>{error || message}</span>
         </div>
@@ -63,9 +63,9 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
 
       <div className="grid gap-8 md:grid-cols-2">
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">Name</span>
+          <span className="text-sm font-medium text-[var(--color-body)]">Name</span>
           <input
-            className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
             value={name}
             onChange={(event) => setName(event.target.value)}
             disabled={loading}
@@ -73,9 +73,9 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
         </label>
         
         <label className="block space-y-3">
-          <span className="text-sm font-medium text-slate-300">Work email</span>
+          <span className="text-sm font-medium text-[var(--color-body)]">Work email</span>
           <input 
-            className="w-full bg-transparent border-b border-white/10 pb-2 text-slate-400 focus:outline-none opacity-60 cursor-not-allowed" 
+            className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-subtext)] focus:outline-none opacity-60 cursor-not-allowed" 
             value={profile.email} 
             disabled 
           />
@@ -83,29 +83,29 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
 
         <UpgradeGate allowed={isFeatureAllowed(planTier, "on_call")} planLabel="Pro">
           <label className="block space-y-3 md:col-span-2">
-            <span className="text-sm font-medium text-slate-300 flex items-center justify-between">
+            <span className="text-sm font-medium text-[var(--color-body)] flex items-center justify-between">
               <span>
                 On-call phone
                 <PlanBadge allowed={isFeatureAllowed(planTier, "on_call")} planLabel="Pro" />
               </span>
-              <span className="text-xs text-neutral-500 font-normal border border-white/10 px-2 py-0.5 rounded-full">E.164 Format</span>
+              <span className="text-xs text-[var(--color-ghost)] font-normal border border-[var(--color-rim)] px-2 py-0.5 rounded-full">E.164 Format</span>
             </span>
             <input
-              className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600"
+              className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)]"
               placeholder="+14155552671"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               disabled={loading}
             />
-            <p className="text-xs text-neutral-500 mt-2">
+            <p className="text-xs text-[var(--color-ghost)] mt-2">
               Used exclusively for high-severity P1 incident escalations. Keep this up to date to ensure you never miss critical alerts.
             </p>
           </label>
         </UpgradeGate>
       </div>
 
-      <div className="pt-4 flex items-center justify-between border-t border-white/5">
-        <p className="text-sm text-neutral-500">
+      <div className="pt-4 flex items-center justify-between border-t border-[var(--color-rim)]">
+        <p className="text-sm text-[var(--color-ghost)]">
           {hasChanges ? "You have unsaved changes." : "Profile is up to date."}
         </p>
         <button 

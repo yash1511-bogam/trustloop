@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "@/components/icon-compat";
 import {
   OTP_RESEND_COOLDOWN_SECONDS,
   useOtpResend,
@@ -100,9 +100,9 @@ export function EarlyAccessForm() {
   if (verified) {
     return (
       <div className="flex flex-col items-center gap-3 py-6 text-center">
-        <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-        <p className="text-lg font-semibold text-white">You&apos;re on the list!</p>
-        <p className="text-sm text-neutral-400">We&apos;ll send your invite code when your spot is ready.</p>
+        <CheckCircle2 color="var(--color-resolve)" size={40} />
+        <p className="text-lg font-semibold text-[var(--color-bright)]">You&apos;re on the list!</p>
+        <p className="text-sm text-[var(--color-subtext)]">We&apos;ll send your invite code when your spot is ready.</p>
       </div>
     );
   }
@@ -138,7 +138,7 @@ export function EarlyAccessForm() {
         </form>
       ) : (
         <form className="space-y-3" onSubmit={verifyCode}>
-          <p className="text-sm text-neutral-400">Enter the code sent to <span className="text-white font-medium">{email}</span></p>
+          <p className="text-sm text-[var(--color-subtext)]">Enter the code sent to <span className="text-[var(--color-bright)] font-medium">{email}</span></p>
           <input
             className="input text-center tracking-widest text-lg"
             placeholder="Verification code"
@@ -160,10 +160,10 @@ export function EarlyAccessForm() {
       )}
 
       {message && !verified ? (
-        <p className="rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-3 text-sm text-emerald-400">{message}</p>
+        <p className="rounded-lg border border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] p-3 text-sm text-[var(--color-resolve)]">{message}</p>
       ) : null}
       {error ? (
-        <p className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-400">{error}</p>
+        <p className="rounded-lg border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-3 text-sm text-[var(--color-danger)]">{error}</p>
       ) : null}
     </div>
   );

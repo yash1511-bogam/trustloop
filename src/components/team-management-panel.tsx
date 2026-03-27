@@ -2,7 +2,9 @@
 
 import { Role } from "@prisma/client";
 import { useState } from "react";
-import { Copy, Loader2, Send, ShieldAlert, UserMinus, X } from "lucide-react";
+import { UsersThree } from "@phosphor-icons/react";
+import { EmptyState } from "@/components/empty-state";
+import { Copy, Loader2, Send, ShieldAlert, UserMinus, X } from "@/components/icon-compat";
 
 type Member = {
   id: string;
@@ -176,7 +178,7 @@ export function TeamManagementPanel({
     <div className="space-y-12">
       {/* Notifications */}
       {(message || error) && (
-        <div className={`p-4 text-sm rounded-xl border ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+        <div className={`p-4 text-sm rounded-xl border ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
           {error || message}
         </div>
       )}
@@ -184,10 +186,10 @@ export function TeamManagementPanel({
       {/* Invite Member Minimalist Form */}
       {canManageRoles && (
         <div className="pt-2">
-          <p className="text-sm font-medium text-slate-100 mb-4">Add new member</p>
+          <p className="text-sm font-medium text-[var(--color-title)] mb-4">Add new member</p>
           <div className="flex flex-wrap items-center gap-4">
             <input
-              className="bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors flex-1 min-w-[200px] placeholder:text-neutral-600"
+              className="bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors flex-1 min-w-[200px] placeholder:text-[var(--color-ghost)]"
               placeholder="teammate@company.com"
               type="email"
               value={inviteEmail}
@@ -195,14 +197,14 @@ export function TeamManagementPanel({
               disabled={loading}
             />
             <select
-              className="bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors pr-8 cursor-pointer disabled:opacity-50 appearance-none"
+              className="bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors pr-8 cursor-pointer disabled:opacity-50 appearance-none"
               value={inviteRole}
               onChange={(event) => setInviteRole(event.target.value as Role)}
               disabled={loading}
               title={getRoleTooltip(inviteRole)}
             >
               {Object.values(Role).map((role) => (
-                <option className="bg-slate-900 text-slate-100" key={role} value={role}>
+                <option className="bg-[var(--color-void)] text-[var(--color-title)]" key={role} value={role}>
                   {role}
                 </option>
               ))}
@@ -217,7 +219,7 @@ export function TeamManagementPanel({
               Send invite
             </button>
           </div>
-          <p className="mt-3 text-xs text-neutral-500">
+          <p className="mt-3 text-xs text-[var(--color-ghost)]">
             {getRoleTooltip(inviteRole)}
           </p>
         </div>
@@ -225,53 +227,62 @@ export function TeamManagementPanel({
 
       {/* Active Members Minimal List */}
       <div>
-        <p className="text-sm tracking-wide text-neutral-500 mb-4 uppercase">Active Members ({members.length})</p>
+        <p className="text-sm tracking-wide text-[var(--color-ghost)] mb-4 uppercase">Active Members ({members.length})</p>
+        {members.length <= 1 ? (
+          <div className="mb-4 rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)]">
+            <EmptyState
+              icon={UsersThree}
+              title="Invite your response team."
+              description="You’re the only member in this workspace. Add responders, managers, and approvers before the next incident."
+            />
+          </div>
+        ) : null}
         <div className="flex flex-col gap-2">
           {members.map((member) => (
             <div 
-              className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all" 
+              className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)] transition-all" 
               key={member.id}
             >
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-sky-500/20 to-purple-500/20 flex items-center justify-center border border-white/10 text-slate-300 font-medium">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[rgba(232,87,42,0.08)] font-medium text-[var(--color-body)]">
                   {member.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-slate-200">{member.name}</p>
-                    {member.id === currentUserId && <span className="text-[10px] uppercase tracking-wider text-sky-400 font-medium">You</span>}
+                    <p className="font-medium text-[var(--color-body)]">{member.name}</p>
+                    {member.id === currentUserId && <span className="text-[10px] uppercase tracking-wider text-[var(--color-signal)] font-medium">You</span>}
                   </div>
-                  <p className="text-sm text-neutral-500">{member.email}</p>
+                  <p className="text-sm text-[var(--color-ghost)]">{member.email}</p>
                 </div>
               </div>
 
               <div className="mt-4 sm:mt-0 flex items-center gap-6">
-                <div className="text-sm text-neutral-400">
+                <div className="text-sm text-[var(--color-subtext)]">
                   Joined {new Date(member.createdAt).toLocaleDateString("en-US", { month: 'short', year: 'numeric' })}
                 </div>
 
                 <div className="flex items-center gap-3">
                   {canManageRoles ? (
                     <select
-                      className="bg-transparent text-sm text-slate-300 focus:outline-none focus:text-sky-400 transition-colors cursor-pointer appearance-none border-b border-transparent hover:border-white/20 pb-0.5"
+                      className="bg-transparent text-sm text-[var(--color-body)] focus:outline-none focus:text-[var(--color-signal)] transition-colors cursor-pointer appearance-none border-b border-transparent hover:border-[var(--color-rim)] pb-0.5"
                       disabled={member.id === currentUserId || loading}
                       value={member.role}
                       onChange={(event) => updateRole(member.id, event.target.value as Role)}
                       title={getRoleTooltip(member.role)}
                     >
                       {Object.values(Role).map((role) => (
-                        <option className="bg-slate-900 text-slate-100" key={role} value={role}>
+                        <option className="bg-[var(--color-void)] text-[var(--color-title)]" key={role} value={role}>
                           {role}
                         </option>
                       ))}
                     </select>
                   ) : (
-                    <span className="text-sm text-slate-300" title={getRoleTooltip(member.role)}>{member.role}</span>
+                    <span className="text-sm text-[var(--color-body)]" title={getRoleTooltip(member.role)}>{member.role}</span>
                   )}
                   
                   {canManageRoles && member.id !== currentUserId ? (
                     <button
-                      className="text-neutral-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      className="text-[var(--color-ghost)] hover:text-[var(--color-danger)] transition-colors p-2 rounded-lg hover:bg-[rgba(232,66,66,0.08)] opacity-0 group-hover:opacity-100 focus:opacity-100"
                       disabled={loading}
                       onClick={() => removeMember(member.id)}
                       type="button"
@@ -289,8 +300,8 @@ export function TeamManagementPanel({
 
       {/* Pending Invites Minimal List */}
       {invites.length > 0 && (
-        <div className="pt-4 border-t border-white/5">
-          <p className="text-sm tracking-wide text-neutral-500 mb-4 uppercase">Pending Invites ({invites.length})</p>
+        <div className="pt-4 border-t border-[var(--color-rim)]">
+          <p className="text-sm tracking-wide text-[var(--color-ghost)] mb-4 uppercase">Pending Invites ({invites.length})</p>
           <div className="flex flex-col gap-2">
             {invites.map((invite) => {
               const appUrl = typeof window !== "undefined" ? window.location.origin : "";
@@ -299,18 +310,18 @@ export function TeamManagementPanel({
 
               return (
                 <div 
-                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-white/5 hover:bg-white/5 transition-all opacity-70 hover:opacity-100" 
+                  className="group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border border-transparent hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)] transition-all opacity-70 hover:opacity-100" 
                   key={invite.id}
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full border border-dashed border-white/20 flex items-center justify-center text-neutral-500">
+                    <div className="h-10 w-10 rounded-full border border-dashed border-[var(--color-rim)] flex items-center justify-center text-[var(--color-ghost)]">
                       ?
                     </div>
                     <div>
-                      <p className="font-medium text-slate-300">{invite.email}</p>
+                      <p className="font-medium text-[var(--color-body)]">{invite.email}</p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-neutral-500">Invited as {invite.role}</span>
-                        {isExpired && <span className="text-[10px] uppercase text-red-400 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Expired</span>}
+                        <span className="text-xs text-[var(--color-ghost)]">Invited as {invite.role}</span>
+                        {isExpired && <span className="text-[10px] uppercase text-[var(--color-danger)] flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Expired</span>}
                       </div>
                     </div>
                   </div>
@@ -318,14 +329,14 @@ export function TeamManagementPanel({
                   <div className="mt-4 sm:mt-0 flex items-center gap-6">
                     <button
                       onClick={() => navigator.clipboard.writeText(link)}
-                      className="text-xs text-neutral-400 hover:text-sky-400 transition-colors flex items-center gap-1.5"
+                      className="text-xs text-[var(--color-subtext)] hover:text-[var(--color-signal)] transition-colors flex items-center gap-1.5"
                       title="Copy join link"
                     >
                       <Copy className="h-3 w-3" /> Copy link
                     </button>
                     
                     <button
-                      className="text-neutral-500 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-red-400/10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                      className="text-[var(--color-ghost)] hover:text-[var(--color-danger)] transition-colors p-2 rounded-lg hover:bg-[rgba(232,66,66,0.08)] opacity-0 group-hover:opacity-100 focus:opacity-100"
                       disabled={loading}
                       onClick={() => revokeInvite(invite.id)}
                       type="button"

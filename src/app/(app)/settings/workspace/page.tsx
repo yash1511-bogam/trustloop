@@ -20,9 +20,19 @@ export default async function SettingsWorkspacePage() {
   const workspace = await prisma.workspace.findUniqueOrThrow({
     where: { id: auth.user.workspaceId },
     select: {
-      id: true, name: true, slug: true, statusPageEnabled: true, planTier: true,
-      slackChannelId: true, slackTeamId: true, samlEnabled: true, samlMetadataUrl: true,
-      samlOrganizationId: true, samlConnectionId: true, complianceMode: true, trialEndsAt: true,
+      id: true,
+      name: true,
+      slug: true,
+      statusPageEnabled: true,
+      planTier: true,
+      slackChannelId: true,
+      slackTeamId: true,
+      samlEnabled: true,
+      samlMetadataUrl: true,
+      samlOrganizationId: true,
+      samlConnectionId: true,
+      complianceMode: true,
+      trialEndsAt: true,
       billing: { select: { dodoCustomerId: true, dodoSubscriptionId: true, status: true } },
     },
   });
@@ -58,19 +68,25 @@ export default async function SettingsWorkspacePage() {
   const webhooksAllowed = isFeatureAllowed(effectivePlanTier, "webhooks");
 
   return (
-    <div className="space-y-16 pt-8">
-      <section>
-        <p className="kicker">Workspace controls</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-100">Quotas, integrations, and workspace policy</h1>
-        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
-          Manage workspace-level rate limits, status page behavior, Slack + SSO configuration, and signed webhook inputs.
-        </p>
+    <div className="page-stack">
+      <section className="page-header section-enter">
+        <div className="page-header-main">
+          <p className="page-kicker">Workspace</p>
+          <h1 className="page-title">Quotas, integrations, and workspace policy</h1>
+          <p className="page-description">
+            Control rate limits, signed inputs, status surfaces, and incident routing policy at the workspace level.
+          </p>
+        </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100">Workspace quotas</h2>
-        <p className="mt-1 text-sm text-neutral-500">Tenant-aware rate-limit and daily quota controls for this workspace.</p>
-        <div className="mt-8">
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Workspace quotas</h2>
+          <p className="settings-section-description">
+            Tenant-aware rate limits and daily usage controls for API calls, triage runs, reminders, and outbound updates.
+          </p>
+        </div>
+        <div>
           <QuotaSettingsPanel
             initialQuota={{
               apiRequestsPerMinute: clampedQuota.apiRequestsPerMinute,
@@ -91,23 +107,31 @@ export default async function SettingsWorkspacePage() {
         </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100">
-          On-call rotation
-          <PlanBadge allowed={onCallAllowed} planLabel="Pro" />
-        </h2>
-        <p className="mt-1 text-sm text-neutral-500">View the current on-call schedule and rotation status for P1 escalations.</p>
-        <div className="mt-8">
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">
+            On-call rotation
+            <PlanBadge allowed={onCallAllowed} planLabel="Pro" />
+          </h2>
+          <p className="settings-section-description">
+            Review the current escalation schedule for P1 incidents and verify who will be paged next.
+          </p>
+        </div>
+        <div>
           <UpgradeGate allowed={onCallAllowed} planLabel="Pro">
             <OnCallPanel />
           </UpgradeGate>
         </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100">Workspace settings</h2>
-        <p className="mt-1 text-sm text-neutral-500">Control public status page, Slack connect/channel, and enterprise SSO metadata.</p>
-        <div className="mt-8">
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Workspace settings</h2>
+          <p className="settings-section-description">
+            Configure the public status page, Slack incident routing, compliance mode, and enterprise SSO metadata.
+          </p>
+        </div>
+        <div>
           <WorkspaceSettingsPanel
             workspace={{ ...workspace, planTier: effectivePlanTier }}
             slackInstallUrl={slackInstallUrl(auth.user.workspaceId)}
@@ -115,27 +139,31 @@ export default async function SettingsWorkspacePage() {
         </div>
       </section>
 
-      <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100">
-          Webhook integrations
-          <PlanBadge allowed={webhooksAllowed} planLabel="Starter" />
-        </h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Configure signed inbound webhook secrets for Datadog, PagerDuty, Sentry, and AI observability tools.
-        </p>
-        <div className="mt-8">
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">
+            Webhook integrations
+            <PlanBadge allowed={webhooksAllowed} planLabel="Starter" />
+          </h2>
+          <p className="settings-section-description">
+            Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.
+          </p>
+        </div>
+        <div>
           <UpgradeGate allowed={webhooksAllowed} planLabel="Starter">
             <IntegrationsPanel endpoints={endpoints} initialIntegrations={integrations} />
           </UpgradeGate>
         </div>
       </section>
 
-      <section className="pb-10">
-        <h2 className="text-xl font-medium text-slate-100">Browser push notifications</h2>
-        <p className="mt-1 text-sm text-neutral-500">
-          Enable browser push for reminder and escalation alerts for your account.
-        </p>
-        <div className="mt-8">
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Browser push notifications</h2>
+          <p className="settings-section-description">
+            Enable device-level reminders and escalation alerts for your account.
+          </p>
+        </div>
+        <div>
           <PushNotificationPanel />
         </div>
       </section>

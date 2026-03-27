@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LogOut, Loader2 } from "lucide-react";
+import { CircleNotch, SignOut } from "@phosphor-icons/react";
 
 export function LogoutButton({ compact }: { compact?: boolean }) {
   const router = useRouter();
@@ -18,15 +18,16 @@ export function LogoutButton({ compact }: { compact?: boolean }) {
 
   return (
     <button 
-      className={compact ? "menu-toggle mx-auto" : "btn btn-ghost"} 
+      className={compact ? "app-sidebar-toggle mx-auto" : "btn btn-ghost w-full justify-start"} 
       disabled={loading} 
       onClick={onLogout}
+      type="button"
       title="Sign out"
     >
       {loading ? (
-        <Loader2 className={`${compact ? 'h-5 w-5' : 'h-4 w-4 mr-2'} animate-spin`} />
+        <CircleNotch className="animate-spin" size={compact ? 18 : 16} />
       ) : (
-        <LogOut className={compact ? "h-5 w-5" : "h-4 w-4 mr-2"} />
+        <SignOut size={compact ? 18 : 16} />
       )}
       {!compact && (loading ? "Signing out..." : "Sign out")}
     </button>

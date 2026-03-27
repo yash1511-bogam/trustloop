@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
+import { Moon, SunDim } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import type { ThemeMode } from "@/lib/theme";
 
@@ -46,13 +46,13 @@ export function ThemeToggle() {
   return (
     <button
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="menu-toggle"
+      className="btn btn-ghost btn-sm"
       disabled={loading}
       onClick={toggleTheme}
       type="button"
       title={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      {isDark ? <SunDim size={16} /> : <Moon size={16} />}
     </button>
   );
 }

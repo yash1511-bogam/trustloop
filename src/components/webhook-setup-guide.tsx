@@ -78,7 +78,7 @@ export function WebhookSetupGuide() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium text-white">Webhook setup guides</h3>
+      <h3 className="text-lg font-medium text-[var(--color-bright)]">Webhook setup guides</h3>
       <div className="flex flex-wrap gap-2">
         {Object.entries(guides).map(([key, guide]) => (
           <button
@@ -92,10 +92,10 @@ export function WebhookSetupGuide() {
       </div>
       {selected && guides[selected] && (
         <div className="panel-card p-4 space-y-2">
-          <h4 className="font-medium text-white">{guides[selected].name} setup</h4>
+          <h4 className="font-medium text-[var(--color-bright)]">{guides[selected].name} setup</h4>
           <ol className="list-decimal list-inside space-y-1">
             {guides[selected].steps.map((step, i) => (
-              <li key={i} className="text-sm text-neutral-300">
+              <li key={i} className="text-sm text-[var(--color-body)]">
                 {step.replace("{baseUrl}", baseUrl)}
               </li>
             ))}

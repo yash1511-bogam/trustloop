@@ -53,6 +53,38 @@ const faqSchema = {
         text: "Yes. You can configure tenant-aware rate limits and daily quotas for each workspace.",
       },
     },
+    {
+      "@type": "Question",
+      name: "What AI models do you support?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "TrustLoop supports OpenAI, Anthropic, and Gemini provider workflows with bring-your-own-key controls.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Is this GDPR compliant?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "TrustLoop is designed for teams handling regulated data with scoped access, audit trails, and encrypted key storage.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What happens after the trial?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "You can upgrade in-product, move to an enterprise conversation, or allow the workspace trial to expire without a forced card-on-file conversion.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Do you have an API?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. Workspace API keys support automation, status update flows, and internal operational tooling.",
+      },
+    },
   ],
 };
 

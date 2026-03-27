@@ -1,5 +1,6 @@
 "use client";
 
+import { CaretDown } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Role } from "@prisma/client";
@@ -59,12 +60,10 @@ export function WorkspaceSwitcher({
   }
 
   return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-[10px] uppercase tracking-[0.18em] text-neutral-500">
-        Workspace
-      </span>
+    <div className="relative">
       <select
-        className="select !py-2 text-sm"
+        aria-label="Switch workspace"
+        className="select pr-9 text-sm"
         disabled={loading}
         value={selectedWorkspaceId}
         onChange={(event) => {
@@ -79,6 +78,12 @@ export function WorkspaceSwitcher({
           </option>
         ))}
       </select>
-    </label>
+      <CaretDown
+        aria-hidden="true"
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+        color="var(--color-ghost)"
+        size={14}
+      />
+    </div>
   );
 }

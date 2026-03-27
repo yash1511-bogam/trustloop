@@ -40,7 +40,7 @@ export function StatusSubscribeForm({ slug, turnstileSiteKey }: Props) {
   }
 
   if (state === "done") {
-    return <p className="text-sm text-emerald-400">Subscribed! You&apos;ll receive incident updates.</p>;
+    return <p className="text-sm text-[var(--color-resolve)]">Subscribed! You&apos;ll receive incident updates.</p>;
   }
 
   return (
@@ -63,7 +63,7 @@ export function StatusSubscribeForm({ slug, turnstileSiteKey }: Props) {
         </button>
       </div>
       <TurnstileWidget ref={turnstileRef} siteKey={turnstileSiteKey} onTokenChange={setTurnstileToken} />
-      {state === "error" && <p className="text-sm text-red-400">Failed. Try again.</p>}
+      {state === "error" && <p className="text-sm text-[var(--color-danger)]">Failed. Try again.</p>}
     </form>
   );
 }

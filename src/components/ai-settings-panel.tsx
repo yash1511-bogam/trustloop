@@ -2,7 +2,7 @@
 
 import { AiProvider, WorkflowType } from "@prisma/client";
 import { useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, KeyRound, Workflow } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, KeyRound, Workflow } from "@/components/icon-compat";
 
 type KeyRecord = {
   provider: AiProvider;
@@ -147,18 +147,18 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
   return (
     <div className="space-y-12">
       {(status || error) && (
-        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-red-500/10 border-red-500/20 text-red-400" : "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"}`}>
+        <div className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
           {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
           <span>{error || status}</span>
         </div>
       )}
 
       <section className="space-y-8">
-        <div className="flex items-center gap-2 text-slate-100">
-          <KeyRound className="w-5 h-5 text-sky-400" />
+        <div className="flex items-center gap-2 text-[var(--color-title)]">
+          <KeyRound className="w-5 h-5 text-[var(--color-signal)]" />
           <h2 className="text-lg font-medium">Provider keys</h2>
         </div>
-        <p className="text-sm text-neutral-400">
+        <p className="text-sm text-[var(--color-subtext)]">
           Keys are encrypted at rest, never shown in full after save, and only used
           server-side for AI workflows.
         </p>
@@ -169,11 +169,11 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
             const isHealthy = record?.healthStatus === "OK";
 
             return (
-              <div className="group relative p-5 rounded-2xl border border-white/5 bg-white/5 transition-colors hover:border-white/10" key={provider}>
+              <div className="group relative p-5 rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)] transition-colors hover:border-[var(--color-rim)]" key={provider}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-medium text-slate-100">{provider}</h3>
+                  <h3 className="font-medium text-[var(--color-title)]">{provider}</h3>
                   {record && (
-                    <span className={`text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border ${isHealthy ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400" : "border-amber-500/20 bg-amber-500/10 text-amber-400"}`}>
+                    <span className={`text-[10px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full border ${isHealthy ? "border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] text-[var(--color-resolve)]" : "border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] text-[var(--color-warning)]"}`}>
                       {isHealthy ? "Healthy" : record.healthStatus}
                     </span>
                   )}
@@ -182,26 +182,26 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                 <div className="space-y-1 mb-6">
                   {record ? (
                     <>
-                      <p className="text-xs text-neutral-400">
-                        Ends in <span className="font-mono text-slate-300">{record.keyLast4}</span>
+                      <p className="text-xs text-[var(--color-subtext)]">
+                        Ends in <span className="font-mono text-[var(--color-body)]">{record.keyLast4}</span>
                       </p>
                       {record.lastVerifiedAt && (
-                        <p className="text-[10px] text-neutral-500">
+                        <p className="text-[10px] text-[var(--color-ghost)]">
                           Verified {new Date(record.lastVerifiedAt).toLocaleString("en-US")}
                         </p>
                       )}
                       {record?.lastVerificationError && (
-                        <p className="text-xs text-red-400 mt-2">{record.lastVerificationError}</p>
+                        <p className="text-xs text-[var(--color-danger)] mt-2">{record.lastVerificationError}</p>
                       )}
                     </>
                   ) : (
-                    <p className="text-xs text-neutral-500">No key configured</p>
+                    <p className="text-xs text-[var(--color-ghost)]">No key configured</p>
                   )}
                 </div>
 
                 <div className="space-y-3">
                   <input
-                    className="w-full bg-transparent border-b border-white/20 pb-2 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600 text-sm"
+                    className="w-full bg-transparent border-b border-[var(--color-rim)] pb-2 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)] text-sm"
                     placeholder={`Enter ${provider} API key`}
                     type="password"
                     value={keyInputs[provider] ?? ""}
@@ -238,9 +238,9 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
         </div>
       </section>
 
-      <section className="space-y-8 pt-8 border-t border-white/5">
-        <div className="flex items-center gap-2 text-slate-100">
-          <Workflow className="w-5 h-5 text-sky-400" />
+      <section className="space-y-8 pt-8 border-t border-[var(--color-rim)]">
+        <div className="flex items-center gap-2 text-[var(--color-title)]">
+          <Workflow className="w-5 h-5 text-[var(--color-signal)]" />
           <h2 className="text-lg font-medium">Workflow routing</h2>
         </div>
         
@@ -256,17 +256,17 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                               workflows.find(w => w.workflowType === workflowType)?.provider !== workflow.provider;
 
             return (
-              <div className="group flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-transparent hover:bg-white/5 hover:border-white/5 transition-colors" key={workflowType}>
+              <div className="group flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-2xl border border-transparent hover:bg-[var(--color-surface)] hover:border-[var(--color-rim)] transition-colors" key={workflowType}>
                 <div className="flex-1">
-                  <p className="font-medium text-slate-200">{workflowType}</p>
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <p className="font-medium text-[var(--color-body)]">{workflowType}</p>
+                  <p className="text-xs text-[var(--color-ghost)] mt-1">
                     Route this specific task to a dedicated provider and model.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
                   <select
-                    className="bg-transparent text-sm text-slate-300 focus:outline-none focus:text-sky-400 transition-colors cursor-pointer appearance-none border-b border-white/20 hover:border-white/40 pb-1 w-32"
+                    className="bg-transparent text-sm text-[var(--color-body)] focus:outline-none focus:text-[var(--color-signal)] transition-colors cursor-pointer appearance-none border-b border-[var(--color-rim)] hover:border-[var(--color-muted)] pb-1 w-32"
                     value={workflow.provider}
                     onChange={(event) =>
                       setWorkflowState((prev) => ({
@@ -279,14 +279,14 @@ export function AiSettingsPanel({ keys, workflows }: Props) {
                     }
                   >
                     {providers.map((provider) => (
-                      <option className="bg-slate-900" key={provider} value={provider}>
+                      <option className="bg-[var(--color-void)]" key={provider} value={provider}>
                         {provider}
                       </option>
                     ))}
                   </select>
 
                   <input
-                    className="bg-transparent border-b border-white/20 pb-1 text-slate-100 focus:outline-none focus:border-sky-400 transition-colors placeholder:text-neutral-600 text-sm w-40"
+                    className="bg-transparent border-b border-[var(--color-rim)] pb-1 text-[var(--color-title)] focus:outline-none focus:border-[var(--color-signal)] transition-colors placeholder:text-[var(--color-ghost)] text-sm w-40"
                     value={workflow.model}
                     placeholder="Model ID"
                     onChange={(event) =>

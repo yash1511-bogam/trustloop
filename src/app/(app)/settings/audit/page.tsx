@@ -1,3 +1,5 @@
+import { FileText } from "@phosphor-icons/react/dist/ssr";
+import { EmptyState } from "@/components/empty-state";
 import { requireAuth } from "@/lib/auth";
 import { listAuditLogs } from "@/lib/audit";
 
@@ -6,51 +8,52 @@ export default async function AuditLogPage() {
   const logs = await listAuditLogs(auth.user.workspaceId, 100);
 
   return (
-    <>
-      <h2 className="mb-6 text-2xl font-semibold text-slate-100">Audit Log</h2>
-      <p className="mb-4 text-sm text-neutral-500">
-        All privileged actions in your workspace are recorded here.
-      </p>
-
-      <div className="surface overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 text-xs uppercase text-neutral-500">
-              <th className="px-4 py-3">Time</th>
-              <th className="px-4 py-3">Actor</th>
-              <th className="px-4 py-3">Action</th>
-              <th className="px-4 py-3">Summary</th>
-              <th className="px-4 py-3">IP</th>
-            </tr>
-          </thead>
-          <tbody>
-            {logs.map((log) => (
-              <tr key={log.id} className="border-b border-neutral-800/50">
-                <td className="whitespace-nowrap px-4 py-3 text-neutral-400">
-                  {log.createdAt.toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-slate-300">
-                  {log.actorUser?.name ?? log.actorApiKey?.name ?? "System"}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="badge text-xs">{log.action}</span>
-                </td>
-                <td className="max-w-xs truncate px-4 py-3 text-neutral-400">
-                  {log.summary}
-                </td>
-                <td className="px-4 py-3 text-neutral-500">{log.ipAddress ?? "-"}</td>
-              </tr>
-            ))}
-            {logs.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">
-                  No audit log entries yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+    <section className="settings-section section-enter">
+      <div className="settings-section-header">
+        <h2 className="settings-section-title">Audit log</h2>
+        <p className="settings-section-description">
+          All privileged actions across your workspace are recorded here for review and compliance checks.
+        </p>
       </div>
-    </>
+
+      {logs.length === 0 ? (
+        <div className="surface">
+          <EmptyState
+            icon={FileText}
+            title="No audit activity yet."
+            description="Privileged workspace actions will appear here as your team configures TrustLoop."
+          />
+        </div>
+      ) : (
+        <div className="table-shell overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Summary</th>
+                <th>IP</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr key={log.id}>
+                  <td className="whitespace-nowrap text-[var(--color-subtext)]">
+                    {log.createdAt.toLocaleString()}
+                  </td>
+                  <td>{log.actorUser?.name ?? log.actorApiKey?.name ?? "System"}</td>
+                  <td>
+                    <span className="badge badge-sm">{log.action}</span>
+                  </td>
+                  <td className="max-w-xs truncate text-[var(--color-subtext)]">{log.summary}</td>
+                  <td className="text-[var(--color-ghost)]">{log.ipAddress ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

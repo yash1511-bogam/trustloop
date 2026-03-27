@@ -136,10 +136,10 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
         turnstileToken={turnstileToken}
       />
 
-      <div className="flex items-center gap-2 text-xs text-neutral-500">
-        <div className="h-px flex-1 bg-neutral-900" />
+      <div className="flex items-center gap-2 text-xs text-[var(--color-ghost)]">
+        <div className="h-px flex-1 bg-[var(--color-rim)]" />
         <span>or use email OTP</span>
-        <div className="h-px flex-1 bg-neutral-900" />
+        <div className="h-px flex-1 bg-[var(--color-rim)]" />
       </div>
 
       <form className="space-y-4" onSubmit={startChallenge}>
@@ -204,12 +204,12 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
       ) : null}
 
       {message ? (
-        <p className="rounded-lg border border-emerald-900/50 bg-emerald-950/20 p-3 text-sm text-emerald-400">
+        <p className="rounded-[var(--radius-sm)] border border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] p-3 text-sm text-[var(--color-resolve)]">
           {message}
         </p>
       ) : null}
       {error ? (
-        <p className="rounded-lg border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-400">
+        <p className="rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-3 text-sm text-[var(--color-danger)]">
           {error}
         </p>
       ) : null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, RefreshCcw } from "lucide-react";
+import { Loader2, RefreshCcw } from "@/components/icon-compat";
 
 export function RefreshDataButton() {
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ export function RefreshDataButton() {
         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCcw className="w-3.5 h-3.5" />}
         {loading ? "Refreshing…" : "Refresh data"}
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-[var(--color-danger)]">{error}</span>}
     </div>
   );
 }

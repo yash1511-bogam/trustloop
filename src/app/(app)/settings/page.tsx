@@ -53,51 +53,57 @@ export default async function SettingsOverviewPage() {
   });
 
   return (
-    <div className="space-y-16 pt-8">
-      <section>
-        <p className="kicker">Settings workspace</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-100">Configuration overview</h1>
-        <p className="mt-2 max-w-3xl text-sm text-neutral-500">
-          Settings are now split into focused pages to reduce page clutter and make operations faster.
-        </p>
-      </section>
-
-      <section className="pb-10 border-b border-white/5">
-        <h2 className="text-xl font-medium text-slate-100 mb-8">Workspace snapshot</h2>
-        <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">AI keys</p>
-            <p className="text-2xl font-light text-slate-100">{keyCount}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Routes</p>
-            <p className="text-2xl font-light text-slate-100">{workflowCount}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Members</p>
-            <p className="text-2xl font-light text-slate-100">{memberCount}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Invites</p>
-            <p className="text-2xl font-light text-slate-100">{inviteCount}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Webhooks</p>
-            <p className="text-2xl font-light text-slate-100">{activeIntegrations}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-medium">Billing</p>
-            <p className="text-sm font-medium text-slate-200 mt-2">{workspace.billing?.status ?? "NONE"}</p>
-          </div>
+    <div className="page-stack">
+      <section className="page-header section-enter">
+        <div className="page-header-main">
+          <p className="page-kicker">Workspace</p>
+          <h1 className="page-title">Configuration overview</h1>
+          <p className="page-description">
+            The operating state of your workspace at a glance, before you move into deeper settings.
+          </p>
         </div>
       </section>
 
-      <section className="pb-10">
-        <h2 className="text-xl font-medium text-slate-100">Navigation</h2>
-        <p className="mt-2 text-sm text-neutral-500 max-w-2xl">
-          Use the left menu bar to open AI & API Keys, Workspace, Team, and Billing pages. 
-          Your current active plan tier is <strong className="text-slate-200 font-medium">{planDefinitionFor(effectivePlanTier).label}</strong>.
-        </p>
+      <section className="settings-section section-enter">
+        <div className="settings-section-header">
+          <h2 className="settings-section-title">Workspace snapshot</h2>
+          <p className="settings-section-description">
+            Current counts for keys, routing, access, and live integrations.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <article className="metric-card">
+            <p className="metric-label">AI keys</p>
+            <p className="metric-value">{keyCount}</p>
+            <p className="metric-meta">Active provider connections</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Routes</p>
+            <p className="metric-value">{workflowCount}</p>
+            <p className="metric-meta">Configured workflow mappings</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Members</p>
+            <p className="metric-value">{memberCount}</p>
+            <p className="metric-meta">Current team members</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Invites</p>
+            <p className="metric-value">{inviteCount}</p>
+            <p className="metric-meta">Pending workspace invites</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Integrations</p>
+            <p className="metric-value">{activeIntegrations}</p>
+            <p className="metric-meta">Active webhook connections</p>
+          </article>
+          <article className="metric-card">
+            <p className="metric-label">Plan</p>
+            <p className="metric-value">{planDefinitionFor(effectivePlanTier).label}</p>
+            <p className="metric-meta">{workspace.billing?.status ?? "No billing status yet"}</p>
+          </article>
+        </div>
       </section>
     </div>
   );
