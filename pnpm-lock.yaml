@@ -65,9 +65,6 @@ importers:
       ioredis:
         specifier: ^5.10.1
         version: 5.10.1
-      lucide-react:
-        specifier: ^1.7.0
-        version: 1.7.0(react@19.2.4)
       motion:
         specifier: ^12.38.0
         version: 12.38.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4)

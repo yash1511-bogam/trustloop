@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import {
   Geist,
   Instrument_Serif,
@@ -8,7 +7,6 @@ import {
 } from "next/font/google";
 import Script from "next/script";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
-import { THEME_COOKIE_NAME, normalizeTheme } from "@/lib/theme";
 import "./globals.css";
 
 const display = Instrument_Serif({
@@ -105,11 +103,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeStore = await cookies();
-  const theme = normalizeTheme(themeStore.get(THEME_COOKIE_NAME)?.value);
-
   return (
-    <html lang="en" data-theme={theme}>
+    <html lang="en" data-theme="dark">
       <body className={`${display.variable} ${heading.variable} ${ui.variable} ${mono.variable} antialiased`}>
         {children}
         <CookieConsentBanner />

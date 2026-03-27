@@ -69,10 +69,6 @@
   --shell-float-blur: 0px;
 }
 
-[data-theme="light"] {
-  color-scheme: dark;
-}
-
 * {
   box-sizing: border-box;
   min-width: 0;

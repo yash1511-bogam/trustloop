@@ -22,7 +22,7 @@ import {
   XLogo,
 } from "@phosphor-icons/react";
 import { FooterSubscribeForm } from "@/components/footer-subscribe-form";
-import { ThemeToggle } from "@/components/theme-toggle";
+
 import { TrustLoopLogo } from "@/components/trustloop-logo";
 
 const integrationWordmarks = [
@@ -402,7 +402,6 @@ export function LandingBelowFold() {
             <TrustLoopLogo size={16} variant="full" />
             <p className="text-[13px] text-[var(--color-subtext)]">AI incident operations for teams that ship.</p>
             <p className="text-[12px] text-[var(--color-ghost)]">© 2026 TrustLoop. All rights reserved.</p>
-            <ThemeToggle />
           </div>
 
           <div className="grid gap-3">
@@ -417,11 +416,12 @@ export function LandingBelowFold() {
           <div className="grid gap-3">
             <p className="text-[13px] font-medium text-[var(--color-subtext)]">Company</p>
             <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/blog">Blog</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/about">About</Link>
             <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/terms">Terms</Link>
             <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/privacy">Privacy</Link>
+            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/security">Security</Link>
             <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/dpa">DPA</Link>
             <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/billing-policy">Billing Policy</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/docs/guides/identity-and-access">Security</Link>
           </div>
 
           <div>

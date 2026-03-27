@@ -1,11 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Buildings } from "@phosphor-icons/react";
 
 export default function CompleteRegistrationPage() {
+  return (
+    <Suspense>
+      <CompleteRegistrationInner />
+    </Suspense>
+  );
+}
+
+function CompleteRegistrationInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const session = searchParams.get("session");
