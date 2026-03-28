@@ -21,20 +21,15 @@ import {
   X,
   XLogo,
 } from "@phosphor-icons/react";
-import { FooterSubscribeForm } from "@/components/footer-subscribe-form";
+import {
+  HiOutlineSignal,
+  HiOutlineCpuChip,
+  HiOutlineChatBubbleLeftRight,
+  HiOutlineAcademicCap,
+} from "react-icons/hi2";
 
 import { TrustLoopLogo } from "@/components/trustloop-logo";
-
-const integrationWordmarks = [
-  "Datadog",
-  "PagerDuty",
-  "Sentry",
-  "Slack",
-  "Langfuse",
-  "Helicone",
-  "Arize Phoenix",
-  "Braintrust",
-];
+import { integrationLogos } from "@/components/integration-logos";
 
 const problemCards = [
   {
@@ -63,28 +58,28 @@ const workflowSteps = [
     label: "Detect",
     title: "Incidents flow in from the systems you already trust.",
     body: "Incidents flow in from Datadog, PagerDuty, Sentry, or your team and are automatically routed by severity and AI category.",
-    icon: Broadcast,
+    icon: <HiOutlineSignal size={20} color="#22d3ee" />,
   },
   {
     number: "02",
     label: "Triage",
     title: "Provider intelligence stays under your control.",
     body: "Your AI provider analyzes the incident, suggests severity, root cause, and a customer-safe update using your key and your data.",
-    icon: Robot,
+    icon: <HiOutlineCpuChip size={20} color="#a78bfa" />,
   },
   {
     number: "03",
     label: "Respond",
     title: "Approval gates slow mistakes, not responders.",
     body: "Draft, review, and approve customer communications with configurable approval gates. Nothing goes out unreviewed.",
-    icon: ChatCircle,
+    icon: <HiOutlineChatBubbleLeftRight size={20} color="#34d399" />,
   },
   {
     number: "04",
     label: "Learn",
     title: "Every incident becomes operational leverage.",
     body: "Post-mortem generation, SLA breach reports, and executive analytics close the loop. The next response starts smarter.",
-    icon: Notepad,
+    icon: <HiOutlineAcademicCap size={20} color="#fbbf24" />,
   },
 ];
 
@@ -172,207 +167,234 @@ const faqItems = [
   ["Do you have an API?", "Yes. Workspace API keys support automation, status update flows, and internal operational tooling."],
 ];
 
-function WorkflowMockup({ index }: { index: number }) {
-  const cards = [
-    [
-      ["Inbound signal", "PagerDuty: inference quality regression"],
-      ["Severity", "P1 suggested"],
-      ["Category", "Hallucination drift"],
-    ],
-    [
-      ["Root cause", "Prompt package rollout"],
-      ["Owner", "Product reliability"],
-      ["Draft", "Customer-safe update ready"],
-    ],
-    [
-      ["Approval", "Comms lead review"],
-      ["Channel", "Status page + Slack"],
-      ["Next update", "12 minutes"],
-    ],
-    [
-      ["Post-mortem", "In progress"],
-      ["SLA risk", "Contained"],
-      ["Executive note", "Prepared"],
-    ],
-  ] as const;
-
-  return (
-    <div className="surface p-5">
-      <div className="grid gap-3">
-        {cards[index].map(([label, value]) => (
-          <div className="rounded-[var(--radius-sm)] border border-[var(--color-rim)] bg-[var(--color-void)] p-3" key={label}>
-            <p className="metric-label">{label}</p>
-            <p className="mt-2 text-sm text-[var(--color-title)]">{value}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function LandingBelowFold() {
   const [annual, setAnnual] = useState(false);
 
   return (
     <>
-      <section className="marketing-section pt-12">
-        <div className="text-center">
-          <p className="page-kicker">Works with your monitoring stack</p>
-        </div>
-        <div className="mt-6 overflow-hidden border-y border-[var(--color-rim)] py-4">
-          <div className="logo-marquee-track flex min-w-max gap-8">
-            {[...integrationWordmarks, ...integrationWordmarks].map((logo, index) => (
-              <span className="font-[var(--font-mono)] text-[12px] uppercase tracking-[0.16em] text-[var(--color-ghost)]" key={`${logo}-${index}`}>
-                {logo}
-              </span>
+      <section className="marketing-section scroll-mt-24" id="why">
+        <div className="mx-auto max-w-[960px]">
+          <framerMotion.h2
+            className="text-center font-[var(--font-heading)] text-[clamp(28px,4vw,44px)] font-bold leading-[1.08] text-[var(--color-title)]"
+            initial={{ opacity: 0, filter: "blur(10px)" }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: true, amount: 0.5 }}
+            whileInView={{ opacity: 1, filter: "blur(0px)" }}
+          >
+            AI failures need a different playbook.
+          </framerMotion.h2>
+          <framerMotion.p
+            className="mx-auto mt-5 max-w-[520px] text-center text-[16px] leading-relaxed text-[var(--color-subtext)]"
+            initial={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            viewport={{ once: true, amount: 0.5 }}
+            whileInView={{ opacity: 1, y: 0 }}
+          >
+            Standard incident tooling breaks down when the failure surface includes models, prompts, evaluation drift, and customer trust.
+          </framerMotion.p>
+
+          <div className="mt-20 space-y-20">
+            {problemCards.map((card, i) => (
+              <framerMotion.div
+                className={`flex flex-col gap-6 md:flex-row md:items-start md:gap-16 ${i % 2 === 1 ? "md:flex-row-reverse" : ""}`}
+                initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
+                key={card.title}
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                viewport={{ once: true, amount: 0.2 }}
+                whileInView={{ opacity: 1, x: 0 }}
+              >
+                <div className="relative flex shrink-0 items-center justify-center md:w-[200px]">
+                  <span className="pointer-events-none select-none font-[var(--font-heading)] text-[120px] font-extrabold leading-none" style={{ color: card.color, opacity: 0.07 }}>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <card.icon className="absolute" color={card.color} size={36} weight="duotone" />
+                </div>
+                <div className="max-w-[480px]">
+                  <h3 className="font-[var(--font-heading)] text-[22px] font-bold leading-snug text-[var(--color-title)]">
+                    {card.title}
+                  </h3>
+                  <p className="mt-3 text-[15px] leading-[1.8] text-[var(--color-subtext)]">{card.body}</p>
+                </div>
+              </framerMotion.div>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="marketing-section scroll-mt-24" id="features">
-        <div className="mx-auto max-w-[680px] text-center">
-          <h2 className="font-[var(--font-heading)] text-[36px] font-bold leading-[1.05] text-[var(--color-title)]">
-            AI failures need a different playbook.
-          </h2>
-          <p className="mx-auto mt-4 max-w-[480px] text-[16px] text-[var(--color-subtext)]">
-            Standard incident tooling breaks down when the failure surface includes models, prompts, evaluation drift, and customer trust.
-          </p>
-        </div>
-        <div className="mt-12 grid gap-5 lg:grid-cols-3">
-          {problemCards.map((card) => (
-            <framerMotion.article
-              className="marketing-card border border-[var(--color-rim)] bg-[var(--color-surface)] p-[28px_24px]"
-              initial={{ opacity: 0, y: 16 }}
-              key={card.title}
-              transition={{ duration: 0.35 }}
-              viewport={{ once: true, amount: 0.3 }}
-              whileInView={{ opacity: 1, y: 0 }}
-            >
-              <card.icon color={card.color} size={36} weight="duotone" />
-              <h3 className="mt-5 font-[var(--font-heading)] text-[20px] font-semibold text-[var(--color-title)]">
-                {card.title}
-              </h3>
-              <p className="mt-3 text-[15px] leading-7 text-[var(--color-subtext)]">{card.body}</p>
-            </framerMotion.article>
-          ))}
+      <section className="marketing-section scroll-mt-24" id="how-it-works">
+        <div className="mx-auto max-w-[960px]">
+          <framerMotion.h2
+            className="text-center font-[var(--font-heading)] text-[clamp(28px,4vw,44px)] font-bold leading-[1.08] text-[var(--color-title)]"
+            initial={{ opacity: 0, scale: 0.92 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, amount: 0.5 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+          >
+            From signal to resolution,<br className="hidden sm:block" /> in one loop.
+          </framerMotion.h2>
+
+          <div className="mt-20 grid gap-px overflow-hidden rounded-[var(--radius-xl)] bg-[var(--color-rim)] sm:grid-cols-2 lg:grid-cols-4">
+            {workflowSteps.map((step, i) => (
+              <framerMotion.div
+                className="relative flex flex-col bg-[var(--color-surface)] p-7"
+                initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                key={step.number}
+                transition={{ duration: 0.5, delay: i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                viewport={{ once: true, amount: 0.1 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              >
+                <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-signal)] to-transparent" style={{ opacity: 0.6 }} />
+                <span className="font-[var(--font-mono)] text-[11px] tracking-[0.16em] text-[var(--color-ghost)]">{step.number}</span>
+                <span className="mt-4 flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface)]">
+                  {step.icon}
+                </span>
+                <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.14em] text-[var(--color-signal)]">{step.label}</p>
+                <h3 className="mt-2 font-[var(--font-heading)] text-[17px] font-bold leading-snug text-[var(--color-title)]">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-[13px] leading-[1.7] text-[var(--color-subtext)]">{step.body}</p>
+              </framerMotion.div>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="marketing-section scroll-mt-24" id="workflow">
-        <div className="relative grid gap-12">
-          <div aria-hidden className="absolute left-6 top-0 hidden h-full w-px bg-gradient-to-b from-[var(--color-rim)] via-[var(--color-signal)] to-[var(--color-rim)] opacity-30 lg:block" />
-          {workflowSteps.map((step, index) => {
-            const reverse = index % 2 === 1;
-            return (
-              <div className={`grid items-center gap-8 lg:grid-cols-2 ${reverse ? "lg:[&>*:first-child]:order-2 lg:[&>*:last-child]:order-1" : ""}`} key={step.number}>
-                <div className="relative">
-                  <div className="pointer-events-none absolute left-0 top-[-18px] font-[var(--font-heading)] text-[120px] font-extrabold leading-none text-[rgba(92,92,102,0.06)]">
-                    {step.number}
-                  </div>
-                  <div className="relative z-10 max-w-[480px]">
-                    <div className="mb-3 flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--color-signal)] bg-[var(--color-signal-dim)]">
-                        <step.icon color="var(--color-signal)" size={16} weight="duotone" />
-                      </span>
-                      <p className="page-kicker text-[var(--color-signal)]">{step.label}</p>
-                    </div>
-                    <h3 className="mt-4 font-[var(--font-heading)] text-[24px] font-bold text-[var(--color-title)]">
-                      {step.title}
-                    </h3>
-                    <p className="mt-4 text-[15px] leading-7 text-[var(--color-subtext)]">{step.body}</p>
-                  </div>
-                </div>
-                <WorkflowMockup index={index} />
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="marketing-section scroll-mt-24" id="integrations">
-        <div className="mx-auto max-w-[620px] text-center">
-          <h2 className="font-[var(--font-heading)] text-[36px] font-bold leading-[1.05] text-[var(--color-title)]">
+      <section className="marketing-section scroll-mt-24 overflow-hidden" id="integrations">
+        <div className="mx-auto max-w-[960px]">
+          <framerMotion.p
+            className="text-center text-[15px] leading-relaxed text-[var(--color-subtext)]"
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            viewport={{ once: true, amount: 0.5 }}
+            whileInView={{ opacity: 1 }}
+          >
             Connects to where failures happen.
-          </h2>
+          </framerMotion.p>
+          <framerMotion.h2
+            className="mt-3 text-center font-[var(--font-heading)] text-[clamp(32px,5vw,56px)] font-bold leading-[1.05] text-[var(--color-title)]"
+            initial={{ opacity: 0, letterSpacing: "0.15em" }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, amount: 0.5 }}
+            whileInView={{ opacity: 1, letterSpacing: "0em" }}
+          >
+            Your stack. Already supported.
+          </framerMotion.h2>
         </div>
-        <div className="mt-12 grid gap-4 md:grid-cols-2">
-          {integrationCards.map(([name, description, Icon]) => (
-            <article className="surface surface-clickable p-5" key={name}>
-              <Icon color="var(--color-subtext)" size={28} weight="duotone" />
-              <h3 className="mt-4 font-[var(--font-heading)] text-[15px] font-semibold text-[var(--color-title)]">{name}</h3>
-              <p className="mt-2 text-[13px] text-[var(--color-subtext)]">{description}</p>
-            </article>
-          ))}
+
+        <div className="relative mt-14">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-[var(--color-void)] to-transparent" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-[var(--color-void)] to-transparent" />
+          <div className="flex gap-[clamp(32px,5vw,64px)] overflow-hidden py-6">
+            <div className="logo-marquee-track flex shrink-0 items-center gap-[clamp(32px,5vw,64px)]">
+              {[...integrationCards, ...integrationCards].map(([name], i) => (
+                <span className="flex shrink-0 items-center gap-3 text-[var(--color-muted)]" key={`${name}-${i}`}>
+                  {integrationLogos[name]}
+                  <span className="whitespace-nowrap font-[var(--font-heading)] text-[clamp(18px,2.5vw,28px)] font-bold text-[var(--color-muted)]">{name}</span>
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="marketing-section scroll-mt-24" id="pricing">
-        <div className="mx-auto max-w-[560px] text-center">
-          <h2 className="font-[var(--font-heading)] text-[36px] font-bold leading-[1.05] text-[var(--color-title)]">
+        <div className="mx-auto max-w-[960px]">
+          <framerMotion.h2
+            className="text-center font-[var(--font-heading)] text-[clamp(32px,5vw,56px)] font-bold leading-[1.05] text-[var(--color-title)]"
+            initial={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true, amount: 0.5 }}
+            whileInView={{ opacity: 1, y: 0 }}
+          >
             Pricing that makes sense.
-          </h2>
-          <div className="mt-6 inline-flex items-center gap-1 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] p-1.5">
-            <button className={annual ? "btn btn-ghost" : "btn btn-primary"} onClick={() => setAnnual(false)} type="button">
-              Monthly
-            </button>
-            <button className={annual ? "btn btn-primary" : "btn btn-ghost"} onClick={() => setAnnual(true)} type="button">
-              Annual
-              <span className="ml-1 rounded-full bg-[var(--color-signal-dim)] px-2 py-0.5 text-[11px] text-[var(--color-signal)]">save 20%</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-12 grid gap-5 lg:grid-cols-3">
-          {plans.map((plan) => (
-            <article
-              className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.featured ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : plan.monthly === null ? "bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)] border-[var(--color-muted)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
-              key={plan.name}
-            >
-              {plan.featured ? (
-                <span className="absolute left-6 top-[-12px] badge badge-info bg-[var(--color-signal-dim)] text-[var(--color-signal)] border-transparent">
-                  Most Popular
-                </span>
-              ) : null}
-              <h3 className="font-[var(--font-heading)] text-[16px] font-extrabold text-[var(--color-title)]">{plan.name}</h3>
-              <div className="mt-4 flex items-end gap-2">
-                <span className="font-[var(--font-heading)] text-[48px] font-extrabold leading-none text-[var(--color-bright)]">
-                  {plan.monthly === null ? "Custom" : `$${annual ? plan.annual : plan.monthly}`}
-                </span>
-                <span className="pb-2 text-[16px] text-[var(--color-subtext)]">
-                  {plan.monthly === null ? "" : "/mo"}
-                </span>
-              </div>
-              <p className="mt-4 max-w-[220px] text-[14px] leading-6 text-[var(--color-subtext)]">{plan.description}</p>
-              <div className="mt-6 h-px bg-[var(--color-rim)]" />
-              <ul className="mt-6 grid gap-3 text-[14px] text-[var(--color-body)]">
-                {plan.features.map(([feature, enabled]) => (
-                  <li className="flex items-center gap-2" key={feature}>
-                    {enabled ? (
-                      <Check color="var(--color-signal)" size={16} weight="regular" />
-                    ) : (
-                      <X color="var(--color-ghost)" size={16} weight="regular" />
-                    )}
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                className={`mt-8 inline-flex w-full justify-center ${plan.cta.primary ? "btn btn-primary" : "btn btn-ghost"}`}
-                href={plan.cta.href}
+          </framerMotion.h2>
+          <div className="mt-6 flex justify-center">
+            <div className="inline-flex items-center rounded-full border border-[var(--color-rim)] bg-[var(--color-void)] p-1">
+              <button
+                className={`rounded-full px-5 py-2 text-[13px] font-semibold transition-all ${!annual ? "bg-[var(--color-bright)] text-[var(--color-void)]" : "bg-transparent text-[var(--color-subtext)] hover:text-[var(--color-body)]"}`}
+                onClick={() => setAnnual(false)}
+                type="button"
               >
-                {plan.cta.label}
-              </Link>
-            </article>
-          ))}
+                Monthly
+              </button>
+              <button
+                className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-[13px] font-semibold transition-all ${annual ? "bg-[var(--color-bright)] text-[var(--color-void)]" : "bg-transparent text-[var(--color-subtext)] hover:text-[var(--color-body)]"}`}
+                onClick={() => setAnnual(true)}
+                type="button"
+              >
+                Annual
+                <span className="rounded-full bg-[var(--color-signal)] px-1.5 py-0.5 text-[10px] font-bold text-white">−20%</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-14 grid items-stretch gap-4 lg:grid-cols-3">
+            {plans.map((plan) => (
+              <framerMotion.article
+                className={`relative flex flex-col rounded-[var(--radius-xl)] border ${plan.featured ? "border-[var(--color-signal)] bg-[var(--color-raised)] shadow-[0_0_40px_-12px_rgba(212,98,43,0.15)]" : plan.monthly === null ? "border-[var(--color-muted)] bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)]" : "border-[var(--color-rim)] bg-[var(--color-surface)]"}`}
+                initial={{ opacity: 0, scale: 0.9, filter: "blur(6px)" }}
+                key={plan.name}
+                transition={{ duration: 0.5, delay: plan.featured ? 0 : 0.1 }}
+                viewport={{ once: true, amount: 0.3 }}
+                whileInView={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+              >
+                {plan.featured && (
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--color-signal)] to-transparent" />
+                )}
+                <div className="flex flex-1 flex-col p-7">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-[var(--font-heading)] text-[15px] font-extrabold uppercase tracking-[0.08em] text-[var(--color-title)]">{plan.name}</h3>
+                    {plan.featured && (
+                      <span className="rounded-full bg-[var(--color-signal-dim)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-signal)]">Popular</span>
+                    )}
+                  </div>
+                  <div className="mt-5 flex items-baseline gap-1">
+                    <span className="font-[var(--font-heading)] text-[clamp(36px,4vw,52px)] font-extrabold leading-none text-[var(--color-bright)]">
+                      {plan.monthly === null ? "Custom" : `$${annual ? plan.annual : plan.monthly}`}
+                    </span>
+                    {plan.monthly !== null && (
+                      <span className="text-[15px] text-[var(--color-ghost)]">/mo</span>
+                    )}
+                  </div>
+                  <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-subtext)]">{plan.description}</p>
+                  <Link
+                    className={`mt-auto inline-flex w-full justify-center ${plan.cta.primary ? "btn btn-primary" : "btn btn-ghost"}`}
+                    href={plan.cta.href}
+                  >
+                    {plan.cta.label}
+                  </Link>
+                </div>
+                <div className="mt-auto border-t border-[var(--color-rim)] px-7 py-5">
+                  <ul className="grid gap-2.5">
+                    {plan.features.map(([feature, enabled]) => (
+                      <li className="flex items-center gap-2.5 text-[13px]" key={feature}>
+                        {enabled ? (
+                          <Check className="shrink-0" color="var(--color-signal)" size={14} weight="bold" />
+                        ) : (
+                          <X className="shrink-0" color="var(--color-ghost)" size={14} weight="regular" />
+                        )}
+                        <span className={enabled ? "text-[var(--color-body)]" : "text-[var(--color-ghost)]"}>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </framerMotion.article>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="marketing-section scroll-mt-24" id="faq">
         <div className="mx-auto max-w-[620px] text-center">
-          <h2 className="font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">
+          <framerMotion.h2
+            className="font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]"
+            initial={{ opacity: 0, x: 30 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, amount: 0.5 }}
+            whileInView={{ opacity: 1, x: 0 }}
+          >
             Common questions.
-          </h2>
+          </framerMotion.h2>
         </div>
         <div className="mx-auto mt-10 max-w-[760px] divide-y divide-[var(--color-rim)] border-y border-[var(--color-rim)]">
           {faqItems.map(([question, answer]) => (
@@ -388,65 +410,75 @@ export function LandingBelowFold() {
       </section>
 
       <section className="marketing-section">
-        <div className="dot-grid-band rounded-[var(--radius-xl)] border border-[var(--color-rim)] px-6 py-16 text-center md:px-12">
-          <h2 className="font-[var(--font-heading)] text-[52px] font-extrabold leading-none text-[var(--color-title)]">
-            One tool for your entire incident workflow.
-          </h2>
-          <p className="mx-auto mt-4 max-w-[520px] text-[16px] leading-7 text-[var(--color-subtext)]">
-            Structured detection, calm response coordination, and the reporting layer leadership actually needs.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link className="btn btn-primary btn-lg" href="/register">Start 14-day trial</Link>
-            <a className="btn btn-ghost btn-lg" href="mailto:hello@trustloop.dev">Talk to us</a>
-          </div>
+        <div className="mx-auto max-w-[720px] text-center">
+          <framerMotion.h2
+            className="font-[var(--font-heading)] text-[clamp(36px,6vw,64px)] font-extrabold leading-[1.02] text-[var(--color-title)]"
+            initial={{ opacity: 0, scale: 0.85 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            viewport={{ once: true, amount: 0.4 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+          >
+            Start running incidents<br className="hidden sm:block" /> the right way.
+          </framerMotion.h2>
+          <framerMotion.p
+            className="mx-auto mt-5 max-w-[440px] text-[16px] leading-relaxed text-[var(--color-subtext)]"
+            initial={{ opacity: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            viewport={{ once: true, amount: 0.4 }}
+            whileInView={{ opacity: 1 }}
+          >
+            14 days free. No credit card. Set up in under two minutes.
+          </framerMotion.p>
+          <framerMotion.div
+            className="mt-8"
+            initial={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.4, delay: 0.35 }}
+            viewport={{ once: true, amount: 0.4 }}
+            whileInView={{ opacity: 1, y: 0 }}
+          >
+            <Link className="btn btn-primary btn-lg" href="/register">Start free trial</Link>
+          </framerMotion.div>
         </div>
       </section>
 
-      <footer className="marketing-section border-t border-[var(--color-rim)] bg-[var(--color-surface)] px-6 py-16 md:px-8">
-        <div className="grid gap-12 md:grid-cols-4">
-          <div className="grid gap-4">
-            <TrustLoopLogo size={16} variant="full" />
-            <p className="text-[13px] text-[var(--color-subtext)]">AI incident operations for teams that ship.</p>
-            <p className="text-[12px] text-[var(--color-ghost)]">© 2026 TrustLoop. All rights reserved.</p>
+      <footer className="px-6 pb-10 pt-12 md:px-8">
+        <div className="mx-auto max-w-[960px] border-t border-[var(--color-rim)] pt-10">
+          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+            <div>
+              <TrustLoopLogo size={16} variant="full" />
+              <p className="mt-3 max-w-[200px] text-[13px] leading-relaxed text-[var(--color-ghost)]">AI incident operations for teams that ship.</p>
+              <div className="mt-5 flex items-center gap-4">
+                <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]" href="https://x.com" rel="noreferrer" target="_blank"><XLogo size={16} weight="regular" /></a>
+                <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]" href="https://github.com" rel="noreferrer" target="_blank"><GithubLogo size={16} weight="regular" /></a>
+                <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]" href="https://linkedin.com" rel="noreferrer" target="_blank"><LinkedinLogo size={16} weight="regular" /></a>
+              </div>
+            </div>
+
+            <div className="grid content-start gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ghost)]">Product</p>
+              {[["Changelog", "/changelog"], ["Pricing", "/pricing"], ["Docs", "/docs"], ["Status", "/status"], ["API", "/api-docs"]].map(([label, href]) => (
+                <Link className="text-[13px] text-[var(--color-subtext)] transition-colors hover:text-[var(--color-bright)]" href={href} key={label}>{label}</Link>
+              ))}
+            </div>
+
+            <div className="grid content-start gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ghost)]">Company</p>
+              {[["Blog", "/blog"], ["About", "/about"], ["Security", "/security"]].map(([label, href]) => (
+                <Link className="text-[13px] text-[var(--color-subtext)] transition-colors hover:text-[var(--color-bright)]" href={href} key={label}>{label}</Link>
+              ))}
+            </div>
+
+            <div className="grid content-start gap-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ghost)]">Legal</p>
+              {[["Terms", "/terms"], ["Privacy", "/privacy"], ["DPA", "/dpa"], ["Billing", "/billing-policy"]].map(([label, href]) => (
+                <Link className="text-[13px] text-[var(--color-subtext)] transition-colors hover:text-[var(--color-bright)]" href={href} key={label}>{label}</Link>
+              ))}
+            </div>
           </div>
 
-          <div className="grid gap-3">
-            <p className="text-[13px] font-medium text-[var(--color-subtext)]">Product</p>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/changelog">Changelog</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/pricing">Pricing</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/docs">Docs</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/status">Status</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/api-docs">API Reference</Link>
+          <div className="mt-10 border-t border-[var(--color-rim)] pt-6">
+            <p className="text-[11px] text-[var(--color-ghost)]">© {new Date().getFullYear()} TrustLoop. All rights reserved.</p>
           </div>
-
-          <div className="grid gap-3">
-            <p className="text-[13px] font-medium text-[var(--color-subtext)]">Company</p>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/blog">Blog</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/about">About</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/terms">Terms</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/privacy">Privacy</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/security">Security</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/dpa">DPA</Link>
-            <Link className="text-[14px] text-[var(--color-body)] hover:text-[var(--color-bright)]" href="/billing-policy">Billing Policy</Link>
-          </div>
-
-          <div>
-            <p className="text-[13px] font-medium text-[var(--color-subtext)]">Stay in the loop</p>
-            <p className="mt-2 text-[12px] text-[var(--color-ghost)]">Product updates, incident best practices.</p>
-            <FooterSubscribeForm />
-          </div>
-        </div>
-
-        <div className="mt-12 flex items-center gap-4 border-t border-[var(--color-rim)] pt-6">
-          <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-subtext)]" href="https://x.com" rel="noreferrer" target="_blank">
-            <XLogo size={18} weight="regular" />
-          </a>
-          <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-subtext)]" href="https://github.com" rel="noreferrer" target="_blank">
-            <GithubLogo size={18} weight="regular" />
-          </a>
-          <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-subtext)]" href="https://linkedin.com" rel="noreferrer" target="_blank">
-            <LinkedinLogo size={18} weight="regular" />
-          </a>
         </div>
       </footer>
     </>

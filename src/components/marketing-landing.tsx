@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -18,6 +19,21 @@ import {
   List,
   X,
 } from "@phosphor-icons/react";
+import {
+  SiDatadog,
+  SiPagerduty,
+  SiSentry,
+  SiSlack,
+} from "react-icons/si";
+import {
+  HiOutlineShieldExclamation,
+  HiOutlineClock,
+  HiOutlineChartBarSquare,
+  HiOutlineSignal,
+  HiOutlineCpuChip,
+  HiOutlineChatBubbleLeftRight,
+  HiOutlineAcademicCap,
+} from "react-icons/hi2";
 import { HoverLink } from "@/components/hover-link";
 import { HeroIllustration } from "@/components/hero-illustration";
 import { TrustLoopLogo } from "@/components/trustloop-logo";
@@ -29,17 +45,45 @@ const LandingBelowFold = dynamic(() => import("./landing-below-fold").then((m) =
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 const navLinks = [
-  { href: "#features", label: "Features" },
-  { href: "#workflow", label: "How It Works" },
+  { href: "#why", label: "Why TrustLoop" },
+  { href: "#how-it-works", label: "How It Works" },
   { href: "#integrations", label: "Integrations" },
   { href: "#pricing", label: "Pricing" },
-  { href: "/changelog", label: "Changelog" },
+  { href: "#faq", label: "FAQ" },
 ] as const;
+
+const dropdownData: Record<string, Array<{ icon: React.ReactNode; title: string; desc: string }>> = {
+  "#why": [
+    { icon: <HiOutlineShieldExclamation size={20} color="#ef4444" />, title: "Built for AI failures", desc: "Understands hallucinations, bias drift, and model degradation." },
+    { icon: <HiOutlineClock size={20} color="#f59e0b" />, title: "Automated updates", desc: "No more copy-pasting under pressure across channels." },
+    { icon: <HiOutlineChartBarSquare size={20} color="#8b5cf6" />, title: "Executive visibility", desc: "Leadership sees incidents before they escalate." },
+  ],
+  "#how-it-works": [
+    { icon: <HiOutlineSignal size={20} color="#22d3ee" />, title: "Detect", desc: "Signals flow in from Datadog, PagerDuty, Sentry, or your team." },
+    { icon: <HiOutlineCpuChip size={20} color="#a78bfa" />, title: "Triage", desc: "AI suggests severity, root cause, and a customer-safe update." },
+    { icon: <HiOutlineChatBubbleLeftRight size={20} color="#34d399" />, title: "Respond", desc: "Approval gates ensure nothing goes out unreviewed." },
+    { icon: <HiOutlineAcademicCap size={20} color="#fbbf24" />, title: "Learn", desc: "Post-mortems and analytics close the loop." },
+  ],
+  "#integrations": [
+    { icon: <SiDatadog size={18} color="#632CA6" />, title: "Datadog", desc: "Infrastructure alerts and service health signals." },
+    { icon: <SiPagerduty size={18} color="#06AC38" />, title: "PagerDuty", desc: "Escalation entry points for urgent failures." },
+    { icon: <SiSentry size={18} color="#FB4226" />, title: "Sentry", desc: "Application errors and AI path regressions." },
+    { icon: <SiSlack size={18} color="#E01E5A" />, title: "Slack", desc: "Responder coordination and approved updates." },
+  ],
+};
 
 export function MarketingLanding() {
   const scope = useRef<HTMLDivElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("");
+  const [hoveredNav, setHoveredNav] = useState<string | null>(null);
+  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeDropdown = hoveredNav && hoveredNav in dropdownData ? hoveredNav : null;
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const navItemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const headerBarRef = useRef<HTMLDivElement>(null);
+  const [dropdownLeft, setDropdownLeft] = useState(0);
 
   useEffect(() => {
     const ids = navLinks.filter((l) => l.href.startsWith("#")).map((l) => l.href.slice(1));
@@ -55,7 +99,6 @@ export function MarketingLanding() {
     return () => observer.disconnect();
   }, []);
   const { scrollY } = useScroll();
-  const heroY = useTransform(scrollY, [0, 1000], [0, 180]);
   const shrinkProgress = useSpring(useTransform(scrollY, [0, 120], [0, 1]), {
     stiffness: 120,
     damping: 26,
@@ -101,20 +144,16 @@ export function MarketingLanding() {
 
   return (
     <div ref={scope} className="relative overflow-clip bg-[var(--color-void)]">
-      <framerMotion.div
-        aria-hidden
-        className="landing-parallax-slow pointer-events-none absolute left-[-120px] top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(212,98,43,0.12),transparent_70%)] blur-3xl"
-        style={{ y: heroY }}
-      />
-      <div
-        aria-hidden
-        className="landing-parallax-fast pointer-events-none absolute right-[-140px] top-[280px] h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.05),transparent_70%)] blur-3xl"
-      />
-
-      <header className="sticky top-0 z-50 px-6">
+      <header
+        className="sticky top-0 z-50 px-6"
+        onMouseLeave={() => {
+          hoverTimeout.current = setTimeout(() => setHoveredNav(null), 150);
+        }}
+      >
         <framerMotion.div style={{ paddingTop: headerPadding }} className="flex justify-center">
           <framerMotion.div
-            className="flex w-full max-w-[1160px] items-center justify-between px-4 py-3 md:px-6"
+            ref={headerBarRef}
+            className="relative flex w-full max-w-[1160px] items-center justify-between px-4 py-3 md:px-6"
             style={{
               backgroundColor: headerBg,
               borderColor: headerBorder,
@@ -124,27 +163,58 @@ export function MarketingLanding() {
               WebkitBackdropFilter: "blur(12px)",
             }}
           >
-            <a href="#top">
+            <Link href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); history.replaceState(null, "", "/"); }}>
               <TrustLoopLogo size={18} variant="full" />
-            </a>
+            </Link>
 
-            <nav className="hidden items-center gap-8 text-[14px] text-[var(--color-subtext)] md:flex">
-              {navLinks.map((item) => (
-                item.href.startsWith("/") ? (
-                  <HoverLink className="rounded-md px-2 py-1 transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)]" href={item.href} key={item.label}>
-                    {item.label}
-                  </HoverLink>
-                ) : (
-                  <a className={`rounded-md px-2 py-1 transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)] ${activeSection === item.href ? "text-[var(--color-bright)]" : ""}`} href={item.href} key={item.label}>
-                    {item.label}
-                  </a>
-                )
-              ))}
+            <nav
+              ref={navRef}
+              className="relative hidden items-center gap-1 text-[14px] text-[var(--color-subtext)] md:flex"
+            >
+              {navLinks.map((item) => {
+                return (
+                  <div
+                    key={item.label}
+                    ref={(el) => { navItemRefs.current[item.href] = el; }}
+                    onMouseEnter={() => {
+                      if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
+                      setHoveredNav(item.href);
+                      const el = navItemRefs.current[item.href];
+                      const bar = headerBarRef.current;
+                      if (el && bar) {
+                        const elRect = el.getBoundingClientRect();
+                        const barRect = bar.getBoundingClientRect();
+                        setDropdownLeft(elRect.left - barRect.left + elRect.width / 2);
+                      }
+                    }}
+                  >
+                    <a
+                      className={`relative z-10 block cursor-pointer rounded-md px-3 py-1.5 transition-colors ${activeSection === item.href ? "text-[var(--color-bright)]" : ""} ${hoveredNav === item.href ? "text-[var(--color-bright)]" : "hover:text-[var(--color-bright)]"}`}
+                      href={item.href}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const id = item.href.slice(1);
+                        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+                        history.replaceState(null, "", `/${id}`);
+                      }}
+                    >
+                      {hoveredNav === item.href && (
+                        <framerMotion.span
+                          className="absolute inset-0 rounded-md bg-[var(--color-raised)]"
+                          layoutId="nav-highlight"
+                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                      )}
+                      <span className="relative z-10">{item.label}</span>
+                    </a>
+                  </div>
+                );
+              })}
             </nav>
 
             <div className="hidden items-center gap-2 md:flex">
               <HoverLink className="btn btn-ghost btn-sm" href="/login">Sign in</HoverLink>
-              <HoverLink className="btn btn-primary btn-sm" href="/register">Request access</HoverLink>
+              <HoverLink className="btn btn-ghost btn-sm border border-[var(--color-rim)] transition-colors hover:border-[var(--color-signal)] hover:text-[var(--color-signal)]" href="/register">Request access</HoverLink>
             </div>
 
             <button
@@ -155,6 +225,61 @@ export function MarketingLanding() {
             >
               {mobileNavOpen ? <X size={18} weight="regular" /> : <List size={18} weight="regular" />}
             </button>
+
+            {/* Dropdown — positioned at bottom of header bar */}
+            <AnimatePresence>
+              {activeDropdown && (
+                <framerMotion.div
+                  animate={{ opacity: 1, y: 0 }}
+                  className="absolute z-50 hidden pt-1 md:block"
+                  exit={{ opacity: 0, y: 4 }}
+                  initial={{ opacity: 0, y: 4 }}
+                  style={{ top: "100%", left: dropdownLeft, transform: "translateX(-50%)" }}
+                  transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <framerMotion.div
+                    className="overflow-hidden rounded-xl border border-[var(--color-rim)] bg-[var(--color-surface)] p-2 shadow-xl shadow-black/20 backdrop-blur-xl"
+                    layout
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  >
+                    <AnimatePresence mode="wait">
+                      <framerMotion.div
+                        animate={{ opacity: 1, x: 0 }}
+                        className="w-[320px]"
+                        exit={{ opacity: 0, x: -8 }}
+                        initial={{ opacity: 0, x: 8 }}
+                        key={activeDropdown}
+                        transition={{ duration: 0.12 }}
+                      >
+                        {dropdownData[activeDropdown].map((entry) => (
+                          <a
+                            className="relative flex items-start gap-3 rounded-lg px-3 py-2.5"
+                            href={activeDropdown}
+                            key={entry.title}
+                            onClick={(e) => { e.preventDefault(); setHoveredNav(null); const id = activeDropdown.slice(1); document.getElementById(id)?.scrollIntoView({ behavior: "smooth" }); history.replaceState(null, "", `/${id}`); }}
+                            onMouseEnter={() => setHoveredItem(entry.title)}
+                            onMouseLeave={() => setHoveredItem(null)}
+                          >
+                            {hoveredItem === entry.title && (
+                              <framerMotion.span
+                                className="absolute inset-0 rounded-lg bg-[var(--color-raised)]"
+                                layoutId="dropdown-highlight"
+                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                              />
+                            )}
+                            <span className="relative z-10 mt-0.5 shrink-0">{entry.icon}</span>
+                            <div className="relative z-10">
+                              <p className="text-[13px] font-semibold text-[var(--color-title)]">{entry.title}</p>
+                              <p className="mt-0.5 text-[12px] leading-snug text-[var(--color-ghost)]">{entry.desc}</p>
+                            </div>
+                          </a>
+                        ))}
+                      </framerMotion.div>
+                    </AnimatePresence>
+                  </framerMotion.div>
+                </framerMotion.div>
+              )}
+            </AnimatePresence>
           </framerMotion.div>
         </framerMotion.div>
       </header>
@@ -201,53 +326,79 @@ export function MarketingLanding() {
         ) : null}
       </AnimatePresence>
 
-      <main id="top" className="marketing-shell pb-20 pt-10 md:pt-14">
-        <section className="marketing-section !pt-8 text-center">
-          <div className="mx-auto max-w-[760px]">
-            <p className="page-kicker">AI Incident Operations</p>
-            <framerMotion.h1
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 font-[var(--font-heading)] text-[length:var(--text-hero-size)] font-extrabold leading-[var(--text-hero-line)] text-[var(--color-title)]"
-              initial={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+      <main id="top" className="marketing-shell pb-20">
+        <section className="text-center" style={{ paddingTop: "clamp(32px, 5vw, 56px)" }}>
+          <div className="mx-auto flex max-w-[860px] flex-col items-center">
+            <framerMotion.p
+              animate={{ opacity: 1, filter: "blur(0px)" }}
+              className="page-kicker mb-5"
+              initial={{ opacity: 0, filter: "blur(8px)" }}
+              transition={{ duration: 0.6 }}
             >
-              When your AI fails, your team{" "}
-              <span className="text-[var(--color-signal)]">shouldn&apos;t.</span>
+              AI Incident Operations
+            </framerMotion.p>
+            <framerMotion.h1
+              className="font-[var(--font-heading)] text-[length:var(--text-hero-size)] font-extrabold leading-[var(--text-hero-line)] text-[var(--color-title)]"
+              style={{ textWrap: "balance" }}
+            >
+              {"When your AI fails,".split(" ").map((word, i) => (
+                <framerMotion.span
+                  key={`a-${i}`}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  className="mr-[0.25em] inline-block"
+                  initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
+                  transition={{ duration: 0.5, delay: 0.1 + i * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {word}
+                </framerMotion.span>
+              ))}
+              <br />
+              {"your team".split(" ").map((word, i) => (
+                <framerMotion.span
+                  key={`b-${i}`}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  className="mr-[0.25em] inline-block"
+                  initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
+                  transition={{ duration: 0.5, delay: 0.4 + i * 0.07, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {word}
+                </framerMotion.span>
+              ))}
+              <framerMotion.span
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                className="inline-block text-[var(--color-signal)]"
+                initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
+                transition={{ duration: 0.5, delay: 0.56, ease: [0.16, 1, 0.3, 1] }}
+              >
+                shouldn&apos;t.
+              </framerMotion.span>
             </framerMotion.h1>
             <framerMotion.p
               animate={{ opacity: 1, y: 0 }}
-              className="mx-auto mt-6 max-w-[520px] text-[18px] leading-[1.6] text-[var(--color-subtext)]"
+              className="mt-5 max-w-[520px] text-[18px] leading-[1.6] text-[var(--color-subtext)]"
               initial={{ opacity: 0, y: 16 }}
               transition={{ delay: 0.08, duration: 0.48 }}
             >
-              TrustLoop turns AI failures into structured, customer-safe responses from detection to post-mortem, in one workspace.
+              TrustLoop turns AI failures into structured, customer-safe responses&mdash;from detection to post-mortem, in one workspace.
             </framerMotion.p>
 
-            <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <framerMotion.div
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-8 flex flex-wrap justify-center gap-3"
+              initial={{ opacity: 0, y: 12 }}
+              transition={{ delay: 0.65, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            >
               <HoverLink className="btn btn-primary btn-lg" href="/register">
                 Start free trial
               </HoverLink>
-              <a className="btn btn-ghost btn-lg group" href="#workflow">
+              <a className="btn btn-ghost btn-lg group" href="#how-it-works" onClick={(e) => { e.preventDefault(); document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); history.replaceState(null, "", "/how-it-works"); }}>
                 See how it works
                 <ArrowRight className="transition-transform group-hover:translate-x-1" size={16} weight="regular" />
               </a>
-            </div>
-
-            <div className="mt-10">
-              <p className="mb-4 text-[12px] text-[var(--color-ghost)]">Trusted by teams shipping production AI</p>
-              <div className="flex flex-wrap items-center justify-center gap-6">
-                {["ACME AI", "CORE ML", "VANTAGE", "NEXUS"].map((logo) => (
-                  <span className="inline-flex items-center rounded-[var(--radius-sm)] border border-[var(--color-rim)] bg-[var(--color-surface)] px-4 py-2 font-[var(--font-mono)] text-[12px] tracking-[0.14em] text-[var(--color-ghost)]" key={logo}>{logo}</span>
-                ))}
-              </div>
-            </div>
+            </framerMotion.div>
           </div>
 
-          <div className="mt-6 text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] px-3 py-1 font-[var(--font-mono)] text-[11px] uppercase tracking-[0.12em] text-[var(--color-ghost)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-resolve)]" />
-              Live Preview
-            </span>
+          <div className="mt-14 text-center">
           </div>
           <HeroIllustration />
         </section>
@@ -258,7 +409,8 @@ export function MarketingLanding() {
       <framerMotion.a
         aria-label="Back to top"
         className="fixed bottom-6 right-6 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] text-[var(--color-subtext)] shadow-lg transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)]"
-        href="#top"
+        href="/"
+        onClick={(e: React.MouseEvent) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); history.replaceState(null, "", "/"); }}
         style={{ opacity: showBackToTop }}
       >
         <ArrowUp size={16} weight="regular" />

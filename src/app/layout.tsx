@@ -45,7 +45,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: {
-    default: "TrustLoop | AI Incident Operations SaaS",
+    default: "TrustLoop | AI Incident Operations",
     template: "%s | TrustLoop",
   },
   description:

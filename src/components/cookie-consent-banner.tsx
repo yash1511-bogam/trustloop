@@ -5,12 +5,9 @@ import { useState } from "react";
 const CONSENT_KEY = "tl_cookie_consent";
 
 export function CookieConsentBanner() {
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-    return !window.localStorage.getItem(CONSENT_KEY);
-  });
+  const [visible, setVisible] = useState(() =>
+    typeof window !== "undefined" ? !localStorage.getItem(CONSENT_KEY) : false
+  );
 
   function accept() {
     localStorage.setItem(CONSENT_KEY, "accepted");

@@ -68,7 +68,6 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
     });
 
     setSubmitting(false);
-    turnstileRef.current?.reset();
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as
@@ -134,89 +133,83 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
 
       {authTab === "social" ? (
         <>
-      <OAuthButtons
-        mode="login"
-        turnstileToken={turnstileToken}
-        disabled={submitting || (requiresTurnstile && !turnstileToken)}
-      />
-      <SamlSsoForm
-        disabled={submitting || (requiresTurnstile && !turnstileToken)}
-        mode="login"
-        turnstileToken={turnstileToken}
-      />
-
-      <div className="flex items-center gap-2 text-xs text-[var(--color-ghost)]">
-        <div className="h-px flex-1 bg-[var(--color-rim)]" />
-        <span>or use email OTP</span>
-        <div className="h-px flex-1 bg-[var(--color-rim)]" />
-      </div>
+          <OAuthButtons
+            mode="login"
+            turnstileToken={turnstileToken}
+            disabled={submitting || (requiresTurnstile && !turnstileToken)}
+          />
+          <SamlSsoForm
+            disabled={submitting || (requiresTurnstile && !turnstileToken)}
+            mode="login"
+            turnstileToken={turnstileToken}
+          />
+          <div className="flex items-center gap-2 text-xs text-[var(--color-ghost)]">
+            <div className="h-px flex-1 bg-[var(--color-rim)]" />
+            <button className="transition-colors hover:text-[var(--color-signal)]" onClick={() => setAuthTab("email")} type="button">or use email OTP</button>
+            <div className="h-px flex-1 bg-[var(--color-rim)]" />
+          </div>
         </>
       ) : null}
 
       {authTab === "email" ? (
         <>
-      <form className="space-y-4" onSubmit={startChallenge}>
-        <div>
-          <label className="sr-only" htmlFor="email">
-            Work email
-          </label>
-          <input
-            id="email"
-            className="input"
-            type="email"
-            placeholder="Work email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-        </div>
+          <form className="space-y-4" onSubmit={startChallenge}>
+            <div>
+              <label className="sr-only" htmlFor="email">Work email</label>
+              <input
+                id="email"
+                className="input"
+                type="email"
+                placeholder="Work email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </div>
+            <button
+              className="btn btn-primary w-full"
+              disabled={submitting || (requiresTurnstile && !turnstileToken)}
+              type="submit"
+            >
+              {submitting ? "Sending code..." : "Send verification code"}
+            </button>
+          </form>
 
-        <TurnstileWidget
-          ref={turnstileRef}
-          siteKey={turnstileSiteKey}
-          onTokenChange={setTurnstileToken}
-        />
-
-        <button
-          className="btn btn-primary w-full"
-          disabled={submitting || (requiresTurnstile && !turnstileToken)}
-          type="submit"
-        >
-          {submitting ? "Sending code..." : "Send verification code"}
-        </button>
-      </form>
-
-      {methodId ? (
-        <form className="space-y-4 mt-6" onSubmit={verifyChallenge}>
-          <div>
-            <label className="sr-only" htmlFor="code">
-              Verification code
-            </label>
-            <input
-              id="code"
-              className="input text-center tracking-widest text-lg"
-              placeholder="Verification code"
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              minLength={4}
-              maxLength={12}
-              required
-            />
-          </div>
-
-          <button className="btn btn-primary w-full" disabled={submitting} type="submit">
-            {submitting ? "Verifying..." : "Verify and sign in"}
-          </button>
-          <button className="btn btn-ghost w-full text-sm" disabled={!otpResend.canResend} onClick={otpResend.resend} type="button">
-            {otpResend.label}
-          </button>
-        </form>
-      ) : null}
+          {methodId ? (
+            <form className="space-y-4 mt-6" onSubmit={verifyChallenge}>
+              <div>
+                <label className="sr-only" htmlFor="code">Verification code</label>
+                <input
+                  id="code"
+                  className="input text-center tracking-widest text-lg"
+                  placeholder="Verification code"
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  minLength={4}
+                  maxLength={12}
+                  required
+                />
+              </div>
+              <button className="btn btn-primary w-full" disabled={submitting} type="submit">
+                {submitting ? "Verifying..." : "Verify and sign in"}
+              </button>
+              <button className="btn btn-ghost w-full text-sm" disabled={!otpResend.canResend} onClick={otpResend.resend} type="button">
+                {otpResend.label}
+              </button>
+            </form>
+          ) : null}
         </>
       ) : null}
+
+      {/* Single Turnstile — always visible, verifies once */}
+      <TurnstileWidget
+        ref={turnstileRef}
+        siteKey={turnstileSiteKey}
+        onTokenChange={setTurnstileToken}
+      />
 
       {message ? (
         <p aria-live="polite" className="rounded-[var(--radius-sm)] border border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] p-3 text-sm text-[var(--color-resolve)]">

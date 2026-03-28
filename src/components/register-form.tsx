@@ -95,7 +95,6 @@ export function RegisterForm({
     });
 
     setSubmitting(false);
-    turnstileRef.current?.reset();
 
     if (!response.ok) {
       const payload = (await response.json().catch(() => null)) as
@@ -174,9 +173,7 @@ export function RegisterForm({
 
       <form className="space-y-4" onSubmit={startRegistration}>
         <div>
-          <label className="sr-only" htmlFor="workspace-name">
-            Company name
-          </label>
+          <label className="sr-only" htmlFor="workspace-name">Company name</label>
           <input
             id="workspace-name"
             className="input"
@@ -187,11 +184,8 @@ export function RegisterForm({
             required
           />
         </div>
-
         <div>
-          <label className="sr-only" htmlFor="name">
-            Your name
-          </label>
+          <label className="sr-only" htmlFor="name">Your name</label>
           <input
             id="name"
             className="input"
@@ -201,11 +195,8 @@ export function RegisterForm({
             required
           />
         </div>
-
         <div>
-          <label className="sr-only" htmlFor="email">
-            Work email
-          </label>
+          <label className="sr-only" htmlFor="email">Work email</label>
           <input
             id="email"
             className="input"
@@ -218,11 +209,8 @@ export function RegisterForm({
             required
           />
         </div>
-
         <div>
-          <label className="sr-only" htmlFor="invite-code">
-            Invite code
-          </label>
+          <label className="sr-only" htmlFor="invite-code">Invite code</label>
           <input
             id="invite-code"
             className="input"
@@ -233,13 +221,6 @@ export function RegisterForm({
             required={!inviteToken}
           />
         </div>
-
-        <TurnstileWidget
-          ref={turnstileRef}
-          siteKey={turnstileSiteKey}
-          onTokenChange={setTurnstileToken}
-        />
-
         <button
           className="btn btn-primary w-full"
           disabled={submitting || (requiresTurnstile && !turnstileToken)}
@@ -252,9 +233,7 @@ export function RegisterForm({
       {methodId ? (
         <form className="space-y-4 mt-6" onSubmit={verifyRegistration}>
           <div>
-            <label className="sr-only" htmlFor="code">
-              Verification code
-            </label>
+            <label className="sr-only" htmlFor="code">Verification code</label>
             <input
               id="code"
               className="input text-center tracking-widest text-lg"
@@ -268,7 +247,6 @@ export function RegisterForm({
               required
             />
           </div>
-
           <button className="btn btn-primary w-full" disabled={submitting} type="submit">
             {submitting ? "Verifying..." : "Verify and create workspace"}
           </button>
@@ -277,6 +255,13 @@ export function RegisterForm({
           </button>
         </form>
       ) : null}
+
+      {/* Single Turnstile — always visible, verifies once */}
+      <TurnstileWidget
+        ref={turnstileRef}
+        siteKey={turnstileSiteKey}
+        onTokenChange={setTurnstileToken}
+      />
 
       {message ? (
         <p className="rounded-[var(--radius-sm)] border border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] p-3 text-sm text-[var(--color-resolve)]">

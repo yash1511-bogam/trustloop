@@ -64,12 +64,23 @@ export function TrustLoopLogo({
     );
   }
 
-  const height = size;
-  const width = Math.round(size * 6.9);
-  const trustY = size * 0.76;
-  const loopY = size * 0.75;
-
+  const s = size / 24;
   const strokeWidth = size <= 20 ? 1 : 1.2;
+
+  /* Fixed positions at base 24, then scaled via the outer transform.
+     "Trust" in Instrument Serif italic ~40px wide at fontSize 21.6,
+     "LOOP" in Syne 800 + 0.12em tracking ~46px wide at fontSize 18.24.
+     Separator sits between them as a subtle vertical bar. */
+  const trustX = 28;
+  const trustFontSize = 21.6;
+  const sepX = 72;
+  const loopX = 79;
+  const loopFontSize = 18.24;
+  const baseline = 18;
+  const totalW = 160;
+
+  const height = size;
+  const width = Math.ceil(totalW * s);
 
   return (
     <svg
@@ -77,20 +88,21 @@ export function TrustLoopLogo({
       className={`trustloop-logo ${className ?? ""}`}
       height={height}
       role="img"
-      viewBox={`0 0 ${width} ${height}`}
+      style={{ overflow: "visible" }}
+      viewBox={`0 0 ${totalW} 24`}
       width={width}
     >
-      <g transform={`scale(${size / 24})`}>
-        <MarkGlyph color={bright} strokeWidth={strokeWidth} />
-      </g>
+      <MarkGlyph color={bright} strokeWidth={strokeWidth / s} />
       <text
         fill={bright}
-        fontFamily="var(--font-display), serif"
-        fontSize={size * 0.9}
-        fontStyle="italic"
-        fontWeight="400"
-        x={size * 1.45}
-        y={trustY}
+        x={trustX}
+        y={baseline}
+        style={{
+          fontFamily: "var(--font-display), serif",
+          fontSize: trustFontSize,
+          fontStyle: "italic",
+          fontWeight: 400,
+        } as CSSProperties}
       >
         Trust
       </text>
@@ -99,20 +111,22 @@ export function TrustLoopLogo({
         height={14}
         rx={0.5}
         width={1}
-        x={size * 4.5}
-        y={(size - 14) / 2}
+        x={sepX}
+        y={5}
       />
       <text
         fill={bright}
-        fontFamily="var(--font-heading), sans-serif"
-        fontSize={size * 0.76}
-        fontWeight="800"
-        letterSpacing="0.12em"
-        style={{ textTransform: "uppercase" } as CSSProperties}
-        x={size * 4.95}
-        y={loopY}
+        x={loopX}
+        y={baseline}
+        style={{
+          fontFamily: "var(--font-heading), sans-serif",
+          fontSize: loopFontSize,
+          fontWeight: 800,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+        } as CSSProperties}
       >
-        LOOP
+        L<tspan stroke={bright} strokeWidth={1.2} paintOrder="stroke">∞</tspan>P
       </text>
     </svg>
   );
