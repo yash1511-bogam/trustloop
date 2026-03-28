@@ -1,23 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useSyncExternalStore, useCallback } from "react";
 
 const CONSENT_KEY = "tl_cookie_consent";
 
+function subscribe(cb: () => void) {
+  window.addEventListener("storage", cb);
+  return () => window.removeEventListener("storage", cb);
+}
+
 export function CookieConsentBanner() {
-  const [visible, setVisible] = useState(() =>
-    typeof window !== "undefined" ? !localStorage.getItem(CONSENT_KEY) : false
+  const hasConsent = useSyncExternalStore(
+    subscribe,
+    () => localStorage.getItem(CONSENT_KEY),
+    () => null,
   );
+  const visible = hasConsent === null;
 
-  function accept() {
+  const accept = useCallback(() => {
     localStorage.setItem(CONSENT_KEY, "accepted");
-    setVisible(false);
-  }
+    window.dispatchEvent(new Event("storage"));
+  }, []);
 
-  function decline() {
+  const decline = useCallback(() => {
     localStorage.setItem(CONSENT_KEY, "declined");
-    setVisible(false);
-  }
+    window.dispatchEvent(new Event("storage"));
+  }, []);
 
   if (!visible) return null;
 

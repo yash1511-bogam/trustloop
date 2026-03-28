@@ -105,10 +105,11 @@ export function MarketingLanding() {
     mass: 0.8,
   });
 
-  const headerPadding = useTransform(shrinkProgress, [0, 1], [0, 10]);
+  const headerPadding = useTransform(shrinkProgress, [0, 1], [0, 0]);
   const headerRadius = useTransform(shrinkProgress, [0, 1], [0, 14]);
   const headerBg = useTransform(shrinkProgress, [0, 1], ["rgba(11,12,14,0)", "rgba(11,12,14,0.96)"]);
   const headerBorder = useTransform(shrinkProgress, [0, 1], ["rgba(37,37,41,0)", "rgba(37,37,41,1)"]);
+  const headerBlur = useTransform(shrinkProgress, [0, 1], ["blur(0px)", "blur(12px)"]);
 
   useGSAP(
     () => {
@@ -144,8 +145,9 @@ export function MarketingLanding() {
 
   return (
     <div ref={scope} className="relative overflow-clip bg-[var(--color-void)]">
+      <div className="fixed top-0 left-0 right-0 z-50 h-[15px] backdrop-blur-md bg-[var(--color-void)]/80" />
       <header
-        className="sticky top-0 z-50 px-6"
+        className="sticky top-[15px] z-50 px-6"
         onMouseLeave={() => {
           hoverTimeout.current = setTimeout(() => setHoveredNav(null), 150);
         }}
@@ -159,8 +161,8 @@ export function MarketingLanding() {
               borderColor: headerBorder,
               borderRadius: headerRadius,
               borderWidth: 1,
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
+              backdropFilter: headerBlur,
+              WebkitBackdropFilter: headerBlur,
             }}
           >
             <Link href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); history.replaceState(null, "", "/"); }}>
@@ -169,7 +171,7 @@ export function MarketingLanding() {
 
             <nav
               ref={navRef}
-              className="relative hidden items-center gap-1 text-[14px] text-[var(--color-subtext)] md:flex"
+              className="relative hidden items-center gap-0 overflow-hidden rounded-[22px] bg-[#000000] px-1 py-[3px] text-[13px] text-[var(--color-subtext)] shadow-[0_0_0_1px_rgba(255,255,255,0.06),0_2px_8px_rgba(0,0,0,0.4)] md:flex"
             >
               {navLinks.map((item) => {
                 return (
@@ -327,7 +329,7 @@ export function MarketingLanding() {
       </AnimatePresence>
 
       <main id="top" className="marketing-shell pb-20">
-        <section className="text-center" style={{ paddingTop: "clamp(32px, 5vw, 56px)" }}>
+        <section className="auth-grain-heavy relative -mt-[60px] flex h-[calc(100vh-35px)] flex-col items-center justify-center overflow-hidden rounded-2xl text-center pt-20" style={{ backgroundImage: "linear-gradient(to left, #283048, #859398)", width: "calc(100vw - 40px)", marginLeft: "calc(50% - 50vw + 20px)", marginTop: "-45px" }}>
           <div className="mx-auto flex max-w-[860px] flex-col items-center">
             <framerMotion.p
               animate={{ opacity: 1, filter: "blur(0px)" }}
@@ -400,8 +402,10 @@ export function MarketingLanding() {
 
           <div className="mt-14 text-center">
           </div>
-          <HeroIllustration />
         </section>
+        <div className="mt-24">
+          <HeroIllustration />
+        </div>
 
         <LandingBelowFold />
       </main>
