@@ -38,8 +38,8 @@ export default function SecurityPage() {
       </section>
 
       <section className="grid gap-5 md:grid-cols-3">
-        {sections.map((section) => (
-          <article className="surface p-6" key={section.title}>
+        {sections.map((section, i) => (
+          <article className="surface stagger-item p-6" key={section.title} style={{ animationDelay: `${i * 80}ms` }}>
             <section.icon color="var(--color-subtext)" size={28} weight="duotone" />
             <h2 className="mt-5 font-[var(--font-heading)] text-[24px] font-bold text-[var(--color-title)]">
               {section.title}

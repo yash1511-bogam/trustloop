@@ -1,21 +1,21 @@
 export default function AppLoading() {
   return (
-    <div className="flex-1 flex flex-col gap-6 p-6 animate-pulse">
-      {/* Page header skeleton */}
-      <div className="flex items-center justify-between">
-        <div className="h-8 w-48 rounded-md bg-[var(--color-surface)]" />
-        <div className="h-9 w-32 rounded-md bg-[var(--color-surface)]" />
-      </div>
-
-      {/* Stat cards skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="page-shell page-stack">
+      <section className="page-header">
+        <div className="page-header-main">
+          <div className="h-3 w-24 rounded bg-[var(--color-rim)] animate-pulse" />
+          <div className="h-7 w-48 rounded bg-[var(--color-rim)] animate-pulse" />
+        </div>
+      </section>
+      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-24 rounded-xl bg-[var(--color-surface)]" />
+          <div key={i} className="metric-card animate-pulse" style={{ animationDelay: `${i * 50}ms` }}>
+            <div className="h-2.5 w-20 rounded bg-[var(--color-rim)]" />
+            <div className="h-8 w-12 rounded bg-[var(--color-rim)]" />
+          </div>
         ))}
-      </div>
-
-      {/* Content area skeleton */}
-      <div className="flex-1 rounded-xl bg-[var(--color-surface)] min-h-[300px]" />
+      </section>
+      <section className="surface animate-pulse min-h-[300px]" />
     </div>
   );
 }

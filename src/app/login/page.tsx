@@ -82,9 +82,9 @@ export default async function LoginPage({
             Continue triage, customer communication, and executive reporting without reassembling context.
           </p>
 
-          <div className="auth-feature-list">
+          <div className="auth-feature-list" role="list">
             {featurePoints.map(({ icon: Icon, copy }) => (
-              <div className="auth-feature-item" key={copy}>
+              <div className="auth-feature-item" key={copy} role="listitem">
                 <Icon color="var(--color-subtext)" size={18} weight="duotone" />
                 <span>{copy}</span>
               </div>

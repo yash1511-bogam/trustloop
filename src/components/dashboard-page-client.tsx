@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CaretDown,
@@ -38,6 +38,14 @@ export function DashboardPageClient({
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Close drawer on Escape key
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") setDrawerOpen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [drawerOpen]);
+
   return (
     <div className="page-shell page-stack">
       <OnboardingChecklist />
@@ -67,32 +75,32 @@ export function DashboardPageClient({
           <h2 className="section-title">Live metrics</h2>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Total incidents</p>
             <p className="metric-value">{counts.total}</p>
             <p className="metric-meta">All time</p>
           </article>
-          <article className="metric-card metric-card-p1">
+          <article className="metric-card metric-card-p1 stagger-item">
             <p className="metric-label">P1 open</p>
             <p className="metric-value">{counts.p1}</p>
             <p className="metric-meta">Immediate attention</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Open incidents</p>
             <p className="metric-value">{counts.open}</p>
             <p className="metric-meta">Current queue</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Resolved</p>
             <p className="metric-value">{counts.resolved}</p>
             <p className="metric-meta">Past 7 days</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Created</p>
             <p className="metric-value">{counts.created7d}</p>
             <p className="metric-meta">Past 7 days</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Avg resolve</p>
             <p className="metric-value">{counts.avgResolutionHours}</p>
             <p className="metric-meta">Hours over 30 days</p>
@@ -155,7 +163,7 @@ export function DashboardPageClient({
             onClick={() => setDrawerOpen(false)}
             type="button"
           />
-          <div className="drawer-shell">
+          <div className="drawer-shell" role="dialog" aria-modal="true" aria-label="Create new incident">
             <div className="drawer-panel">
               <div className="drawer-header">
                 <div className="section-heading">

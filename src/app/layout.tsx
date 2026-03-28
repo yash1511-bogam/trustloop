@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import {
-  Geist,
+  DM_Sans,
   Instrument_Serif,
   JetBrains_Mono,
   Syne,
@@ -22,7 +22,7 @@ const heading = Syne({
   weight: ["600", "700", "800"],
 });
 
-const ui = Geist({
+const ui = DM_Sans({
   variable: "--font-ui",
   subsets: ["latin"],
   weight: ["400", "500"],
@@ -39,7 +39,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0B0C0E",
+  themeColor: "#0A0B0D",
 };
 
 export const metadata: Metadata = {
@@ -106,6 +106,7 @@ export default async function RootLayout({
   return (
     <html lang="en" data-theme="dark">
       <body className={`${display.variable} ${heading.variable} ${ui.variable} ${mono.variable} antialiased`}>
+        <a className="skip-to-content" href="#main-content">Skip to content</a>
         {children}
         <CookieConsentBanner />
         <Script id="sw-register" strategy="afterInteractive">

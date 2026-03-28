@@ -63,9 +63,10 @@ export function WorkspaceSwitcher({
     <div className="relative">
       <select
         aria-label="Switch workspace"
-        className="select pr-9 text-sm"
+        className="select pr-9 text-sm bg-[var(--color-void)] border-[var(--color-rim)] rounded-[var(--radius-sm)]"
         disabled={loading}
         value={selectedWorkspaceId}
+        style={{ transition: `border-color var(--duration-fast) var(--ease-out)` }}
         onChange={(event) => {
           const nextValue = event.target.value;
           setSelectedWorkspaceId(nextValue);

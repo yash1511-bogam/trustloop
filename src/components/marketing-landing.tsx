@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
@@ -39,6 +39,21 @@ const navLinks = [
 export function MarketingLanding() {
   const scope = useRef<HTMLDivElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("");
+
+  useEffect(() => {
+    const ids = navLinks.filter((l) => l.href.startsWith("#")).map((l) => l.href.slice(1));
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
+        }
+      },
+      { rootMargin: "-40% 0px -55% 0px" },
+    );
+    ids.forEach((id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
+    return () => observer.disconnect();
+  }, []);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 1000], [0, 180]);
   const shrinkProgress = useSpring(useTransform(scrollY, [0, 120], [0, 1]), {
@@ -88,7 +103,7 @@ export function MarketingLanding() {
     <div ref={scope} className="relative overflow-clip bg-[var(--color-void)]">
       <framerMotion.div
         aria-hidden
-        className="landing-parallax-slow pointer-events-none absolute left-[-120px] top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(232,87,42,0.14),transparent_70%)] blur-3xl"
+        className="landing-parallax-slow pointer-events-none absolute left-[-120px] top-10 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(212,98,43,0.12),transparent_70%)] blur-3xl"
         style={{ y: heroY }}
       />
       <div
@@ -105,6 +120,8 @@ export function MarketingLanding() {
               borderColor: headerBorder,
               borderRadius: headerRadius,
               borderWidth: 1,
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
             }}
           >
             <a href="#top">
@@ -118,7 +135,7 @@ export function MarketingLanding() {
                     {item.label}
                   </HoverLink>
                 ) : (
-                  <a className="rounded-md px-2 py-1 transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)]" href={item.href} key={item.label}>
+                  <a className={`rounded-md px-2 py-1 transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-bright)] ${activeSection === item.href ? "text-[var(--color-bright)]" : ""}`} href={item.href} key={item.label}>
                     {item.label}
                   </a>
                 )
@@ -145,10 +162,11 @@ export function MarketingLanding() {
       <AnimatePresence>
         {mobileNavOpen ? (
           <framerMotion.div
-            animate={{ opacity: 1 }}
+            animate={{ opacity: 1, y: 0 }}
             className="fixed inset-0 z-[70] bg-[var(--color-void)]/95 px-6 py-8 backdrop-blur-md md:hidden"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            initial={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
             <div className="flex items-center justify-between">
               <TrustLoopLogo size={18} variant="full" />

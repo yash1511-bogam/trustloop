@@ -90,10 +90,11 @@ export default function PricingPage() {
       </section>
 
       <section className="grid gap-5 lg:grid-cols-3">
-        {plans.map((plan) => (
+        {plans.map((plan, index) => (
           <article
-            className={`relative rounded-[var(--radius-xl)] border p-6 ${plan.highlighted ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : plan.monthly === null ? "bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)] border-[var(--color-muted)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
+            className={`stagger-item relative rounded-[var(--radius-xl)] border p-6 ${plan.highlighted ? "bg-[var(--color-raised)] border-[var(--color-signal)] shadow-[0_0_0_1px_var(--color-signal)]" : plan.monthly === null ? "bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)] border-[var(--color-muted)]" : "bg-[var(--color-surface)] border-[var(--color-rim)]"}`}
             key={plan.name}
+            style={{ animationDelay: `${index * 80}ms` }}
           >
             {plan.highlighted ? (
               <span className="absolute left-6 top-[-12px] badge badge-info bg-[var(--color-signal-dim)] text-[var(--color-signal)] border-transparent">

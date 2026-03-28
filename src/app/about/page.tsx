@@ -33,8 +33,8 @@ export default function AboutPage() {
             { role: "Product Design", desc: "Shapes the interface, interaction patterns, and visual language that responders rely on under pressure." },
             { role: "Infrastructure", desc: "Builds the data layer, queue systems, and deployment pipelines that keep TrustLoop reliable at scale." },
             { role: "Response Systems", desc: "Designs the triage, escalation, and communication workflows that drive incident resolution." },
-          ].map((member) => (
-            <article className="surface p-5" key={member.role}>
+          ].map((member, i) => (
+            <article className="surface stagger-item p-5" key={member.role} style={{ animationDelay: `${i * 80}ms` }}>
               <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[linear-gradient(135deg,var(--color-raised),var(--color-void))]">
                 <span className="font-[var(--font-heading)] text-[20px] font-bold text-[var(--color-ghost)]">
                   {member.role.charAt(0)}

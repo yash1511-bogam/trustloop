@@ -219,12 +219,12 @@ export function LoginForm({ turnstileSiteKey }: LoginFormProps) {
       ) : null}
 
       {message ? (
-        <p className="rounded-[var(--radius-sm)] border border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] p-3 text-sm text-[var(--color-resolve)]">
+        <p aria-live="polite" className="rounded-[var(--radius-sm)] border border-[rgba(22,163,74,0.24)] bg-[rgba(22,163,74,0.08)] p-3 text-sm text-[var(--color-resolve)]">
           {message}
         </p>
       ) : null}
       {error ? (
-        <p className="rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-3 text-sm text-[var(--color-danger)]">
+        <p aria-live="assertive" className="rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] p-3 text-sm text-[var(--color-danger)]">
           {error}
         </p>
       ) : null}

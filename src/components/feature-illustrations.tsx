@@ -7,7 +7,7 @@ type IllustrationType = "workflow" | "bot" | "mail" | "dashboard" | "gauge" | "s
 function Frame({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative mb-6 h-48 w-full overflow-hidden rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(232,87,42,0.12),transparent_42%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212, 98, 43,0.12),transparent_42%)]" />
       {children}
     </div>
   );
@@ -20,12 +20,12 @@ export function FeatureIllustration({ type }: { type: IllustrationType }) {
         <Frame>
           <motion.div
             className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-4"
-            initial={{ opacity: 0, scale: 0.94 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.45, delay: 0.08 }}
+            transition={{ duration: 0.4, delay: 0.08, ease: [0.23, 1, 0.32, 1] }}
           >
             <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-[var(--color-rim)] bg-[var(--color-void)]">
-              <div className="h-8 w-8 rounded-lg border border-[rgba(232,87,42,0.28)] bg-[var(--color-signal-dim)]" />
+              <div className="h-8 w-8 rounded-lg border border-[rgba(212, 98, 43,0.28)] bg-[var(--color-signal-dim)]" />
             </div>
             <div className="grid gap-2">
               <div className="h-1 w-10 rounded-full bg-[var(--color-rim)]" />
@@ -41,11 +41,11 @@ export function FeatureIllustration({ type }: { type: IllustrationType }) {
       return (
         <Frame>
           <motion.div
-            className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--color-rim)] border-r-[var(--color-signal)] border-t-[var(--color-signal)] bg-[rgba(232,87,42,0.04)]"
+            className="absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--color-rim)] border-r-[var(--color-signal)] border-t-[var(--color-signal)] bg-[rgba(212, 98, 43,0.04)]"
             animate={{ rotate: 360 }}
             transition={{ duration: 18, repeat: Infinity, ease: "linear" }}
           />
-          <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[rgba(232,87,42,0.3)] bg-[var(--color-signal-dim)]" />
+          <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[rgba(212, 98, 43,0.3)] bg-[var(--color-signal-dim)]" />
         </Frame>
       );
     case "mail":
@@ -103,7 +103,7 @@ export function FeatureIllustration({ type }: { type: IllustrationType }) {
             whileInView={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 160 }}
           >
-            <div className="flex h-full w-full items-center justify-center rounded-b-[2rem] rounded-t-md border border-[var(--color-rim)] bg-[var(--color-void)] shadow-[0_0_0_1px_rgba(232,87,42,0.08)]">
+            <div className="flex h-full w-full items-center justify-center rounded-b-[2rem] rounded-t-md border border-[var(--color-rim)] bg-[var(--color-void)] shadow-[0_0_0_1px_rgba(212, 98, 43,0.08)]">
               <div className="h-6 w-4 rounded-sm bg-[var(--color-signal)]" />
             </div>
           </motion.div>

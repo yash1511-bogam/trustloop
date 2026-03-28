@@ -65,6 +65,15 @@ function CompleteRegistrationInner() {
   return (
     <main className="auth-shell">
       <section className="auth-panel surface w-full max-w-md">
+        <div className="mb-6 flex items-center gap-2 text-xs text-[var(--color-ghost)]">
+          <span className="text-[var(--color-signal)]">Register</span>
+          <span>→</span>
+          <span className="text-[var(--color-signal)]">Verify</span>
+          <span>→</span>
+          <span className="font-medium text-[var(--color-title)]">Workspace</span>
+          <span>→</span>
+          <span>Plan</span>
+        </div>
         <div className="mb-6 flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[var(--color-void)]">
             <Buildings color="var(--color-subtext)" size={18} weight="duotone" />
@@ -92,7 +101,7 @@ function CompleteRegistrationInner() {
           </div>
 
           <button className="btn btn-primary w-full" disabled={submitting} type="submit">
-            {submitting ? "Creating workspace..." : "Create workspace"}
+            {submitting ? "Creating workspace…" : "Create workspace"}
           </button>
         </form>
 

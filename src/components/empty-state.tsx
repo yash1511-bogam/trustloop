@@ -21,19 +21,19 @@ export function EmptyState({
   action,
 }: EmptyStateProps) {
   return (
-    <div className="empty-state">
-      <span className="rounded-full bg-[var(--color-signal-dim)] p-4">
-        <Icon color="var(--color-subtext)" size={56} weight="duotone" />
+    <div className="empty-state section-enter">
+      <span className="rounded-full bg-[var(--color-signal-dim)] p-5">
+        <Icon color="var(--color-signal)" size={40} weight="duotone" />
       </span>
       <h3 className="empty-state-title">{title}</h3>
       <p className="empty-state-description">{description}</p>
       {action ? (
         action.href ? (
-          <Link className="btn btn-primary mt-5" href={action.href}>
+          <Link className="btn btn-primary mt-6" href={action.href}>
             {action.label}
           </Link>
         ) : (
-          <button className="btn btn-primary mt-5" onClick={action.onClick} type="button">
+          <button className="btn btn-primary mt-6" onClick={action.onClick} type="button">
             {action.label}
           </button>
         )

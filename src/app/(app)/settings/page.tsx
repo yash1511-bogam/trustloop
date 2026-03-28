@@ -73,32 +73,32 @@ export default async function SettingsOverviewPage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">AI keys</p>
             <p className="metric-value">{keyCount}</p>
             <p className="metric-meta">Active provider connections</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Routes</p>
             <p className="metric-value">{workflowCount}</p>
             <p className="metric-meta">Configured workflow mappings</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Members</p>
             <p className="metric-value">{memberCount}</p>
             <p className="metric-meta">Current team members</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Invites</p>
             <p className="metric-value">{inviteCount}</p>
             <p className="metric-meta">Pending workspace invites</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Integrations</p>
             <p className="metric-value">{activeIntegrations}</p>
             <p className="metric-meta">Active webhook connections</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Plan</p>
             <p className="metric-value">{planDefinitionFor(effectivePlanTier).label}</p>
             <p className="metric-meta">{workspace.billing?.status ?? "No billing status yet"}</p>

@@ -52,10 +52,10 @@ const entries: Entry[] = [
 
 export default function ChangelogPage() {
   return (
-    <main className="container-shell py-8">
+    <main className="legal-page">
       <section className="surface p-6">
-        <p className="kicker">Product updates</p>
-        <h1 className="mt-2 text-3xl font-bold text-[var(--color-bright)]">Changelog</h1>
+        <p className="page-kicker">Product updates</p>
+        <h1 className="mt-2 font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">Changelog</h1>
         <p className="mt-2 text-sm text-[var(--color-subtext)]">What&apos;s new and improved in TrustLoop.</p>
       </section>
 

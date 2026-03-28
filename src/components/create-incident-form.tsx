@@ -194,7 +194,7 @@ export function CreateIncidentForm() {
       </div>
 
       {error ? (
-        <p className="field-help field-error rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] px-3 py-2">
+        <p aria-live="assertive" className="field-help field-error rounded-[var(--radius-sm)] border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] px-3 py-2">
           {error}
         </p>
       ) : null}

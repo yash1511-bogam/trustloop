@@ -234,14 +234,14 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                   disabled={loading}
                   className={`rounded-2xl border p-4 text-left transition ${
                     isSelected
-                      ? "border-[rgba(232,87,42,0.28)] bg-[var(--color-signal-dim)] text-[var(--color-title)]"
+                      ? "border-[rgba(212, 98, 43,0.28)] bg-[var(--color-signal-dim)] text-[var(--color-title)]"
                       : "border-[var(--color-rim)] bg-[var(--color-void)] text-[var(--color-body)] hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)]"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-sm font-medium">{preset.label}</span>
                     {isSelected ? (
-                      <span className="rounded-full border border-[rgba(232,87,42,0.28)] bg-[var(--color-signal-dim)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-signal)]">
+                      <span className="rounded-full border border-[rgba(212, 98, 43,0.28)] bg-[var(--color-signal-dim)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-signal)]">
                         Selected
                       </span>
                     ) : null}
@@ -282,7 +282,7 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
                   key={scope.id}
                   className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
                     checked
-                      ? "border-[rgba(232,87,42,0.24)] bg-[var(--color-signal-dim)]"
+                      ? "border-[rgba(212, 98, 43,0.24)] bg-[var(--color-signal-dim)]"
                       : "border-[var(--color-rim)] bg-[var(--color-void)] hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)]"
                   }`}
                 >

@@ -118,8 +118,11 @@ export function OnboardingChecklist() {
           </p>
           <div className="mt-1 h-1.5 w-48 rounded-full bg-[var(--color-rim)]">
             <div
-              className="h-full rounded-full bg-[var(--color-signal)] transition-all"
-              style={{ width: `${(doneCount / items.length) * 100}%` }}
+              className="h-full rounded-full bg-[var(--color-signal)]"
+              style={{
+                width: `${(doneCount / items.length) * 100}%`,
+                transition: `width var(--duration-slow) var(--ease-out)`,
+              }}
             />
           </div>
         </div>

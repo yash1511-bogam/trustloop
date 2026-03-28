@@ -81,8 +81,8 @@ export function TrialPlanSelector() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-16">
       <div className="text-center mb-12">
-        <p className="text-[10px] uppercase tracking-widest text-[var(--color-signal)] font-medium mb-3">Choose your plan</p>
-        <h1 className="text-3xl font-semibold text-[var(--color-title)]">Start your 14-day free trial</h1>
+        <p className="page-kicker mb-3">Choose your plan</p>
+        <h1 className="font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">Start your 14-day free trial</h1>
         <p className="mt-3 text-sm text-[var(--color-ghost)] max-w-md mx-auto">
           Full access to your chosen plan. No credit card required. Cancel anytime.
         </p>
@@ -97,7 +97,7 @@ export function TrialPlanSelector() {
             onClick={() => setSelected(plan.id)}
             className={`relative text-left p-6 rounded-2xl border transition-all ${
               selected === plan.id
-                ? "border-[var(--color-signal)] bg-[var(--color-signal-dim)] ring-1 ring-[rgba(232,87,42,0.24)]"
+                ? "border-[var(--color-signal)] bg-[var(--color-signal-dim)] ring-1 ring-[rgba(212, 98, 43,0.24)]"
                 : "border-[var(--color-rim)] bg-[var(--color-surface)] hover:border-[var(--color-rim)]"
             }`}
           >

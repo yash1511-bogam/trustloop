@@ -298,7 +298,7 @@ export function LandingBelowFold() {
         </div>
         <div className="mt-12 grid gap-4 md:grid-cols-2">
           {integrationCards.map(([name, description, Icon]) => (
-            <article className="surface p-5" key={name}>
+            <article className="surface surface-clickable p-5" key={name}>
               <Icon color="var(--color-subtext)" size={28} weight="duotone" />
               <h3 className="mt-4 font-[var(--font-heading)] text-[15px] font-semibold text-[var(--color-title)]">{name}</h3>
               <p className="mt-2 text-[13px] text-[var(--color-subtext)]">{description}</p>
@@ -379,7 +379,7 @@ export function LandingBelowFold() {
             <details className="group py-5" key={question}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15px] font-medium text-[var(--color-body)]">
                 {question}
-                <CaretDown className="flex-shrink-0 transition-transform group-open:rotate-180" size={16} weight="regular" />
+                <CaretDown className="flex-shrink-0 transition-transform duration-200 ease-[var(--ease-out)] group-open:rotate-180" size={16} weight="regular" />
               </summary>
               <p className="pt-3 pr-10 text-[14px] leading-7 text-[var(--color-subtext)]">{answer}</p>
             </details>

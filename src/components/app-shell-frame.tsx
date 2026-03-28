@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AppShellNav } from "@/components/app-shell-nav";
 import { LogoutButton } from "@/components/logout-button";
 import { TrustLoopLoader } from "@/components/trustloop-loader";
+import { GlobalSearch } from "@/components/global-search";
 import { TrustLoopLogo } from "@/components/trustloop-logo";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
@@ -69,6 +70,7 @@ export function AppShellFrame({
   return (
     <main className="app-main-shell">
       <TrustLoopLoader />
+      <GlobalSearch />
       {!desktop ? (
         <header className="menu-mobile-bar">
           <button
@@ -80,7 +82,7 @@ export function AppShellFrame({
             <SidebarSimple color="var(--color-subtext)" size={20} weight="regular" />
           </button>
           <TrustLoopLogo size={16} variant="full" />
-          <div style={{ width: 20 }} />
+          <span className="text-[11px] font-medium text-[var(--color-ghost)] truncate max-w-[100px]">{workspaceName}</span>
         </header>
       ) : null}
 
@@ -146,7 +148,7 @@ export function AppShellFrame({
         </div>
       </aside>
 
-      <section className="app-shell-content">{children}</section>
+      <section className="app-shell-content" id="main-content">{children}</section>
     </main>
   );
 }

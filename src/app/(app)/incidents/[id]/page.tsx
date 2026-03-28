@@ -73,7 +73,7 @@ export default async function IncidentDetailPage({
 
   return (
     <>
-      <section className="surface p-6">
+      <section className="surface section-enter p-6">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className={severityBadgeClass(incident.severity)}>
             {incident.severity === IncidentSeverity.P1 && <Warning size={12} weight="bold" />}
@@ -86,7 +86,7 @@ export default async function IncidentDetailPage({
           {incident.category ? <span className="badge"><Brain size={12} weight="regular" />{incident.category}</span> : null}
         </div>
 
-        <h2 className="text-3xl font-semibold text-[var(--color-title)]">{incident.title}</h2>
+        <h2 className="font-[var(--font-heading)] text-[28px] font-bold text-[var(--color-title)]">{incident.title}</h2>
         <p className="mt-4 max-w-4xl whitespace-pre-wrap leading-relaxed text-[var(--color-ghost)]">{incident.description}</p>
 
         <div className="mt-6 grid gap-3 text-sm md:grid-cols-2">
@@ -111,7 +111,7 @@ export default async function IncidentDetailPage({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section className="surface p-6">
-          <h3 className="mb-4 text-lg font-semibold text-[var(--color-title)]">Timeline</h3>
+          <h3 className="mb-4 font-[var(--font-heading)] text-[18px] font-semibold text-[var(--color-title)]">Timeline</h3>
           <div className="relative space-y-0">
             {incident.events.length > 1 && (
               <div aria-hidden className="absolute left-[9px] top-4 bottom-4 w-px bg-[var(--color-rim)]" />
@@ -142,7 +142,7 @@ export default async function IncidentDetailPage({
 
         <aside className="space-y-6">
           <section className="surface p-6">
-            <h3 className="mb-4 text-lg font-semibold text-[var(--color-title)]">Actions</h3>
+            <h3 className="mb-4 font-[var(--font-heading)] text-[18px] font-semibold text-[var(--color-title)]">Actions</h3>
             <IncidentActions
               incidentId={incident.id}
               status={incident.status}
@@ -156,7 +156,7 @@ export default async function IncidentDetailPage({
           </section>
 
           <section className="surface p-6">
-            <h3 className="mb-4 text-lg font-semibold text-[var(--color-title)]">Post-Mortem</h3>
+            <h3 className="mb-4 font-[var(--font-heading)] text-[18px] font-semibold text-[var(--color-title)]">Post-Mortem</h3>
             {incident.postMortem ? (
               <div>
                 <div className="mb-2 flex items-center gap-2">

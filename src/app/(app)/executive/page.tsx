@@ -53,27 +53,27 @@ export default async function ExecutivePage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Open incidents</p>
             <p className="metric-value">{snapshot?.openIncidents ?? 0}</p>
             <p className="metric-meta">Currently active across the workspace</p>
           </article>
-          <article className="metric-card metric-card-p1">
+          <article className="metric-card metric-card-p1 stagger-item">
             <p className="metric-label">P1 open</p>
             <p className="metric-value">{snapshot?.p1OpenIncidents ?? 0}</p>
             <p className="metric-meta">Highest-severity incidents in flight</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Created 7d</p>
             <p className="metric-value">{snapshot?.incidentsCreatedLast7d ?? 0}</p>
             <p className="metric-meta">New incidents over the last week</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Resolved 7d</p>
             <p className="metric-value">{snapshot?.incidentsResolvedLast7d ?? 0}</p>
             <p className="metric-meta">Closed incidents over the last week</p>
           </article>
-          <article className="metric-card">
+          <article className="metric-card stagger-item">
             <p className="metric-label">Failed reminders</p>
             <p className="metric-value">{failedReminders7d}</p>
             <p className="metric-meta">Reminder jobs that failed in seven days</p>

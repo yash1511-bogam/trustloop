@@ -12,7 +12,7 @@ import {
 export function HeroIllustration() {
   return (
     <div className="relative mt-16 w-full max-w-5xl">
-      <div className="absolute inset-x-[12%] top-10 -z-10 h-56 rounded-full bg-[radial-gradient(circle,rgba(232,87,42,0.12),transparent_70%)] blur-3xl" />
+      <div className="absolute inset-x-[12%] top-10 -z-10 h-56 rounded-full bg-[radial-gradient(circle,rgba(212,98,43,0.10),transparent_70%)] blur-3xl" />
       <motion.div
         animate="visible"
         className="grid gap-5 lg:grid-cols-[1.6fr_0.9fr]"
@@ -28,8 +28,8 @@ export function HeroIllustration() {
         <motion.div
           className="overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-rim)] bg-[var(--color-surface)]"
           variants={{
-            hidden: { opacity: 0, y: 24, scale: 0.98 },
-            visible: { opacity: 1, y: 0, scale: 1 },
+            hidden: { opacity: 0, y: 20, scale: 0.98 },
+            visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.4, ease: [0.23, 1, 0.32, 1] } },
           }}
         >
           <div className="border-b border-[var(--color-rim)] px-5 py-4">
@@ -115,8 +115,8 @@ export function HeroIllustration() {
           <motion.div
             className="rounded-[var(--radius-xl)] border border-[var(--color-rim)] bg-[var(--color-surface)] p-5"
             variants={{
-              hidden: { opacity: 0, x: 18 },
-              visible: { opacity: 1, x: 0 },
+              hidden: { opacity: 0, x: 12 },
+              visible: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.23, 1, 0.32, 1] } },
             }}
           >
             <p className="metric-label">Monitoring stack</p>
@@ -137,8 +137,8 @@ export function HeroIllustration() {
           <motion.div
             className="rounded-[var(--radius-xl)] border border-[var(--color-rim)] bg-[var(--color-surface)] p-5"
             variants={{
-              hidden: { opacity: 0, x: 18 },
-              visible: { opacity: 1, x: 0 },
+              hidden: { opacity: 0, x: 12 },
+              visible: { opacity: 1, x: 0, transition: { duration: 0.35, ease: [0.23, 1, 0.32, 1] } },
             }}
           >
             <p className="metric-label">Commander note</p>

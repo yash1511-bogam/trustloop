@@ -1,4 +1,5 @@
 import { AppShellFrame } from "@/components/app-shell-frame";
+import { AnnounceProvider } from "@/components/announce-provider";
 import { requireAuth } from "@/lib/auth";
 import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +41,7 @@ export default async function AppLayout({
         slug: membership.workspace.slug,
       }))}
     >
-      {children}
+      <AnnounceProvider>{children}</AnnounceProvider>
     </AppShellFrame>
   );
 }

@@ -113,7 +113,7 @@ export function ProfileSettingsPanel({ profile, planTier }: Props) {
           {hasChanges ? "You have unsaved changes." : "Profile is up to date."}
         </p>
         <button 
-          className={`btn btn-primary ${hasChanges ? "animate-pulse shadow-[0_0_12px_rgba(232,87,42,0.3)]" : ""}`} 
+          className={`btn btn-primary ${hasChanges ? "shadow-[0_0_12px_rgba(212,98,43,0.25)]" : ""}`} 
           disabled={loading || !hasChanges} 
           onClick={save} 
           type="button"

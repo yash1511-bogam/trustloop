@@ -43,7 +43,7 @@ function UnsubscribeContent() {
             <p className="mb-6 text-sm text-[var(--color-ghost)]">{email}</p>
             <button
               onClick={confirm}
-              className="rounded-lg bg-[var(--color-signal)] px-6 py-2.5 text-sm font-semibold text-[var(--color-bright)] hover:bg-[#cf4a22] transition"
+              className="rounded-lg bg-[var(--color-signal)] px-6 py-2.5 text-sm font-semibold text-[var(--color-bright)] hover:bg-[var(--color-signal-hover)] transition"
             >
               Confirm unsubscribe
             </button>

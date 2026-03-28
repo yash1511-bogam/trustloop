@@ -46,8 +46,8 @@ export function TrustLoopLogo({
   variant = "full",
   className,
 }: TrustLoopLogoProps) {
-  const bright = variant === "white" ? "#F5F5F8" : "#EDEDF0";
-  const muted = variant === "white" ? "#F5F5F8" : "#333333";
+  const bright = variant === "white" ? "#F4F5F9" : "#ECEDF1";
+  const muted = variant === "white" ? "#F4F5F9" : "#333333";
 
   if (variant === "mark") {
     return (
@@ -74,7 +74,7 @@ export function TrustLoopLogo({
   return (
     <svg
       aria-label="TrustLoop"
-      className={className}
+      className={`trustloop-logo ${className ?? ""}`}
       height={height}
       role="img"
       viewBox={`0 0 ${width} ${height}`}

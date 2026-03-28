@@ -1,28 +1,16 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { motion } from "framer-motion";
-
+/**
+ * Page transitions removed per animation decision framework:
+ * route changes happen tens of times per session — animation
+ * at this frequency makes the app feel slower, not smoother.
+ * A simple CSS opacity fade via @starting-style handles the
+ * rare first-paint without penalising repeat navigation.
+ */
 export default function Template({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  return (
-    <motion.div
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      initial={{ opacity: 0, y: 16, scale: 0.98 }}
-      key={pathname}
-      transition={{ 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30,
-        mass: 0.8 
-      }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className="section-enter">{children}</div>;
 }

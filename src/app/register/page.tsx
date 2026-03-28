@@ -119,9 +119,9 @@ export default async function RegisterPage({
             Provision a workspace, verify team identity, and start structured AI incident response in minutes.
           </p>
 
-          <div className="auth-feature-list">
+          <div className="auth-feature-list" role="list">
             {featurePoints.map(({ icon: Icon, copy }) => (
-              <div className="auth-feature-item" key={copy}>
+              <div className="auth-feature-item" key={copy} role="listitem">
                 <Icon color="var(--color-subtext)" size={18} weight="duotone" />
                 <span>{copy}</span>
               </div>

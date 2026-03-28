@@ -251,7 +251,7 @@ export function TeamManagementPanel({
               key={member.id}
             >
               <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[rgba(232,87,42,0.08)] font-medium text-[var(--color-body)]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-rim)] bg-[rgba(212, 98, 43,0.08)] font-medium text-[var(--color-body)]">
                   {member.name.charAt(0).toUpperCase()}
                 </div>
                 <div>

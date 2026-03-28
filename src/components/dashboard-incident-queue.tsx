@@ -219,6 +219,7 @@ export function DashboardIncidentQueue() {
               onKeyDown={(event) => event.key === "Enter" && applyFilters()}
               placeholder="Search incidents, tickets, or customers"
               value={search}
+              aria-label="Search incidents"
             />
           </label>
 
@@ -251,7 +252,7 @@ export function DashboardIncidentQueue() {
             </thead>
             <tbody>
               {Array.from({ length: 5 }).map((_, index) => (
-                <tr key={`skel-${index}`}>
+                <tr key={`skel-${index}`} className="animate-pulse" style={{ animationDelay: `${index * 50}ms` }}>
                   <td><div className="h-5 w-12 rounded bg-[var(--color-rim)]" /></td>
                   <td><div className="h-5 w-16 rounded bg-[var(--color-rim)]" /></td>
                   <td><div className="h-4 w-56 rounded bg-[var(--color-rim)]" /></td>
@@ -288,10 +289,14 @@ export function DashboardIncidentQueue() {
               </tr>
             </thead>
             <tbody>
-              {items.map((incident) => (
+              {items.map((incident, idx) => (
                 <tr
+                  className="stagger-item"
                   key={incident.id}
-                  style={incident.severity === IncidentSeverity.P1 ? { boxShadow: "inset 0 0 0 1px var(--color-danger)", background: "rgba(232,66,66,0.04)" } : undefined}
+                  style={{
+                    animationDelay: `${idx * 30}ms`,
+                    ...(incident.severity === IncidentSeverity.P1 ? { boxShadow: "inset 0 0 0 1px var(--color-danger)", background: "rgba(232,66,66,0.04)" } : undefined),
+                  }}
                 >
                   <td><span className={severityBadgeClass(incident.severity)}>{incident.severity}</span></td>
                   <td><span className={statusBadgeClass(incident.status)}>{incident.status}</span></td>

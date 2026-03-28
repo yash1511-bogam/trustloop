@@ -12,6 +12,7 @@ import {
 } from "@phosphor-icons/react";
 import { HoverLink } from "./hover-link";
 import { usePathname } from "next/navigation";
+import { useCallback, useRef } from "react";
 import { Role } from "@prisma/client";
 import { workspacePath } from "@/lib/workspace-url";
 
@@ -51,6 +52,18 @@ type AppShellNavProps = {
 
 export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShellNavProps) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const links = navRef.current?.querySelectorAll<HTMLAnchorElement>("a");
+    if (!links?.length) return;
+    const arr = Array.from(links);
+    const idx = arr.indexOf(document.activeElement as HTMLAnchorElement);
+    const next = e.key === "ArrowDown" ? (idx + 1) % arr.length : (idx - 1 + arr.length) % arr.length;
+    arr[next]?.focus();
+  }, []);
   const mainItems = mainNavItems.map((item) => ({
     ...item,
     href: slug && role ? workspacePath(item.href, slug, role as Role) : item.href,
@@ -61,7 +74,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
   }));
 
   return (
-    <nav aria-label="Primary navigation" className="app-nav">
+    <nav aria-label="Primary navigation" className="app-nav" ref={navRef} onKeyDown={handleKeyDown}>
       <div className="app-nav-group">
         {mainItems.map((item) => {
           const active = isActive(pathname, item.href, item.exact);

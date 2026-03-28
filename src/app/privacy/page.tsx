@@ -1,7 +1,7 @@
 export default function PrivacyPolicyPage() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-20">
-      <h1 className="mb-8 text-3xl font-bold text-[var(--color-title)]">Privacy Policy</h1>
+    <main className="legal-page">
+      <p className="page-kicker">Legal</p><h1 className="mt-3 font-[var(--font-heading)] text-[32px] font-bold text-[var(--color-title)]">Privacy Policy</h1>
       <p className="mb-4 text-sm text-[var(--color-ghost)]">Last updated: March 2026</p>
       <div className="prose prose-invert max-w-none space-y-6 text-[var(--color-body)]">
         <section>
