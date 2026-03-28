@@ -15,6 +15,7 @@ function turnstileSecretKey(): string | null {
 }
 
 export function isTurnstileEnabled(): boolean {
+  if (process.env.NODE_ENV === "development") return false;
   return Boolean(turnstileSiteKey() && turnstileSecretKey());
 }
 

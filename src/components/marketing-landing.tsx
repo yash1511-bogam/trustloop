@@ -9,6 +9,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   AnimatePresence,
   motion as framerMotion,
+  useMotionValueEvent,
   useScroll,
   useSpring,
   useTransform,
@@ -110,31 +111,13 @@ export function MarketingLanding() {
   const headerBg = useTransform(shrinkProgress, [0, 1], ["rgba(11,12,14,0)", "rgba(11,12,14,0.96)"]);
   const headerBorder = useTransform(shrinkProgress, [0, 1], ["rgba(37,37,41,0)", "rgba(37,37,41,1)"]);
   const headerBlur = useTransform(shrinkProgress, [0, 1], ["blur(0px)", "blur(12px)"]);
+  const [scrolled, setScrolled] = useState(false);
+  useMotionValueEvent(scrollY, "change", (v) => setScrolled(v > 60));
 
   useGSAP(
     () => {
       const media = gsap.matchMedia();
       media.add("(min-width: 768px)", () => {
-        gsap.to(".landing-parallax-slow", {
-          yPercent: -12,
-          ease: "none",
-          scrollTrigger: {
-            trigger: scope.current,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: true,
-          },
-        });
-        gsap.to(".landing-parallax-fast", {
-          yPercent: -20,
-          ease: "none",
-          scrollTrigger: {
-            trigger: scope.current,
-            start: "top top",
-            end: "bottom bottom",
-            scrub: true,
-          },
-        });
       });
       return () => media.revert();
     },
@@ -166,7 +149,7 @@ export function MarketingLanding() {
             }}
           >
             <Link href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); history.replaceState(null, "", "/"); }}>
-              <TrustLoopLogo size={18} variant="full" />
+              <TrustLoopLogo size={18} variant="full" color={scrolled ? "white" : "black"} />
             </Link>
 
             <nav
@@ -296,7 +279,7 @@ export function MarketingLanding() {
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
             <div className="flex items-center justify-between">
-              <TrustLoopLogo size={18} variant="full" />
+              <TrustLoopLogo size={18} variant="full" color="black" />
               <button className="btn btn-ghost btn-sm" onClick={() => setMobileNavOpen(false)} type="button">
                 <X size={18} weight="regular" />
               </button>
@@ -333,14 +316,14 @@ export function MarketingLanding() {
           <div className="mx-auto flex max-w-[860px] flex-col items-center">
             <framerMotion.p
               animate={{ opacity: 1, filter: "blur(0px)" }}
-              className="page-kicker mb-5"
+              className="page-kicker mb-5 text-white/80"
               initial={{ opacity: 0, filter: "blur(8px)" }}
               transition={{ duration: 0.6 }}
             >
               AI Incident Operations
             </framerMotion.p>
             <framerMotion.h1
-              className="font-[var(--font-heading)] text-[length:var(--text-hero-size)] font-extrabold leading-[var(--text-hero-line)] text-[var(--color-title)]"
+              className="font-[var(--font-heading)] text-[length:var(--text-hero-size)] font-extrabold leading-[var(--text-hero-line)] text-white"
               style={{ textWrap: "balance" }}
             >
               {"When your AI fails,".split(" ").map((word, i) => (
@@ -377,7 +360,7 @@ export function MarketingLanding() {
             </framerMotion.h1>
             <framerMotion.p
               animate={{ opacity: 1, y: 0 }}
-              className="mt-5 max-w-[520px] text-[18px] leading-[1.6] text-[var(--color-subtext)]"
+              className="mt-5 max-w-[520px] text-[18px] leading-[1.6] text-white/70"
               initial={{ opacity: 0, y: 16 }}
               transition={{ delay: 0.08, duration: 0.48 }}
             >

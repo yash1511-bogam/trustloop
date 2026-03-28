@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { motion as framerMotion } from "framer-motion";
+import { AnimatePresence, motion as framerMotion } from "framer-motion";
 import {
   ArrowRight,
   Broadcast,
@@ -107,6 +107,7 @@ type MarketingPlan = {
     primary: boolean;
   };
   features: Array<[string, boolean]>;
+  hoverGradient: string;
 };
 
 const plans: MarketingPlan[] = [
@@ -117,6 +118,7 @@ const plans: MarketingPlan[] = [
     description: "For early-stage AI product teams handling customer incidents weekly.",
     featured: false,
     cta: { href: "/register", label: "Start trial", primary: false },
+    hoverGradient: "linear-gradient(to bottom, #283048, #859398)",
     features: [
       ["50 incidents/day", true],
       ["100 triage runs/day", true],
@@ -132,6 +134,7 @@ const plans: MarketingPlan[] = [
     description: "For teams running incident operations daily with tighter approval and reporting needs.",
     featured: true,
     cta: { href: "/register", label: "Start trial", primary: true },
+    hoverGradient: "linear-gradient(to bottom, #0c0c6d, #de512b)",
     features: [
       ["200 incidents/day", true],
       ["300 triage runs/day", true],
@@ -147,6 +150,7 @@ const plans: MarketingPlan[] = [
     description: "For regulated or high-throughput organizations with stricter access and governance requirements.",
     featured: false,
     cta: { href: "mailto:hello@trustloop.dev", label: "Talk to sales", primary: false },
+    hoverGradient: "linear-gradient(to bottom, #1a1a2e, #16213e)",
     features: [
       ["Unlimited incidents", true],
       ["Unlimited triage", true],
@@ -331,32 +335,45 @@ export function LandingBelowFold() {
           <div className="mt-14 grid items-stretch gap-4 lg:grid-cols-3">
             {plans.map((plan) => (
               <framerMotion.article
-                className={`relative flex flex-col rounded-[var(--radius-xl)] border ${plan.featured ? "border-[var(--color-signal)] bg-[var(--color-raised)] shadow-[0_0_40px_-12px_rgba(212,98,43,0.15)]" : plan.monthly === null ? "border-[var(--color-muted)] bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)]" : "border-[var(--color-rim)] bg-[var(--color-surface)]"}`}
+                className={`relative flex flex-col overflow-hidden rounded-[var(--radius-xl)] border ${plan.featured ? "border-[var(--color-signal)] bg-[var(--color-raised)] shadow-[0_0_40px_-12px_rgba(212,98,43,0.15)]" : plan.monthly === null ? "border-[var(--color-muted)] bg-gradient-to-b from-[var(--color-raised)] to-[var(--color-surface)]" : "border-[var(--color-rim)] bg-[var(--color-surface)]"} group`}
                 initial={{ opacity: 0, scale: 0.9, filter: "blur(6px)" }}
                 key={plan.name}
                 transition={{ duration: 0.5, delay: plan.featured ? 0 : 0.1 }}
                 viewport={{ once: true, amount: 0.3 }}
                 whileInView={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
               >
+                <div className="auth-grain-heavy pointer-events-none absolute inset-0 z-0 rounded-[var(--radius-xl)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ backgroundImage: plan.hoverGradient }} />
                 {plan.featured && (
                   <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--color-signal)] to-transparent" />
                 )}
-                <div className="flex flex-1 flex-col p-7">
+                <div className="relative z-10 flex flex-1 flex-col gap-6 p-7 transition-colors group-hover:text-white">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-[var(--font-heading)] text-[15px] font-extrabold uppercase tracking-[0.08em] text-[var(--color-title)]">{plan.name}</h3>
+                    <h3 className="font-[var(--font-heading)] text-[15px] font-extrabold uppercase tracking-[0.08em] text-[var(--color-title)] group-hover:text-white">{plan.name}</h3>
                     {plan.featured && (
                       <span className="rounded-full bg-[var(--color-signal-dim)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-signal)]">Popular</span>
                     )}
                   </div>
                   <div className="mt-5 flex items-baseline gap-1">
-                    <span className="font-[var(--font-heading)] text-[clamp(36px,4vw,52px)] font-extrabold leading-none text-[var(--color-bright)]">
-                      {plan.monthly === null ? "Custom" : `$${annual ? plan.annual : plan.monthly}`}
+                    <span className="font-[var(--font-heading)] text-[clamp(36px,4vw,52px)] font-extrabold leading-none text-[var(--color-bright)] group-hover:text-white">
+                      {plan.monthly === null ? "Custom" : (
+                        <AnimatePresence mode="wait" initial={false}>
+                          <framerMotion.span
+                            key={annual ? "a" : "m"}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.25 }}
+                          >
+                            ${annual ? plan.annual : plan.monthly}
+                          </framerMotion.span>
+                        </AnimatePresence>
+                      )}
                     </span>
                     {plan.monthly !== null && (
-                      <span className="text-[15px] text-[var(--color-ghost)]">/mo</span>
+                      <span className="text-[15px] text-[var(--color-ghost)] group-hover:text-white/70">/mo</span>
                     )}
                   </div>
-                  <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-subtext)]">{plan.description}</p>
+                  <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-subtext)] group-hover:text-white/80">{plan.description}</p>
                   <Link
                     className={`mt-auto inline-flex w-full justify-center ${plan.cta.primary ? "btn btn-primary" : "btn btn-ghost"}`}
                     href={plan.cta.href}
@@ -364,7 +381,7 @@ export function LandingBelowFold() {
                     {plan.cta.label}
                   </Link>
                 </div>
-                <div className="mt-auto border-t border-[var(--color-rim)] px-7 py-5">
+                <div className="relative z-10 mt-auto border-t border-[var(--color-rim)] px-7 py-5 transition-colors group-hover:text-white group-hover:border-white/20">
                   <ul className="grid gap-2.5">
                     {plan.features.map(([feature, enabled]) => (
                       <li className="flex items-center gap-2.5 text-[13px]" key={feature}>
@@ -373,7 +390,7 @@ export function LandingBelowFold() {
                         ) : (
                           <X className="shrink-0" color="var(--color-ghost)" size={14} weight="regular" />
                         )}
-                        <span className={enabled ? "text-[var(--color-body)]" : "text-[var(--color-ghost)]"}>{feature}</span>
+                        <span className={enabled ? "text-[var(--color-body)] group-hover:text-white" : "text-[var(--color-ghost)] group-hover:text-white/50"}>{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -476,11 +493,12 @@ export function LandingBelowFold() {
             </div>
           </div>
 
-          <div className="mt-10 border-t border-[var(--color-rim)] pt-6">
-            <p className="text-[11px] text-[var(--color-ghost)]">© {new Date().getFullYear()} TrustLoop. All rights reserved.</p>
-          </div>
         </div>
       </footer>
+      <div className="mx-auto" style={{ maxWidth: "960px" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/Logo/%E2%88%9E.svg" alt="" loading="lazy" className="block w-full opacity-10" style={{ clipPath: "inset(0 0 25% 0)", marginBottom: "-25%", maxWidth: "960px" }} draggable={false} />
+      </div>
     </>
   );
 }
