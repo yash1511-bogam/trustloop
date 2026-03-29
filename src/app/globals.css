@@ -1006,6 +1006,13 @@
   transition: color var(--duration-fast) var(--ease-out);
 }
 
+/* Neutralize icon wrapper divs inside nav links */
+.app-nav-link > div:first-child {
+  display: flex;
+  align-items: center;
+  line-height: 0;
+}
+
 .app-nav-link:hover {
   color: var(--color-body);
 }

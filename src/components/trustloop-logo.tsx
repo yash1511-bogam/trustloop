@@ -37,7 +37,7 @@ export function TrustLoopLogo({
   }
 
   const scale = size / 83;
-  const gap = Math.round(size * 0.06);
+  const gap = Math.max(2, Math.round(size * 0.06));
 
   return (
     <div
