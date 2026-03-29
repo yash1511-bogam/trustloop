@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  color-scheme: dark light;
+  color-scheme: dark;
 
   /* Surface stack — warm-neutral dark */
   --color-void: #0a0b0d;
@@ -1819,81 +1819,6 @@ details > summary::-webkit-details-marker {
 
   .page-title {
     font-size: 20px;
-  }
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
-
-    /* Surface stack — warm-neutral light */
-    --color-void: #f8f8fa;
-    --color-surface: #ffffff;
-    --color-raised: #f0f0f3;
-    --color-rim: #dcdde2;
-    --color-muted: #c2c3ca;
-    --color-ghost: #6e6f79;
-    --color-subtext: #5c5d66;
-    --color-body: #3a3b42;
-    --color-title: #18191c;
-    --color-bright: #0e0f11;
-
-    /* Signal — burnt sienna (slightly darker for light bg contrast) */
-    --color-signal: #c0541f;
-    --color-signal-dim: rgba(192, 84, 31, 0.1);
-    --color-signal-glow: rgba(192, 84, 31, 0.06);
-    --color-signal-hover: #a84a1b;
-
-    /* Semantic */
-    --color-danger: #dc2626;
-    --color-warning: #b45309;
-    --color-resolve: #15803d;
-    --color-info: #4f63a0;
-  }
-
-  .surface,
-  .panel-card,
-  .auth-panel,
-  .settings-panel,
-  .drawer-panel {
-    background: linear-gradient(180deg, #ffffff, #fafafa);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  }
-
-  .app-sidebar {
-    background: linear-gradient(180deg, #f8f8fa, #f4f4f7);
-  }
-
-  .table-shell th {
-    background: #f4f4f7;
-  }
-
-  .metric-card {
-    background: #ffffff;
-  }
-
-  .drawer-backdrop {
-    background: rgba(0, 0, 0, 0.3);
-  }
-
-  .badge {
-    background: rgba(0, 0, 0, 0.04);
-    border-color: rgba(0, 0, 0, 0.1);
-  }
-
-  .input,
-  .textarea,
-  .select {
-    background: #ffffff;
-    border-color: #dcdde2;
-  }
-
-  .btn-ghost {
-    border-color: #dcdde2;
-  }
-
-  .btn-ghost:hover {
-    background: #f0f0f3;
   }
 }
 
