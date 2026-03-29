@@ -249,6 +249,7 @@
   max-width: var(--content-max-dashboard);
   margin: 0 auto;
   padding: var(--space-6);
+  flex: 1;
 }
 
 /* ── Page header — clean inline, no gradient card ── */
@@ -1101,6 +1102,8 @@ button.app-nav-link {
 
 .app-shell-content {
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   height: 100%;
@@ -1108,6 +1111,12 @@ button.app-nav-link {
   overscroll-behavior: none;
   padding: 0;
   background: var(--color-void);
+}
+
+.app-shell-content > * {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .menu-mobile-bar {
