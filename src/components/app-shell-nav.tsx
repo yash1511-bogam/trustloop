@@ -188,7 +188,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
         <div className="app-nav-group">
           {allSettingsItems.map((item) => {
             const resolved = { ...item, href: resolve(item.href) };
-            return renderLink(resolved, { iconOnly: true, iconSize: 16 });
+            return renderLink(resolved, { iconOnly: true, iconSize: 18 });
           })}
         </div>
       </nav>
@@ -199,7 +199,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
   return (
     <nav aria-label="Primary navigation" className="app-nav" ref={navRef} onKeyDown={handleKeyDown}>
       <div className="app-nav-group">
-        {mainItems.map((item) => renderLink(item, { iconOnly: false, iconSize: 18 }))}
+        {mainItems.map((item) => renderLink(item, { iconOnly: false, iconSize: 20 }))}
       </div>
 
       {settingsGroups.map((group) => {

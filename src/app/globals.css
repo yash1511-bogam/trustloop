@@ -284,14 +284,12 @@
   background: var(--color-surface);
   border: 1px solid var(--color-rim);
   transition: border-color var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out),
     box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .dash-stat-card:hover {
   border-color: rgba(212,98,43,0.25);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
 }
 
 .dash-stat-top {
@@ -496,15 +494,13 @@
 .surface-clickable {
   transition: border-color var(--duration-fast) var(--ease-out),
     background-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out);
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .surface-clickable:hover {
   border-color: var(--color-muted);
   background: var(--color-raised);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
 }
 
 .surface-raised {
@@ -729,7 +725,6 @@
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: border-color var(--duration-fast) var(--ease-out),
     box-shadow var(--duration-fast) var(--ease-out),
-    transform var(--duration-fast) var(--ease-out),
     background-color var(--duration-fast) var(--ease-out);
 }
 
@@ -737,7 +732,6 @@
   border-color: var(--color-muted);
   background: var(--color-raised);
   box-shadow: 0 16px 64px rgba(255, 255, 255, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  transform: translateY(-3px);
 }
 
 .metric-card.metric-card-p1 {
@@ -878,8 +872,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-md);
   color: var(--color-subtext);
   transition: background-color var(--duration-fast) var(--ease-out),
@@ -993,11 +987,11 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 34px;
-  padding: 0 10px;
+  height: 36px;
+  padding: 0 12px;
   border-radius: var(--radius-md);
   color: var(--color-subtext);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
   transition: color var(--duration-fast) var(--ease-out);
 }
@@ -1025,9 +1019,9 @@
 
 /* Group toggle buttons — shorter than nav links */
 button.app-nav-link {
-  height: 30px !important;
-  padding: 0 10px !important;
-  font-size: 12px;
+  height: 32px !important;
+  padding: 0 12px !important;
+  font-size: 13px;
 }
 
 .app-nav-link-active {
