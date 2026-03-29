@@ -224,6 +224,7 @@
 .stack-32 {
   display: grid;
   gap: var(--space-5);
+  align-content: start;
 }
 
 .below-fold {
@@ -247,8 +248,7 @@
   width: 100%;
   max-width: var(--content-max-dashboard);
   margin: 0 auto;
-  padding: var(--space-6) var(--space-6) var(--space-6);
-  box-sizing: border-box;
+  padding: var(--space-6);
 }
 
 /* ── Page header — clean inline, no gradient card ── */
@@ -1105,6 +1105,7 @@ button.app-nav-link {
   min-height: 0;
   height: 100%;
   overflow-y: auto;
+  overscroll-behavior: none;
   padding: 0;
   background: var(--color-void);
 }
