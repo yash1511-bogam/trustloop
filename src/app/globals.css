@@ -247,8 +247,8 @@
   width: 100%;
   max-width: var(--content-max-dashboard);
   margin: 0 auto;
-  padding: var(--space-6) var(--space-6) var(--space-3);
-  min-height: calc(100dvh - 1px);
+  padding: var(--space-6) var(--space-6) var(--space-6);
+  box-sizing: border-box;
 }
 
 /* ── Page header — clean inline, no gradient card ── */
@@ -1106,7 +1106,7 @@ button.app-nav-link {
   height: 100%;
   overflow-y: auto;
   padding: 0;
-  background: var(--color-surface);
+  background: var(--color-void);
 }
 
 .menu-mobile-bar {
