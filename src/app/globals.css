@@ -968,11 +968,13 @@
 .app-nav {
   display: grid;
   gap: 1px;
+  align-content: start;
 }
 
 .app-nav-group {
   display: grid;
   gap: 1px;
+  align-content: start;
 }
 
 .app-nav-group-label {
