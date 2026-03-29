@@ -136,12 +136,10 @@ export function AppShellFrame({
               <div className="app-sidebar-workspace-name">{workspaceName}</div>
               <span className="app-sidebar-plan">{planLabel}</span>
             </div>
-            <div>
-              <WorkspaceSwitcher
-                currentWorkspaceId={currentWorkspaceId}
-                workspaces={workspaces}
-              />
-            </div>
+            <WorkspaceSwitcher
+              currentWorkspaceId={currentWorkspaceId}
+              workspaces={workspaces}
+            />
             {complianceMode ? (
               <div className="badge badge-warning badge-sm w-fit">Compliance mode</div>
             ) : null}
