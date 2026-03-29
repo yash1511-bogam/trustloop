@@ -312,7 +312,7 @@ export function MarketingLanding() {
       </AnimatePresence>
 
       <main id="top" className="marketing-shell pb-20">
-        <section className="auth-grain-heavy relative -mt-[60px] flex h-[calc(100vh-35px)] flex-col items-center justify-center overflow-hidden rounded-2xl text-center pt-20" style={{ backgroundImage: "linear-gradient(to left, #283048, #859398)", width: "calc(100vw - 40px)", marginLeft: "calc(50% - 50vw + 20px)", marginTop: "-45px" }}>
+        <section className="auth-grain-heavy relative -mt-[60px] flex h-[calc(100vh-35px)] flex-col items-center justify-center overflow-hidden rounded-2xl text-center pt-20" style={{ backgroundImage: "linear-gradient(to left, #030608, #080e11, #0c1a20)", width: "calc(100vw - 40px)", marginLeft: "calc(50% - 50vw + 20px)", marginTop: "-45px" }}>
           <div className="mx-auto flex max-w-[860px] flex-col items-center">
             <framerMotion.p
               animate={{ opacity: 1, filter: "blur(0px)" }}
@@ -351,7 +351,7 @@ export function MarketingLanding() {
               ))}
               <framerMotion.span
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                className="inline-block text-[var(--color-signal)]"
+                className="relative z-[2] inline-block text-[var(--color-signal)]"
                 initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
                 transition={{ duration: 0.5, delay: 0.56, ease: [0.16, 1, 0.3, 1] }}
               >
@@ -373,12 +373,12 @@ export function MarketingLanding() {
               initial={{ opacity: 0, y: 12 }}
               transition={{ delay: 0.65, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              <HoverLink className="btn btn-primary btn-lg" href="/register">
+              <HoverLink className="btn btn-primary btn-lg relative z-[2]" href="/register">
                 Start free trial
               </HoverLink>
-              <a className="btn btn-ghost btn-lg group" href="#how-it-works" onClick={(e) => { e.preventDefault(); document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); history.replaceState(null, "", "/how-it-works"); }}>
+              <a className="btn btn-lg group relative z-[2] border border-black text-black hover:bg-black/10" href="#how-it-works" onClick={(e) => { e.preventDefault(); document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); history.replaceState(null, "", "/how-it-works"); }}>
                 See how it works
-                <ArrowRight className="transition-transform group-hover:translate-x-1" size={16} weight="regular" />
+                <ArrowRight className="text-black transition-transform group-hover:translate-x-1" size={16} weight="regular" />
               </a>
             </framerMotion.div>
           </div>

@@ -58,7 +58,7 @@ export default async function LoginPage({
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_1.1fr]">
           {/* Left — brand */}
-          <GradientCard colors="bg-gradient-to-br from-[#0d0d0d] via-[#2d2d2d] to-[#1a1a1a]">
+          <GradientCard colors="bg-gradient-to-br from-[#0d0d0d] via-[#2d2d2d] to-[#1a1a1a]" heading="Welcome back to TrustLoop." description="Your incidents, your team, your customers — all in one place. Pick up right where you left off.">
             <Link href="/"><TrustLoopLogo size={18} variant="full" /></Link>
           </GradientCard>
 

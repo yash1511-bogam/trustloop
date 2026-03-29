@@ -94,6 +94,16 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  icons: {
+    icon: [
+      { url: "/128.svg", type: "image/svg+xml", sizes: "128x128" },
+      { url: "/256.svg", type: "image/svg+xml", sizes: "256x256" },
+      { url: "/512.svg", type: "image/svg+xml", sizes: "512x512" },
+    ],
+    apple: [
+      { url: "/512.svg", type: "image/svg+xml", sizes: "512x512" },
+    ],
+  },
   manifest: "/manifest.webmanifest",
   category: "technology",
 };

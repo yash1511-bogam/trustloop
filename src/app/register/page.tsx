@@ -79,7 +79,7 @@ export default async function RegisterPage({
       <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <div className="grid min-h-0 flex-1 lg:grid-cols-[1fr_1.1fr]">
           {/* Left — brand */}
-          <GradientCard gradient="linear-gradient(135deg, #0c0c6d, #de512b, #98d0c1, #5bb226, #023c0d)">
+          <GradientCard gradient="linear-gradient(135deg, #060630, #6e2815, #4a6860, #2d5913, #011e06)" heading="Build trust with every incident." description="Set up your workspace in under two minutes. Detect AI failures, triage with AI, and publish customer-safe updates from one place.">
             <Link href="/"><TrustLoopLogo size={18} variant="full" /></Link>
           </GradientCard>
 
