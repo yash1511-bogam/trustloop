@@ -35,6 +35,14 @@ type DashboardPageClientProps = {
     avgResolutionHours: number;
   };
   snapshot: Snapshot | null;
+  onboarding: {
+    dismissed: boolean;
+    hasIncident: boolean;
+    hasTriaged: boolean;
+    hasAiKey: boolean;
+    hasSlack: boolean;
+    hasWebhook: boolean;
+  };
 };
 
 /* ── Donut chart (pure SVG) ── */
@@ -99,6 +107,7 @@ function CoverageDonut({ triage, update }: { triage: number; update: number }) {
 export function DashboardPageClient({
   counts,
   snapshot,
+  onboarding,
 }: DashboardPageClientProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -147,7 +156,7 @@ export function DashboardPageClient({
 
   return (
     <div className="page-shell page-stack">
-      <OnboardingChecklist />
+      <OnboardingChecklist onboarding={onboarding} />
 
       {/* ── Page header ── */}
       <section className="dash-hero section-enter">

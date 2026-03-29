@@ -6,11 +6,13 @@ import { getExecutiveDashboard } from "@/lib/read-models";
 export default async function DashboardPage() {
   const auth = await requireAuth();
 
-  const [executiveData, totalIncidents] = await Promise.all([
+  const [executiveData, totalIncidents, workspace, aiKeyCount, triagedCount, webhookCount] = await Promise.all([
     getExecutiveDashboard(auth.user.workspaceId),
-    prisma.incident.count({
-      where: { workspaceId: auth.user.workspaceId },
-    }),
+    prisma.incident.count({ where: { workspaceId: auth.user.workspaceId } }),
+    prisma.workspace.findUniqueOrThrow({ where: { id: auth.user.workspaceId } }),
+    prisma.aiProviderKey.count({ where: { workspaceId: auth.user.workspaceId } }),
+    prisma.incident.count({ where: { workspaceId: auth.user.workspaceId, triagedAt: { not: null } } }),
+    prisma.workspaceWebhookIntegration.count({ where: { workspaceId: auth.user.workspaceId } }),
   ]);
 
   const snapshot = executiveData.snapshot;
@@ -30,6 +32,14 @@ export default async function DashboardPage() {
         ...snapshot,
         updatedAt: snapshot.updatedAt ?? null,
       } : null}
+      onboarding={{
+        dismissed: (workspace as Record<string, unknown>).onboardingDismissedAt !== null && (workspace as Record<string, unknown>).onboardingDismissedAt !== undefined,
+        hasIncident: totalIncidents > 0,
+        hasTriaged: triagedCount > 0,
+        hasAiKey: aiKeyCount > 0,
+        hasSlack: workspace.slackBotToken !== null,
+        hasWebhook: webhookCount > 0,
+      }}
     />
   );
 }
