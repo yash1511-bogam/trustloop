@@ -43,16 +43,13 @@ export function IncidentsPageClient({ counts }: Props) {
       <section className="dash-hero section-enter">
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
-            <p className="page-kicker">Incident Operations</p>
-            <h1 className="page-title">Incidents</h1>
-            <p className="page-description">
-              Filter, search, and manage every incident across your workspace.
-            </p>
+            <p className="page-kicker">Incidents</p>
+            <h1 className="page-title">All incidents</h1>
           </div>
           <div className="page-header-actions">
             <button className="btn btn-primary" onClick={() => setDrawerOpen(true)} type="button">
-              <Plus size={16} weight="regular" />
-              New Incident
+              <Plus size={14} weight="regular" />
+              New incident
             </button>
           </div>
         </div>

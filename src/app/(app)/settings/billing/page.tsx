@@ -98,9 +98,6 @@ export default async function SettingsBillingPage({
           <div className="dash-hero-text">
             <p className="page-kicker">Workspace</p>
             <h1 className="page-title">Billing</h1>
-            <p className="page-description">
-              Review plan usage, compare tiers, and move into checkout only when you are ready.
-            </p>
           </div>
         </div>
       </section>

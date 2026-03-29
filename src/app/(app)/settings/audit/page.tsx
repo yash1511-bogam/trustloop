@@ -14,9 +14,6 @@ export default async function AuditLogPage() {
           <div className="dash-hero-text">
             <p className="page-kicker">Security</p>
             <h1 className="page-title">Audit log</h1>
-            <p className="page-description">
-              All privileged actions across your workspace are recorded here for review and compliance checks.
-            </p>
           </div>
         </div>
       </section>

@@ -149,24 +149,21 @@ export function DashboardPageClient({
     <div className="page-shell page-stack">
       <OnboardingChecklist />
 
-      {/* ── Hero header with warm gradient ── */}
+      {/* ── Page header ── */}
       <section className="dash-hero section-enter">
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
-            <p className="page-kicker">Incident Operations</p>
-            <h1 className="page-title">Command dashboard</h1>
-            <p className="page-description">
-              Live responder metrics, queue pressure, and customer-safe action paths.
-            </p>
+            <p className="page-kicker">Dashboard</p>
+            <h1 className="page-title">Command center</h1>
           </div>
           <div className="page-header-actions">
             <Link className="btn btn-ghost" href="/executive">
               Executive view
-              <ArrowRight size={16} weight="regular" />
+              <ArrowRight size={14} weight="regular" />
             </Link>
             <button className="btn btn-primary" onClick={() => setDrawerOpen(true)} type="button">
-              <Plus size={16} weight="regular" />
-              New Incident
+              <Plus size={14} weight="regular" />
+              New incident
             </button>
           </div>
         </div>

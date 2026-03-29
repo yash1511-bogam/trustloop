@@ -66,11 +66,8 @@ export default async function SettingsOverviewPage() {
       <section className="dash-hero section-enter">
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
-            <p className="page-kicker">Workspace</p>
-            <h1 className="page-title">Configuration overview</h1>
-            <p className="page-description">
-              The operating state of your workspace at a glance, before you move into deeper settings.
-            </p>
+            <p className="page-kicker">Settings</p>
+            <h1 className="page-title">Overview</h1>
           </div>
         </div>
       </section>

@@ -64,9 +64,6 @@ export default async function SettingsAiPage() {
           <div className="dash-hero-text">
             <p className="page-kicker">Integrations</p>
             <h1 className="page-title">AI & API keys</h1>
-            <p className="page-description">
-              Configure provider access, workflow routing, and scoped automation credentials.
-            </p>
           </div>
         </div>
       </section>

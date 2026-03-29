@@ -1,21 +1,30 @@
 export default function AppLoading() {
   return (
     <div className="page-shell page-stack">
-      <section className="page-header">
-        <div className="page-header-main">
-          <div className="h-3 w-24 rounded bg-[var(--color-rim)] animate-pulse" />
-          <div className="h-7 w-48 rounded bg-[var(--color-rim)] animate-pulse" />
+      <section className="dash-hero">
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <div className="h-3 w-16 rounded bg-[var(--color-rim)] animate-pulse" />
+            <div className="h-6 w-40 rounded bg-[var(--color-rim)] animate-pulse" />
+          </div>
         </div>
       </section>
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="metric-card animate-pulse" style={{ animationDelay: `${i * 50}ms` }}>
-            <div className="h-2.5 w-20 rounded bg-[var(--color-rim)]" />
-            <div className="h-8 w-12 rounded bg-[var(--color-rim)]" />
+      <section className="dash-stats">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="dash-stat-card animate-pulse" style={{ animationDelay: `${i * 60}ms` }}>
+            <div className="h-8 w-8 rounded-[var(--radius-sm)] bg-[var(--color-rim)]" />
+            <div className="h-6 w-14 rounded bg-[var(--color-rim)]" />
+            <div className="h-3 w-20 rounded bg-[var(--color-rim)]" />
           </div>
         ))}
       </section>
-      <section className="surface animate-pulse min-h-[300px]" />
+      <div className="dash-chart-card animate-pulse min-h-[240px]" />
+      <div className="table-shell animate-pulse">
+        <div className="h-9 border-b border-[var(--color-rim)]" />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-11 border-b border-[var(--color-rim)]" />
+        ))}
+      </div>
     </div>
   );
 }

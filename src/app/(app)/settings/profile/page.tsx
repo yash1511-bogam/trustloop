@@ -26,9 +26,6 @@ export default async function SettingsProfilePage() {
           <div className="dash-hero-text">
             <p className="page-kicker">Account</p>
             <h1 className="page-title">Profile</h1>
-            <p className="page-description">
-              Personal contact details used across incident notifications and escalation routing.
-            </p>
           </div>
         </div>
       </section>

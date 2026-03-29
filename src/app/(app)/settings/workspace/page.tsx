@@ -74,9 +74,6 @@ export default async function SettingsWorkspacePage() {
           <div className="dash-hero-text">
             <p className="page-kicker">Workspace</p>
             <h1 className="page-title">Quotas, integrations & policy</h1>
-            <p className="page-description">
-              Control rate limits, signed inputs, status surfaces, and incident routing policy at the workspace level.
-            </p>
           </div>
         </div>
       </section>

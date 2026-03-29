@@ -59,9 +59,6 @@ export default async function SettingsTeamPage() {
           <div className="dash-hero-text">
             <p className="page-kicker">Workspace</p>
             <h1 className="page-title">Team</h1>
-            <p className="page-description">
-              Invite responders, manage roles, and keep the on-call contact layer current.
-            </p>
           </div>
         </div>
       </section>

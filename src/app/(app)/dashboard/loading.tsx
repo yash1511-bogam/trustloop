@@ -1,50 +1,37 @@
 export default function DashboardLoading() {
   return (
     <div className="page-shell page-stack">
-      <section className="page-header">
-        <div className="page-header-main">
-          <div className="h-3 w-24 rounded bg-[var(--color-rim)] animate-pulse" />
-          <div className="h-7 w-56 rounded bg-[var(--color-rim)] animate-pulse" />
-          <div className="h-4 w-72 rounded bg-[var(--color-surface)] animate-pulse" />
-        </div>
-        <div className="page-header-actions">
-          <div className="h-9 w-36 rounded-[var(--radius-md)] bg-[var(--color-surface)] animate-pulse" />
-          <div className="h-9 w-32 rounded-[var(--radius-md)] bg-[var(--color-signal-dim)] animate-pulse" />
-        </div>
-      </section>
-
-      <section>
-        <div className="h-5 w-24 rounded bg-[var(--color-rim)] animate-pulse" />
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="metric-card animate-pulse"
-              style={{ animationDelay: `${i * 50}ms` }}
-            >
-              <div className="h-2.5 w-20 rounded bg-[var(--color-rim)]" />
-              <div className="h-8 w-12 rounded bg-[var(--color-rim)]" />
-              <div className="h-2.5 w-16 rounded bg-[var(--color-surface)]" />
-            </div>
-          ))}
+      <section className="dash-hero">
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <div className="h-3 w-20 rounded bg-[var(--color-rim)] animate-pulse" />
+            <div className="h-6 w-44 rounded bg-[var(--color-rim)] animate-pulse" />
+          </div>
+          <div className="page-header-actions">
+            <div className="h-9 w-28 rounded-[var(--radius-md)] bg-[var(--color-surface)] animate-pulse" />
+            <div className="h-9 w-32 rounded-[var(--radius-md)] bg-[var(--color-signal-dim)] animate-pulse" />
+          </div>
         </div>
       </section>
-
-      <section>
-        <div className="surface p-5 animate-pulse">
-          <div className="h-5 w-48 rounded bg-[var(--color-rim)]" />
-          <div className="mt-2 h-3 w-64 rounded bg-[var(--color-surface)]" />
-        </div>
+      <section className="dash-stats">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="dash-stat-card animate-pulse" style={{ animationDelay: `${i * 60}ms` }}>
+            <div className="h-8 w-8 rounded-[var(--radius-sm)] bg-[var(--color-rim)]" />
+            <div className="h-6 w-12 rounded bg-[var(--color-rim)]" />
+            <div className="h-3 w-20 rounded bg-[var(--color-rim)]" />
+          </div>
+        ))}
       </section>
-
-      <section>
-        <div className="table-shell animate-pulse">
-          <div className="h-10 border-b border-[var(--color-rim)]" />
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 border-b border-[var(--color-rim)]" />
-          ))}
-        </div>
-      </section>
+      <div className="dash-analytics">
+        <div className="dash-chart-card animate-pulse min-h-[260px]" />
+        <div className="dash-chart-card animate-pulse min-h-[260px]" />
+      </div>
+      <div className="table-shell animate-pulse">
+        <div className="h-9 border-b border-[var(--color-rim)]" />
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="h-11 border-b border-[var(--color-rim)]" />
+        ))}
+      </div>
     </div>
   );
 }

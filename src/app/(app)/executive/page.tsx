@@ -59,10 +59,7 @@ export default async function ExecutivePage() {
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Executive</p>
-            <h1 className="page-title">Reliability and response analytics</h1>
-            <p className="page-description">
-              Tenant-scoped read models for leadership reviews, responder coverage, and incident velocity.
-            </p>
+            <h1 className="page-title">Analytics</h1>
           </div>
           <div className="page-header-actions">
             <Link className="btn btn-ghost btn-sm" href="/api/incidents/export?format=csv">
