@@ -878,9 +878,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
   color: var(--color-subtext);
   transition: background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out);
@@ -907,7 +907,7 @@
 }
 
 .app-sidebar-workspace-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-title);
   letter-spacing: -0.01em;
@@ -927,13 +927,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 16px;
-  padding: 0 6px;
+  height: 18px;
+  padding: 0 7px;
   border-radius: var(--radius-pill);
   background: var(--color-signal-dim);
   color: var(--color-signal);
   font-family: var(--font-mono), monospace;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   flex-shrink: 0;
@@ -967,13 +967,13 @@
 
 .app-nav {
   display: grid;
-  gap: 1px;
+  gap: 2px;
   align-content: start;
 }
 
 .app-nav-group {
   display: grid;
-  gap: 1px;
+  gap: 2px;
   align-content: start;
 }
 
@@ -992,9 +992,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding: 0 8px;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
   border-radius: var(--radius-md);
   color: var(--color-subtext);
   font-size: 13px;
@@ -1025,9 +1025,9 @@
 
 /* Group toggle buttons — shorter than nav links */
 button.app-nav-link {
-  height: 24px !important;
-  padding: 0 8px !important;
-  font-size: 11px;
+  height: 30px !important;
+  padding: 0 10px !important;
+  font-size: 12px;
 }
 
 .app-nav-link-active {
@@ -1046,7 +1046,7 @@ button.app-nav-link {
   left: 0;
   top: 50%;
   width: 2px;
-  height: 12px;
+  height: 16px;
   border-radius: 0 999px 999px 0;
   background: var(--color-signal);
   transform: translateY(-50%);
