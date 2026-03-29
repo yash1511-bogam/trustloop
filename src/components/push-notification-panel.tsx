@@ -198,8 +198,11 @@ export function PushNotificationPanel() {
     }
   }
 
-  const browserSupport =
-    typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+  const [browserSupport, setBrowserSupport] = useState(false);
+
+  useEffect(() => {
+    setBrowserSupport("serviceWorker" in navigator && "PushManager" in window);
+  }, []);
 
   return (
     <div className="space-y-8 max-w-4xl">
