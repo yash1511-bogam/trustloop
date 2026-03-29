@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { IncidentSeverity, IncidentStatus as IncidentStatusEnum } from "@prisma/client";
-import { Clock, Warning, Brain } from "@phosphor-icons/react/dist/ssr";
+import { Clock, Warning, Brain, ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { IncidentActions } from "@/components/incident-actions";
 import { requireAuth } from "@/lib/auth";
 import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
@@ -71,47 +71,62 @@ export default async function IncidentDetailPage({
     where: { workspaceId: auth.user.workspaceId, isActive: true },
   });
 
+  const isP1 = incident.severity === IncidentSeverity.P1;
+
   return (
-    <>
-      <section className="surface section-enter p-6">
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className={severityBadgeClass(incident.severity)}>
-            {incident.severity === IncidentSeverity.P1 && <Warning size={12} weight="bold" />}
-            {incident.severity}
-          </span>
-          <span className="badge">
-            {incident.status === IncidentStatusEnum.NEW && <Clock size={12} weight="bold" />}
-            {incident.status}
-          </span>
-          {incident.category ? <span className="badge"><Brain size={12} weight="regular" />{incident.category}</span> : null}
-        </div>
-
-        <h2 className="font-[var(--font-heading)] text-[28px] font-bold text-[var(--color-title)]">{incident.title}</h2>
-        <p className="mt-4 max-w-4xl whitespace-pre-wrap leading-relaxed text-[var(--color-ghost)]">{incident.description}</p>
-
-        <div className="mt-6 grid gap-3 text-sm md:grid-cols-2">
-          <p>
-            <span className="text-[var(--color-subtext)]">Owner</span>
-            <span className="ml-3 text-[var(--color-title)]">{incident.owner?.name ?? "Unassigned"}</span>
-          </p>
-          <p>
-            <span className="text-[var(--color-subtext)]">Customer</span>
-            <span className="ml-3 text-[var(--color-title)]">{incident.customerName || incident.customerEmail || "Unknown"}</span>
-          </p>
-          <p>
-            <span className="text-[var(--color-subtext)]">Ticket ref</span>
-            <span className="ml-3 text-[var(--color-title)]">{incident.sourceTicketRef ?? "-"}</span>
-          </p>
-          <p>
-            <span className="text-[var(--color-subtext)]">Model version</span>
-            <span className="ml-3 text-[var(--color-title)]">{incident.modelVersion ?? "-"}</span>
-          </p>
+    <div className="page-shell page-stack">
+      {/* ── Hero ── */}
+      <section className={`dash-hero section-enter${isP1 ? " dash-hero-p1" : ""}`}>
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className={severityBadgeClass(incident.severity)}>
+                {isP1 && <Warning size={12} weight="bold" />}
+                {incident.severity}
+              </span>
+              <span className="badge">
+                {incident.status === IncidentStatusEnum.NEW && <Clock size={12} weight="bold" />}
+                {incident.status}
+              </span>
+              {incident.category ? <span className="badge"><Brain size={12} weight="regular" />{incident.category}</span> : null}
+            </div>
+            <h1 className="page-title" style={{ fontSize: 28 }}>{incident.title}</h1>
+            <p className="page-description">{incident.description}</p>
+          </div>
+          <div className="page-header-actions">
+            <Link className="btn btn-ghost btn-sm" href="/dashboard">
+              <ArrowLeft size={16} weight="regular" />
+              Dashboard
+            </Link>
+          </div>
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <section className="surface p-6">
-          <h3 className="mb-4 font-[var(--font-heading)] text-[18px] font-semibold text-[var(--color-title)]">Timeline</h3>
+      {/* ── Metadata cards ── */}
+      <section className="dash-stats section-enter" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+        {[
+          { label: "Owner", value: incident.owner?.name ?? "Unassigned" },
+          { label: "Customer", value: incident.customerName || incident.customerEmail || "Unknown" },
+          { label: "Ticket ref", value: incident.sourceTicketRef ?? "—" },
+          { label: "Model version", value: incident.modelVersion ?? "—" },
+        ].map((m) => (
+          <div key={m.label} className="dash-stat-card">
+            <div className="dash-stat-label">{m.label}</div>
+            <div className="dash-stat-value" style={{ fontSize: 16, fontWeight: 600 }}>{m.value}</div>
+          </div>
+        ))}
+      </section>
+
+      {/* ── Main content ── */}
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px] section-enter">
+        {/* Timeline */}
+        <div className="dash-chart-card">
+          <div className="dash-chart-header">
+            <div>
+              <h2 className="dash-chart-title">Timeline</h2>
+              <p className="dash-chart-desc">{incident.events.length} event{incident.events.length !== 1 ? "s" : ""}</p>
+            </div>
+          </div>
           <div className="relative space-y-0">
             {incident.events.length > 1 && (
               <div aria-hidden className="absolute left-[9px] top-4 bottom-4 w-px bg-[var(--color-rim)]" />
@@ -125,7 +140,7 @@ export default async function IncidentDetailPage({
                   <div className="mb-1 flex items-center justify-between gap-2 text-xs text-[var(--color-ghost)]">
                     <span>
                       {event.eventType}
-                      {event.actor?.name ? ` • ${event.actor.name}` : ""}
+                      {event.actor?.name ? ` · ${event.actor.name}` : ""}
                     </span>
                     <span>{event.createdAt.toLocaleString()}</span>
                   </div>
@@ -133,16 +148,21 @@ export default async function IncidentDetailPage({
                 </div>
               </article>
             ))}
-
             {incident.events.length === 0 ? (
               <p className="text-sm text-[var(--color-ghost)]">No timeline events yet.</p>
             ) : null}
           </div>
-        </section>
+        </div>
 
-        <aside className="space-y-6">
-          <section className="surface p-6">
-            <h3 className="mb-4 font-[var(--font-heading)] text-[18px] font-semibold text-[var(--color-title)]">Actions</h3>
+        {/* Sidebar */}
+        <div className="space-y-5">
+          <div className="dash-chart-card">
+            <div className="dash-chart-header">
+              <div>
+                <h2 className="dash-chart-title">Actions</h2>
+                <p className="dash-chart-desc">Update status, assign, or run AI</p>
+              </div>
+            </div>
             <IncidentActions
               incidentId={incident.id}
               status={incident.status}
@@ -153,10 +173,14 @@ export default async function IncidentDetailPage({
               planTier={planTier}
               hasAiKeys={aiKeyCount > 0}
             />
-          </section>
+          </div>
 
-          <section className="surface p-6">
-            <h3 className="mb-4 font-[var(--font-heading)] text-[18px] font-semibold text-[var(--color-title)]">Post-Mortem</h3>
+          <div className="dash-chart-card">
+            <div className="dash-chart-header">
+              <div>
+                <h2 className="dash-chart-title">Post-Mortem</h2>
+              </div>
+            </div>
             {incident.postMortem ? (
               <div>
                 <div className="mb-2 flex items-center gap-2">
@@ -173,7 +197,7 @@ export default async function IncidentDetailPage({
                 </div>
               </div>
             ) : (
-              <div className="text-center">
+              <div className="text-center py-4">
                 <p className="text-sm text-[var(--color-ghost)]">No post-mortem yet.</p>
                 {aiKeyCount > 0 ? (
                   <p className="mt-2 text-xs text-[var(--color-subtext)]">
@@ -186,13 +210,9 @@ export default async function IncidentDetailPage({
                 )}
               </div>
             )}
-          </section>
-
-          <Link className="btn btn-ghost" href="/dashboard">
-            Back to dashboard
-          </Link>
-        </aside>
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

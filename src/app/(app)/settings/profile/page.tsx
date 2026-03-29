@@ -21,25 +21,26 @@ export default async function SettingsProfilePage() {
 
   return (
     <div className="page-stack">
-      <section className="page-header section-enter">
-        <div className="page-header-main">
-          <p className="page-kicker">Account</p>
-          <h1 className="page-title">Profile</h1>
-          <p className="page-description">
-            Personal contact details used across incident notifications and escalation routing.
-          </p>
+      <section className="dash-hero section-enter">
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <p className="page-kicker">Account</p>
+            <h1 className="page-title">Profile</h1>
+            <p className="page-description">
+              Personal contact details used across incident notifications and escalation routing.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Responder profile</h2>
-          <p className="settings-section-description">
-            Keep your name and phone number current for urgent incident communications.
-          </p>
+      <section className="section-enter">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">Responder profile</h2>
+          <p className="dash-chart-desc">Keep your name and phone number current for urgent incident communications.</p>
         </div>
-
-        <ProfileSettingsPanel planTier={planTier} profile={profile} />
+        <div className="dash-chart-card">
+          <ProfileSettingsPanel planTier={planTier} profile={profile} />
+        </div>
       </section>
     </div>
   );

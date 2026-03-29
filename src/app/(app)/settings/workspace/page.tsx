@@ -69,24 +69,24 @@ export default async function SettingsWorkspacePage() {
 
   return (
     <div className="page-stack">
-      <section className="page-header section-enter">
-        <div className="page-header-main">
-          <p className="page-kicker">Workspace</p>
-          <h1 className="page-title">Quotas, integrations, and workspace policy</h1>
-          <p className="page-description">
-            Control rate limits, signed inputs, status surfaces, and incident routing policy at the workspace level.
-          </p>
+      <section className="dash-hero section-enter">
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <p className="page-kicker">Workspace</p>
+            <h1 className="page-title">Quotas, integrations & policy</h1>
+            <p className="page-description">
+              Control rate limits, signed inputs, status surfaces, and incident routing policy at the workspace level.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Workspace quotas</h2>
-          <p className="settings-section-description">
-            Tenant-aware rate limits and daily usage controls for API calls, triage runs, reminders, and outbound updates.
-          </p>
+      <section className="section-enter">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">Workspace quotas</h2>
+          <p className="dash-chart-desc">Tenant-aware rate limits and daily usage controls for API calls, triage runs, reminders, and outbound updates.</p>
         </div>
-        <div>
+        <div className="dash-chart-card">
           <QuotaSettingsPanel
             initialQuota={{
               apiRequestsPerMinute: clampedQuota.apiRequestsPerMinute,
@@ -107,31 +107,27 @@ export default async function SettingsWorkspacePage() {
         </div>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">
+      <section className="section-enter" id="on-call">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">
             On-call rotation
             <PlanBadge allowed={onCallAllowed} planLabel="Pro" />
           </h2>
-          <p className="settings-section-description">
-            Review the current escalation schedule for P1 incidents and verify who will be paged next.
-          </p>
+          <p className="dash-chart-desc">Review the current escalation schedule for P1 incidents and verify who will be paged next.</p>
         </div>
-        <div>
-          <UpgradeGate allowed={onCallAllowed} planLabel="Pro">
+        <UpgradeGate allowed={onCallAllowed} planLabel="Pro">
+          <div className="dash-chart-card">
             <OnCallPanel />
-          </UpgradeGate>
-        </div>
+          </div>
+        </UpgradeGate>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Workspace settings</h2>
-          <p className="settings-section-description">
-            Configure the public status page, Slack incident routing, compliance mode, and enterprise SSO metadata.
-          </p>
+      <section className="section-enter" id="settings">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">Workspace settings</h2>
+          <p className="dash-chart-desc">Configure the public status page, Slack incident routing, compliance mode, and enterprise SSO metadata.</p>
         </div>
-        <div>
+        <div className="dash-chart-card">
           <WorkspaceSettingsPanel
             workspace={{ ...workspace, planTier: effectivePlanTier }}
             slackInstallUrl={slackInstallUrl(auth.user.workspaceId)}
@@ -139,31 +135,27 @@ export default async function SettingsWorkspacePage() {
         </div>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">
+      <section className="section-enter" id="integrations">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">
             Webhook integrations
             <PlanBadge allowed={webhooksAllowed} planLabel="Starter" />
           </h2>
-          <p className="settings-section-description">
-            Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.
-          </p>
+          <p className="dash-chart-desc">Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.</p>
         </div>
-        <div>
-          <UpgradeGate allowed={webhooksAllowed} planLabel="Starter">
+        <UpgradeGate allowed={webhooksAllowed} planLabel="Starter">
+          <div className="dash-chart-card">
             <IntegrationsPanel endpoints={endpoints} initialIntegrations={integrations} />
-          </UpgradeGate>
-        </div>
+          </div>
+        </UpgradeGate>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Browser push notifications</h2>
-          <p className="settings-section-description">
-            Enable device-level reminders and escalation alerts for your account.
-          </p>
+      <section className="section-enter">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">Browser push notifications</h2>
+          <p className="dash-chart-desc">Enable device-level reminders and escalation alerts for your account.</p>
         </div>
-        <div>
+        <div className="dash-chart-card">
           <PushNotificationPanel />
         </div>
       </section>

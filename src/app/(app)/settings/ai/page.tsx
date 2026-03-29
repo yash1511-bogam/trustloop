@@ -59,61 +59,61 @@ export default async function SettingsAiPage() {
 
   return (
     <div className="page-stack">
-      <section className="page-header section-enter">
-        <div className="page-header-main">
-          <p className="page-kicker">Integrations</p>
-          <h1 className="page-title">AI & API keys</h1>
-          <p className="page-description">
-            Configure provider access, workflow routing, and scoped automation credentials.
-          </p>
+      <section className="dash-hero section-enter">
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <p className="page-kicker">Integrations</p>
+            <h1 className="page-title">AI & API keys</h1>
+            <p className="page-description">
+              Configure provider access, workflow routing, and scoped automation credentials.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="settings-section section-enter" id="providers">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">
+      <section className="section-enter" id="providers">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">
             AI provider keys
             <PlanBadge allowed={aiAllowed} planLabel="Starter" />
           </h2>
-          <p className="settings-section-description">
-            Bring your own keys for OpenAI, Gemini, and Anthropic with explicit workflow mapping.
-          </p>
+          <p className="dash-chart-desc">Bring your own keys for OpenAI, Gemini, and Anthropic with explicit workflow mapping.</p>
         </div>
-
         <UpgradeGate allowed={aiAllowed} planLabel="Starter">
-          <AiSettingsPanel
-            keys={keys.map((key) => ({
-              ...key,
-              lastVerifiedAt: key.lastVerifiedAt?.toISOString() ?? null,
-              updatedAt: key.updatedAt.toISOString(),
-            }))}
-            workflows={workflows}
-          />
+          <div className="dash-chart-card">
+            <AiSettingsPanel
+              keys={keys.map((key) => ({
+                ...key,
+                lastVerifiedAt: key.lastVerifiedAt?.toISOString() ?? null,
+                updatedAt: key.updatedAt.toISOString(),
+              }))}
+              workflows={workflows}
+            />
+          </div>
         </UpgradeGate>
       </section>
 
-      <section className="settings-section section-enter" id="api-keys">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">
+      <section className="section-enter" id="api-keys">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">
             Workspace API keys
             <PlanBadge allowed={apiKeysAllowed} planLabel="Pro" />
           </h2>
-          <p className="settings-section-description">
-            Issue scoped bearer keys for automation and revoke them cleanly when no longer needed.
-          </p>
+          <p className="dash-chart-desc">Issue scoped bearer keys for automation and revoke them cleanly when no longer needed.</p>
         </div>
-
         <UpgradeGate allowed={apiKeysAllowed} planLabel="Pro">
-          <ApiKeySettingsPanel
-            initialKeys={apiKeys.map((key) => ({
-              ...key,
-              scopes: normalizeApiKeyScopes(key.scopes),
-              createdAt: key.createdAt.toISOString(),
-              lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
-              expiresAt: key.expiresAt?.toISOString() ?? null,
-            }))}
-            turnstileSiteKey={siteKey}
-          />
+          <div className="dash-chart-card">
+            <ApiKeySettingsPanel
+              initialKeys={apiKeys.map((key) => ({
+                ...key,
+                scopes: normalizeApiKeyScopes(key.scopes),
+                createdAt: key.createdAt.toISOString(),
+                lastUsedAt: key.lastUsedAt?.toISOString() ?? null,
+                expiresAt: key.expiresAt?.toISOString() ?? null,
+              }))}
+              turnstileSiteKey={siteKey}
+            />
+          </div>
         </UpgradeGate>
       </section>
     </div>

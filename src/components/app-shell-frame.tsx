@@ -58,15 +58,17 @@ export function AppShellFrame({
     setMenuOpen(false);
   }
 
-  const compactDesktopMenu = desktop && sidebarCollapsed;
+  const compact = desktop && sidebarCollapsed;
   const planLabel = workspacePlanTier.toUpperCase();
   const sidebarClass = [
     "app-sidebar",
-    compactDesktopMenu ? "app-sidebar-collapsed" : "",
+    compact ? "app-sidebar-collapsed" : "",
     !desktop && menuOpen ? "app-sidebar-mobile-open" : "",
   ]
     .filter(Boolean)
     .join(" ");
+
+  const initial = workspaceName.charAt(0).toUpperCase();
 
   return (
     <main className="app-main-shell">
@@ -98,24 +100,37 @@ export function AppShellFrame({
 
       <aside className={sidebarClass}>
         <div className="app-sidebar-header">
-          {compactDesktopMenu ? (
+          {compact ? (
             <Image src="/Logo/%E2%88%9E.svg" alt="TrustLoop" width={28} height={16} draggable={false} />
           ) : (
-            <TrustLoopLogo size={20} variant="full" />
+            <>
+              <TrustLoopLogo size={20} variant="full" />
+              {desktop ? (
+                <button
+                  aria-label="Collapse sidebar"
+                  className="app-sidebar-toggle"
+                  onClick={() => setSidebarCollapsed(true)}
+                  type="button"
+                >
+                  <SidebarSimple color="var(--color-subtext)" size={18} weight="regular" />
+                </button>
+              ) : null}
+            </>
           )}
-          {desktop ? (
-            <button
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="app-sidebar-toggle"
-              onClick={() => setSidebarCollapsed((value) => !value)}
-              type="button"
-            >
-              <SidebarSimple color="var(--color-subtext)" size={18} weight="regular" />
-            </button>
-          ) : null}
         </div>
 
-        {!compactDesktopMenu && (
+        {compact ? (
+          <div className="flex justify-center py-2">
+            <div
+              className="flex items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-surface)] text-[var(--color-title)] font-semibold text-[13px] cursor-pointer"
+              style={{ width: 36, height: 36 }}
+              title={`${workspaceName} · ${planLabel}`}
+              onClick={() => setSidebarCollapsed(false)}
+            >
+              {initial}
+            </div>
+          </div>
+        ) : (
           <div className="app-sidebar-workspace">
             <div className="app-sidebar-workspace-row">
               <div className="app-sidebar-workspace-name">{workspaceName}</div>
@@ -133,9 +148,11 @@ export function AppShellFrame({
           </div>
         )}
 
+        <div className="app-sidebar-divider" />
+
         <div className="app-sidebar-section">
           <AppShellNav
-            compact={compactDesktopMenu}
+            compact={compact}
             role={currentRole}
             slug={currentSlug}
             onNavigate={() => {
@@ -145,7 +162,7 @@ export function AppShellFrame({
         </div>
 
         <div className="app-sidebar-footer">
-          <LogoutButton compact={compactDesktopMenu} />
+          <LogoutButton compact={compact} />
         </div>
       </aside>
 

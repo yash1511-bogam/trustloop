@@ -52,57 +52,42 @@ export default async function SettingsOverviewPage() {
     trialEndsAt: workspace.trialEndsAt,
   });
 
+  const stats = [
+    { label: "AI keys", value: keyCount, sub: "Active provider connections" },
+    { label: "Routes", value: workflowCount, sub: "Configured workflow mappings" },
+    { label: "Members", value: memberCount, sub: "Current team members" },
+    { label: "Invites", value: inviteCount, sub: "Pending workspace invites" },
+    { label: "Integrations", value: activeIntegrations, sub: "Active webhook connections" },
+    { label: "Plan", value: planDefinitionFor(effectivePlanTier).label, sub: workspace.billing?.status ?? "No billing status yet" },
+  ];
+
   return (
     <div className="page-stack">
-      <section className="page-header section-enter">
-        <div className="page-header-main">
-          <p className="page-kicker">Workspace</p>
-          <h1 className="page-title">Configuration overview</h1>
-          <p className="page-description">
-            The operating state of your workspace at a glance, before you move into deeper settings.
-          </p>
+      <section className="dash-hero section-enter">
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <p className="page-kicker">Workspace</p>
+            <h1 className="page-title">Configuration overview</h1>
+            <p className="page-description">
+              The operating state of your workspace at a glance, before you move into deeper settings.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Workspace snapshot</h2>
-          <p className="settings-section-description">
-            Current counts for keys, routing, access, and live integrations.
-          </p>
+      <section className="section-enter">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">Workspace snapshot</h2>
+          <p className="dash-chart-desc">Current counts for keys, routing, access, and live integrations.</p>
         </div>
-
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          <article className="metric-card stagger-item">
-            <p className="metric-label">AI keys</p>
-            <p className="metric-value">{keyCount}</p>
-            <p className="metric-meta">Active provider connections</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Routes</p>
-            <p className="metric-value">{workflowCount}</p>
-            <p className="metric-meta">Configured workflow mappings</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Members</p>
-            <p className="metric-value">{memberCount}</p>
-            <p className="metric-meta">Current team members</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Invites</p>
-            <p className="metric-value">{inviteCount}</p>
-            <p className="metric-meta">Pending workspace invites</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Integrations</p>
-            <p className="metric-value">{activeIntegrations}</p>
-            <p className="metric-meta">Active webhook connections</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Plan</p>
-            <p className="metric-value">{planDefinitionFor(effectivePlanTier).label}</p>
-            <p className="metric-meta">{workspace.billing?.status ?? "No billing status yet"}</p>
-          </article>
+        <div className="dash-stats" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          {stats.map((s) => (
+            <div key={s.label} className="dash-stat-card">
+              <div className="dash-stat-value" style={{ fontSize: 28 }}>{s.value}</div>
+              <div className="dash-stat-label">{s.label}</div>
+              <div className="dash-stat-sub">{s.sub}</div>
+            </div>
+          ))}
         </div>
       </section>
     </div>

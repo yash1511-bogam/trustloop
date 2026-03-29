@@ -26,105 +26,94 @@ export default async function ExecutivePage() {
 
   const snapshot = dashboard.snapshot;
 
+  const operatingStats = [
+    { label: "Open incidents", value: snapshot?.openIncidents ?? 0, sub: "Currently active across the workspace" },
+    { label: "P1 open", value: snapshot?.p1OpenIncidents ?? 0, sub: "Highest-severity incidents in flight", highlight: true },
+    { label: "Created (7d)", value: snapshot?.incidentsCreatedLast7d ?? 0, sub: "New incidents over the last week" },
+    { label: "Resolved (7d)", value: snapshot?.incidentsResolvedLast7d ?? 0, sub: "Closed incidents over the last week" },
+    { label: "Failed reminders", value: failedReminders7d, sub: "Reminder jobs that failed in seven days" },
+  ];
+
+  const coverageStats = [
+    { label: "Avg resolution", value: `${snapshot?.avgResolutionHoursLast30d ?? 0}h`, sub: "Hours across the last 30 days" },
+    {
+      label: "Triage coverage",
+      value: `${snapshot?.triageCoveragePct ?? 0}%`,
+      sub: (snapshot?.triageCoveragePct ?? 0) === 0
+        ? "Run AI triage on your first incident to improve this metric."
+        : "Incidents with AI-assisted triage",
+    },
+    {
+      label: "Customer updates",
+      value: `${snapshot?.customerUpdateCoveragePct ?? 0}%`,
+      sub: (snapshot?.customerUpdateCoveragePct ?? 0) === 0
+        ? "Publish a customer update on an incident to start tracking."
+        : "Incidents with outbound customer comms",
+    },
+  ];
+
   return (
-    <div className="page-stack">
-      <section className="page-header section-enter">
-        <div className="page-header-main">
-          <p className="page-kicker">Executive</p>
-          <h1 className="page-title">Reliability and response analytics</h1>
-          <p className="page-description">
-            Tenant-scoped read models for leadership reviews, responder coverage, and incident velocity.
-          </p>
-        </div>
-        <div className="page-header-actions">
-          <Link className="btn btn-ghost btn-sm" href="/api/incidents/export?format=csv">
-            Export CSV
-          </Link>
-          <RefreshDataButton />
-        </div>
-      </section>
-
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Current operating state</h2>
-          <p className="settings-section-description">
-            The metrics leadership needs first when a response is active.
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Open incidents</p>
-            <p className="metric-value">{snapshot?.openIncidents ?? 0}</p>
-            <p className="metric-meta">Currently active across the workspace</p>
-          </article>
-          <article className="metric-card metric-card-p1 stagger-item">
-            <p className="metric-label">P1 open</p>
-            <p className="metric-value">{snapshot?.p1OpenIncidents ?? 0}</p>
-            <p className="metric-meta">Highest-severity incidents in flight</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Created 7d</p>
-            <p className="metric-value">{snapshot?.incidentsCreatedLast7d ?? 0}</p>
-            <p className="metric-meta">New incidents over the last week</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Resolved 7d</p>
-            <p className="metric-value">{snapshot?.incidentsResolvedLast7d ?? 0}</p>
-            <p className="metric-meta">Closed incidents over the last week</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Failed reminders</p>
-            <p className="metric-value">{failedReminders7d}</p>
-            <p className="metric-meta">Reminder jobs that failed in seven days</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">Coverage and timing</h2>
-          <p className="settings-section-description">
-            Response quality indicators across resolution, triage, and customer communications.
-          </p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-3">
-          <article className="metric-card">
-            <p className="metric-label">Avg resolution</p>
-            <p className="metric-value">{snapshot?.avgResolutionHoursLast30d ?? 0}</p>
-            <p className="metric-meta">Hours across the last 30 days</p>
-          </article>
-          <article className="metric-card">
-            <p className="metric-label">Triage coverage</p>
-            <p className="metric-value">{snapshot?.triageCoveragePct ?? 0}%</p>
-            <p className="metric-meta">
-              {(snapshot?.triageCoveragePct ?? 0) === 0
-                ? "Run AI triage on your first incident to improve this metric."
-                : "Incidents with AI-assisted triage"}
+    <div className="page-shell page-stack">
+      {/* ── Hero ── */}
+      <section className="dash-hero section-enter">
+        <div className="dash-hero-inner">
+          <div className="dash-hero-text">
+            <p className="page-kicker">Executive</p>
+            <h1 className="page-title">Reliability and response analytics</h1>
+            <p className="page-description">
+              Tenant-scoped read models for leadership reviews, responder coverage, and incident velocity.
             </p>
-          </article>
-          <article className="metric-card">
-            <p className="metric-label">Customer updates</p>
-            <p className="metric-value">{snapshot?.customerUpdateCoveragePct ?? 0}%</p>
-            <p className="metric-meta">
-              {(snapshot?.customerUpdateCoveragePct ?? 0) === 0
-                ? "Publish a customer update on an incident to start tracking."
-                : "Incidents with outbound customer comms"}
-            </p>
-          </article>
+          </div>
+          <div className="page-header-actions">
+            <Link className="btn btn-ghost btn-sm" href="/api/incidents/export?format=csv">
+              Export CSV
+            </Link>
+            <RefreshDataButton />
+          </div>
         </div>
       </section>
 
-      <section className="settings-section section-enter">
-        <div className="settings-section-header">
-          <h2 className="settings-section-title">14-day analytics trend</h2>
-          <p className="settings-section-description">
-            Incident volume and severity patterns for weekly review and board-level reporting.
-          </p>
+      {/* ── Operating state ── */}
+      <section className="section-enter">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">Current operating state</h2>
+          <p className="dash-chart-desc">The metrics leadership needs first when a response is active.</p>
         </div>
+        <div className="dash-stats" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+          {operatingStats.map((s) => (
+            <div key={s.label} className={`dash-stat-card${s.highlight ? " dash-stat-card-p1" : ""}`}>
+              <div className="dash-stat-value" style={{ fontSize: 28 }}>{s.value}</div>
+              <div className="dash-stat-label">{s.label}</div>
+              <div className="dash-stat-sub">{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </section>
 
-        <div className="surface p-8">
+      {/* ── Coverage and timing ── */}
+      <section className="section-enter">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">Coverage and timing</h2>
+          <p className="dash-chart-desc">Response quality indicators across resolution, triage, and customer communications.</p>
+        </div>
+        <div className="dash-stats" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          {coverageStats.map((s) => (
+            <div key={s.label} className="dash-stat-card">
+              <div className="dash-stat-value" style={{ fontSize: 28 }}>{s.value}</div>
+              <div className="dash-stat-label">{s.label}</div>
+              <div className="dash-stat-sub">{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 14-day analytics ── */}
+      <section className="section-enter">
+        <div className="dash-section-header">
+          <h2 className="dash-chart-title">14-day analytics trend</h2>
+          <p className="dash-chart-desc">Incident volume and severity patterns for weekly review and board-level reporting.</p>
+        </div>
+        <div className="dash-chart-card">
           <ExecutiveCharts data={dashboard.series} />
         </div>
       </section>
