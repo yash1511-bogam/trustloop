@@ -207,7 +207,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
         const isOpen = openGroups[group.label] || groupActive;
 
         return (
-          <div key={group.label} className="mt-1">
+          <div key={group.label}>
             <button
               type="button"
               onClick={() => toggleGroup(group.label)}
@@ -215,8 +215,8 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
             >
               <span className="app-nav-group-label font-medium" style={{ padding: 0, margin: 0 }}>{group.label}</span>
               <svg
-                width={14}
-                height={14}
+                width={12}
+                height={12}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -239,7 +239,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   style={{ overflow: "hidden" }}
                 >
-                  <div className="app-nav-group pl-2">
+                  <div className="app-nav-group pl-1">
                     {group.items.map((item) => {
                       const resolved = { ...item, href: resolve(item.href) };
                       return renderLink(resolved, { iconOnly: false, iconSize: 18, fontSize: "13px" });
