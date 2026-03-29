@@ -38,7 +38,7 @@ type NavGroup = {
 const mainNavItems: readonly NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutGridIcon },
   { href: "/incidents", label: "Incidents", icon: ActivityIcon },
-  { href: "/executive", label: "Executive", icon: ChartPieIcon },
+  { href: "/executive", label: "Analytics", icon: ChartPieIcon },
 ];
 
 const settingsGroups: readonly NavGroup[] = [

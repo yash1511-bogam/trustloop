@@ -14,7 +14,6 @@ import {
   ChartPie,
 } from "@phosphor-icons/react";
 import { CreateIncidentForm } from "@/components/create-incident-form";
-import { DashboardIncidentQueue } from "@/components/dashboard-incident-queue";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { ResponsiveBar } from "@nivo/bar";
 
@@ -167,7 +166,7 @@ export function DashboardPageClient({
           </div>
           <div className="page-header-actions">
             <Link className="btn btn-ghost" href="/executive">
-              Executive view
+              Analytics
               <ArrowRight size={14} weight="regular" />
             </Link>
             <button className="btn btn-primary" onClick={() => setDrawerOpen(true)} type="button">
@@ -263,9 +262,6 @@ export function DashboardPageClient({
           </div>
         </div>
       </section>
-
-      {/* ── Incident queue ── */}
-      <DashboardIncidentQueue />
 
       {/* ── Create incident drawer ── */}
       {drawerOpen ? (
