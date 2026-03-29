@@ -16,7 +16,7 @@ export function UpgradeGate({ allowed, planLabel, children }: Props) {
   if (allowed) return <>{children}</>;
 
   return (
-    <div className="relative">
+    <div className="relative overflow-hidden rounded-[var(--radius-md)]">
       <div className="pointer-events-none select-none opacity-40 blur-[1px]" aria-disabled="true">
         {children}
       </div>

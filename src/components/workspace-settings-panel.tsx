@@ -202,7 +202,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
         </label>
 
         <UpgradeGate allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise">
-          <label className="block space-y-3 md:col-span-2">
+          <label className="block space-y-3">
             <span className="text-sm font-medium text-[var(--color-body)]">
               SAML metadata URL
               <PlanBadge allowed={isFeatureAllowed(workspace.planTier, "saml")} planLabel="Enterprise" />

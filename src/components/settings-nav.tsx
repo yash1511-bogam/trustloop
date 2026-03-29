@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   Buildings,
@@ -51,16 +52,34 @@ function normalizeHref(href: string): string {
   return href.split("#")[0];
 }
 
-function isActive(pathname: string, href: string): boolean {
+function isActive(pathname: string, href: string, currentHash: string): boolean {
   const normalized = normalizeHref(href);
+  const hash = href.includes("#") ? href.split("#")[1] : null;
+
   if (normalized === "/settings") {
-    return pathname === normalized;
+    return pathname === normalized && !hash;
   }
-  return pathname === normalized || pathname.startsWith(`${normalized}/`);
+
+  const pathMatches = pathname === normalized || pathname.startsWith(`${normalized}/`);
+  if (!pathMatches) return false;
+
+  // Links with a hash only highlight when the hash matches
+  if (hash) return currentHash === hash;
+
+  // Plain links only highlight when there's no hash active
+  return !currentHash;
 }
 
 export function SettingsNav() {
   const pathname = usePathname();
+  const [hash, setHash] = useState("");
+
+  useEffect(() => {
+    const update = () => setHash(window.location.hash.replace("#", ""));
+    update();
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, [pathname]);
 
   return (
     <nav aria-label="Settings navigation">
@@ -68,7 +87,7 @@ export function SettingsNav() {
         <div className="settings-sidebar-group" key={group.label}>
           <div className="app-nav-group-label">{group.label}</div>
           {group.items.map((item) => {
-            const active = isActive(pathname, item.href);
+            const active = isActive(pathname, item.href, hash);
 
             return (
               <HoverLink
