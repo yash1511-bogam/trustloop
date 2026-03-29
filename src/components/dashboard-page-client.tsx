@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  CaretDown,
-  CaretRight,
   Plus,
 } from "@phosphor-icons/react";
 import { CreateIncidentForm } from "@/components/create-incident-form";
@@ -35,7 +33,6 @@ export function DashboardPageClient({
   counts,
   snapshot,
 }: DashboardPageClientProps) {
-  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Close drawer on Escape key
@@ -71,85 +68,55 @@ export function DashboardPageClient({
       </section>
 
       <section className="section-enter">
-        <div className="section-heading">
-          <h2 className="section-title">Live metrics</h2>
+        <div className="section-heading mb-6">
+          <h2 className="section-title">Incident Velocity & Severity</h2>
+          <p className="section-description">Live multidimensional view of your incident queue.</p>
         </div>
-        <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Total incidents</p>
-            <p className="metric-value">{counts.total}</p>
-            <p className="metric-meta">All time</p>
-          </article>
-          <article className="metric-card metric-card-p1 stagger-item">
-            <p className="metric-label">P1 open</p>
-            <p className="metric-value">{counts.p1}</p>
-            <p className="metric-meta">Immediate attention</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Open incidents</p>
-            <p className="metric-value">{counts.open}</p>
-            <p className="metric-meta">Current queue</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Resolved</p>
-            <p className="metric-value">{counts.resolved}</p>
-            <p className="metric-meta">Past 7 days</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Created</p>
-            <p className="metric-value">{counts.created7d}</p>
-            <p className="metric-meta">Past 7 days</p>
-          </article>
-          <article className="metric-card stagger-item">
-            <p className="metric-label">Avg resolve</p>
-            <p className="metric-value">{counts.avgResolutionHours}</p>
-            <p className="metric-meta">Hours over 30 days</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="section-enter">
-        <div className="surface p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="section-heading">
-              <h2 className="section-title">Executive read-model snapshot</h2>
-              <p className="section-description">
-                Collapsed by default so responders stay focused on the live queue.
-              </p>
-            </div>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setAnalyticsOpen((value) => !value)}
-              type="button"
-            >
-              {analyticsOpen ? "Collapse analytics" : "Expand analytics"}
-              {analyticsOpen ? <CaretDown size={14} weight="regular" /> : <CaretRight size={14} weight="regular" />}
-            </button>
-          </div>
-
-          {analyticsOpen ? (
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <article className="metric-card">
-                <p className="metric-label">Triage coverage</p>
-                <p className="metric-value">{snapshot?.triageCoveragePct ?? 0}</p>
-                <p className="metric-meta">30 day percentage</p>
-              </article>
-              <article className="metric-card">
-                <p className="metric-label">Customer updates</p>
-                <p className="metric-value">{snapshot?.customerUpdateCoveragePct ?? 0}</p>
-                <p className="metric-meta">30 day percentage</p>
-              </article>
-              <article className="metric-card metric-card-p1">
-                <p className="metric-label">P1 active now</p>
-                <p className="metric-value">{snapshot?.p1OpenIncidents ?? 0}</p>
-                <p className="metric-meta">
-                  {snapshot?.updatedAt
-                    ? `Updated ${new Date(snapshot.updatedAt).toLocaleString("en-US")}`
-                    : "No cached snapshot yet"}
-                </p>
-              </article>
-            </div>
-          ) : null}
+        <div className="surface p-6 h-[400px] w-full relative">
+          <ResponsiveBar
+            data={[
+              { id: "P1 Critical", value: counts.p1, color: "var(--color-danger)" },
+              { id: "Open Queue", value: counts.open, color: "var(--color-warning)" },
+              { id: "Resolved (7d)", value: counts.resolved, color: "var(--color-resolve)" },
+              { id: "Created (7d)", value: counts.created7d, color: "var(--color-info)" },
+            ]}
+            keys={["value"]}
+            indexBy="id"
+            margin={{ top: 20, right: 20, bottom: 40, left: 40 }}
+            padding={0.4}
+            valueScale={{ type: "linear" }}
+            indexScale={{ type: "band", round: true }}
+            colors={{ datum: "data.color" }}
+            borderRadius={8}
+            borderWidth={0}
+            theme={{
+              text: { fill: "var(--color-subtext)", fontSize: 13, fontFamily: "var(--font-ui)" },
+              axis: {
+                domain: { line: { stroke: "transparent" } },
+                ticks: { line: { stroke: "transparent" }, text: { fill: "var(--color-ghost)" } },
+              },
+              grid: { line: { stroke: "var(--color-rim)", strokeDasharray: "4 4" } },
+              tooltip: { container: { background: "var(--color-surface)", color: "var(--color-title)", borderRadius: "12px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)" } },
+            }}
+            axisTop={null}
+            axisRight={null}
+            axisBottom={{
+              tickSize: 0,
+              tickPadding: 16,
+              tickRotation: 0,
+            }}
+            axisLeft={{
+              tickSize: 0,
+              tickPadding: 16,
+              tickRotation: 0,
+              tickValues: 5,
+            }}
+            labelSkipWidth={12}
+            labelSkipHeight={12}
+            labelTextColor="var(--color-void)"
+            animate={true}
+            motionConfig="wobbly"
+          />
         </div>
       </section>
 

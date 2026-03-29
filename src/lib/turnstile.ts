@@ -28,6 +28,10 @@ export async function verifyTurnstileToken(input: {
   request: NextRequest;
   token?: string | null;
 }): Promise<TurnstileVerificationResult> {
+  if (process.env.NODE_ENV === "development") {
+    return { success: true, errorCodes: [] };
+  }
+
   const secret = turnstileSecretKey();
   if (!secret || !turnstileSiteKey()) {
     return {

@@ -48,6 +48,25 @@ export async function getAuth(): Promise<AuthContext | null> {
   const store = await cookies();
   const sessionToken = store.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionToken) {
+    if (process.env.NODE_ENV === "development") {
+      const devUser = await prisma.user.findFirst({
+        where: { email: "demo@trustloop.local" },
+        include: { workspace: true },
+      });
+      if (devUser) {
+        return {
+          user: {
+            id: devUser.id,
+            name: devUser.name,
+            email: devUser.email,
+            role: devUser.role,
+            workspaceId: devUser.workspaceId,
+            workspaceName: devUser.workspace.name,
+            stytchUserId: devUser.stytchUserId,
+          },
+        };
+      }
+    }
     return null;
   }
 

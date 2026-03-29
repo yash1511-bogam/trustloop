@@ -3,11 +3,13 @@ import {
   DM_Sans,
   Instrument_Serif,
   JetBrains_Mono,
-  Syne,
-} from "next/font/google";
+  Syne, Geist } from "next/font/google";
 import Script from "next/script";
 import { CookieConsentBanner } from "@/components/cookie-consent-banner";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const display = Instrument_Serif({
   variable: "--font-display",
@@ -114,7 +116,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="dark">
+    <html lang="en" data-theme="dark" className={cn("font-sans", geist.variable)}>
       <body className={`${display.variable} ${heading.variable} ${ui.variable} ${mono.variable} antialiased`}>
         <a className="skip-to-content" href="#main-content">Skip to content</a>
         {children}

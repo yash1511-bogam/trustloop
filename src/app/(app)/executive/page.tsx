@@ -52,7 +52,7 @@ export default async function ExecutivePage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
           <article className="metric-card stagger-item">
             <p className="metric-label">Open incidents</p>
             <p className="metric-value">{snapshot?.openIncidents ?? 0}</p>
@@ -89,7 +89,7 @@ export default async function ExecutivePage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3">
           <article className="metric-card">
             <p className="metric-label">Avg resolution</p>
             <p className="metric-value">{snapshot?.avgResolutionHoursLast30d ?? 0}</p>
@@ -124,7 +124,7 @@ export default async function ExecutivePage() {
           </p>
         </div>
 
-        <div className="surface p-6">
+        <div className="surface p-8">
           <ExecutiveCharts data={dashboard.series} />
         </div>
       </section>

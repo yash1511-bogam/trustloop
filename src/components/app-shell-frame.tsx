@@ -2,6 +2,7 @@
 
 import { SidebarSimple } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { AppShellNav } from "@/components/app-shell-nav";
 import { LogoutButton } from "@/components/logout-button";
 import { TrustLoopLoader } from "@/components/trustloop-loader";
@@ -98,7 +99,7 @@ export function AppShellFrame({
       <aside className={sidebarClass}>
         <div className="app-sidebar-header">
           {compactDesktopMenu ? (
-            <TrustLoopLogo size={20} variant="mark" />
+            <Image src="/Logo/%E2%88%9E.svg" alt="TrustLoop" width={28} height={16} draggable={false} />
           ) : (
             <TrustLoopLogo size={20} variant="full" />
           )}

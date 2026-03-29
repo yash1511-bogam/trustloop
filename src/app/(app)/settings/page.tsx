@@ -72,7 +72,7 @@ export default async function SettingsOverviewPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           <article className="metric-card stagger-item">
             <p className="metric-label">AI keys</p>
             <p className="metric-value">{keyCount}</p>
