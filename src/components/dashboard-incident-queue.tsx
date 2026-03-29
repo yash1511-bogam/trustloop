@@ -295,7 +295,6 @@ export function DashboardIncidentQueue() {
                   key={incident.id}
                   style={{
                     animationDelay: `${idx * 30}ms`,
-                    ...(incident.severity === IncidentSeverity.P1 ? { boxShadow: "inset 0 0 0 1px var(--color-danger)", background: "rgba(232,66,66,0.04)" } : undefined),
                   }}
                 >
                   <td><span className={severityBadgeClass(incident.severity)}>{incident.severity}</span></td>
