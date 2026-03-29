@@ -248,6 +248,7 @@
   max-width: var(--content-max-dashboard);
   margin: 0 auto;
   padding: var(--space-6) var(--space-6) var(--space-3);
+  min-height: calc(100dvh - 1px);
 }
 
 /* ── Page header — clean inline, no gradient card ── */
