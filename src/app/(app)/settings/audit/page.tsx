@@ -50,7 +50,7 @@ export default async function AuditLogPage() {
                       <span className="badge badge-sm">{log.action}</span>
                     </td>
                     <td className="max-w-xs truncate text-[var(--color-subtext)]">{log.summary}</td>
-                    <td className="text-[var(--color-ghost)]">{log.ipAddress ?? "-"}</td>
+                    <td className="font-mono text-xs text-[var(--color-subtext)]">{log.ipAddress ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

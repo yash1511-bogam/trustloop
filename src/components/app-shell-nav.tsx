@@ -3,15 +3,16 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { HoverLink } from "./hover-link";
 import { usePathname } from "next/navigation";
-import { useCallback, useRef, useState, type ComponentType } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Role } from "@prisma/client";
 import { workspacePath } from "@/lib/workspace-url";
 
 import { SparklesIcon } from "@/components/ui/sparkles-icon";
 import { LayoutGridIcon } from "@/components/ui/layout-grid-icon";
 import { ActivityIcon } from "@/components/ui/activity-icon";
+import { BlocksIcon } from "@/components/ui/blocks-icon";
 import { ChartPieIcon } from "@/components/ui/chart-pie-icon";
-import { SettingsIcon } from "@/components/ui/settings-icon";
+import { LayersIcon } from "@/components/ui/layers-icon";
 import { UserIcon } from "@/components/ui/user-icon";
 import { UsersIcon } from "@/components/ui/users-icon";
 import { CreditCardIcon } from "@/components/ui/credit-card-icon";
@@ -21,7 +22,8 @@ import { KeyRoundIcon } from "@/components/ui/key-round-icon";
 import { ScanIcon } from "@/components/ui/scan-icon";
 import { ShieldCheckIcon } from "@/components/ui/shield-check-icon";
 
-type AnimatedIcon = ComponentType<{ size?: number; className?: string }>;
+type AnimatedIconHandle = { startAnimation: () => void; stopAnimation: () => void };
+type AnimatedIcon = React.ForwardRefExoticComponent<{ size?: number; className?: string; isAnimated?: boolean } & React.RefAttributes<AnimatedIconHandle>>;
 
 type NavItem = {
   href: string;
@@ -51,7 +53,8 @@ const settingsGroups: readonly NavGroup[] = [
   {
     label: "Workspace",
     items: [
-      { href: "/settings", label: "General", icon: SettingsIcon, exact: true },
+      { href: "/settings", label: "Overview", icon: LayersIcon, exact: true },
+      { href: "/settings/general", label: "General", icon: BlocksIcon },
       { href: "/settings/team", label: "Team", icon: UsersIcon },
       { href: "/settings/billing", label: "Billing", icon: CreditCardIcon },
     ],
@@ -60,16 +63,16 @@ const settingsGroups: readonly NavGroup[] = [
     label: "Integrations",
     items: [
       { href: "/settings/ai", label: "AI Providers", icon: SparklesIcon },
-      { href: "/settings/workspace#integrations", label: "Webhooks", icon: WebhookIcon },
-      { href: "/settings/workspace#on-call", label: "On-Call", icon: ZapIcon },
+      { href: "/settings/webhooks", label: "Webhooks", icon: WebhookIcon },
+      { href: "/settings/on-call", label: "On-Call", icon: ZapIcon },
     ],
   },
   {
     label: "Security",
     items: [
-      { href: "/settings/ai#api-keys", label: "API Keys", icon: KeyRoundIcon },
+      { href: "/settings/api-keys", label: "API Keys", icon: KeyRoundIcon },
       { href: "/settings/audit", label: "Audit Log", icon: ScanIcon },
-      { href: "/settings/workspace#security", label: "SAML SSO", icon: ShieldCheckIcon },
+      { href: "/settings/sso", label: "SAML SSO", icon: ShieldCheckIcon },
     ],
   },
 ];
@@ -98,7 +101,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
-  const iconRefs = useRef<Record<string, { startAnimation: () => void; stopAnimation: () => void } | null>>({});
+  const iconRefs = useRef<Record<string, AnimatedIconHandle | null>>({});
   const inSettings = pathname.startsWith("/settings");
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -163,7 +166,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
           )}
         </AnimatePresence>
         <HoverLink className={`${cls} relative z-10`} href={item.href} onClick={onNavigate} title={item.label}>
-          <item.icon ref={(el: any) => { iconRefs.current[item.href] = el; }} size={opts.iconSize} isAnimated={false} />
+          <item.icon ref={(el) => { iconRefs.current[item.href] = el; }} size={opts.iconSize} isAnimated={false} />
           {opts.iconOnly ? (
             <>
               <span className="sr-only">{item.label}</span>

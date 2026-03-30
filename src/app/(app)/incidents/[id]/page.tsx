@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { IncidentSeverity, IncidentStatus as IncidentStatusEnum } from "@prisma/client";
-import { Clock, Warning, Brain, ArrowLeft } from "@phosphor-icons/react/dist/ssr";
+import { Clock, Warning, Brain, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { IncidentActions } from "@/components/incident-actions";
 import { requireAuth } from "@/lib/auth";
 import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
@@ -79,6 +79,13 @@ export default async function IncidentDetailPage({
       <section className={`dash-hero section-enter${isP1 ? " dash-hero-p1" : ""}`}>
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs text-[var(--color-ghost)] mb-3">
+              <Link href="/dashboard" className="hover:text-[var(--color-body)] transition-colors">Dashboard</Link>
+              <CaretRight size={10} weight="bold" />
+              <Link href="/incidents" className="hover:text-[var(--color-body)] transition-colors">Incidents</Link>
+              <CaretRight size={10} weight="bold" />
+              <span className="text-[var(--color-subtext)]">{incident.sourceTicketRef ?? incident.id.slice(0, 8)}</span>
+            </nav>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <span className={severityBadgeClass(incident.severity)}>
                 {isP1 && <Warning size={12} weight="bold" />}
@@ -92,12 +99,6 @@ export default async function IncidentDetailPage({
             </div>
             <h1 className="page-title" style={{ fontSize: 28 }}>{incident.title}</h1>
             <p className="page-description">{incident.description}</p>
-          </div>
-          <div className="page-header-actions">
-            <Link className="btn btn-ghost btn-sm" href="/dashboard">
-              <ArrowLeft size={16} weight="regular" />
-              Dashboard
-            </Link>
           </div>
         </div>
       </section>

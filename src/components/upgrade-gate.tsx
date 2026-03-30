@@ -1,4 +1,5 @@
-import Link from "next/link";
+"use client";
+
 import { Lock } from "@/components/icon-compat";
 
 type Props = {
@@ -24,9 +25,15 @@ export function UpgradeGate({ allowed, planLabel, children }: Props) {
         <div className="rounded-[var(--radius-md)] border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] px-4 py-2 text-sm font-medium text-[var(--color-warning)] backdrop-blur-sm">
           <Lock className="mr-1.5 inline h-3.5 w-3.5" />
           Requires {planLabel} plan ·{" "}
-          <Link href="/settings/billing" className="underline underline-offset-2 hover:text-[var(--color-body)]">
+          <span
+            role="link"
+            tabIndex={0}
+            className="underline underline-offset-2 hover:text-[var(--color-body)] cursor-pointer"
+            onClick={() => { window.location.href = "/settings/billing"; }}
+            onKeyDown={(e) => { if (e.key === "Enter") window.location.href = "/settings/billing"; }}
+          >
             Upgrade
-          </Link>
+          </span>
         </div>
       </div>
     </div>
@@ -41,12 +48,9 @@ export function PlanBadge({ allowed, planLabel }: { allowed: boolean; planLabel:
   if (allowed) return null;
 
   return (
-    <span className="inline-flex items-center gap-1.5 ml-3 rounded-full border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] px-3 py-1 text-xs font-medium text-[var(--color-warning)] align-middle">
-      <Lock className="h-3 w-3" />
-      Requires {planLabel}
-      <Link href="/settings/billing" className="ml-1 underline underline-offset-2 hover:text-[var(--color-body)]">
-        Upgrade
-      </Link>
+    <span className="inline-flex items-center gap-1 ml-2 rounded-full border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-warning)] align-middle leading-none">
+      <Lock className="h-2.5 w-2.5" />
+      {planLabel}
     </span>
   );
 }

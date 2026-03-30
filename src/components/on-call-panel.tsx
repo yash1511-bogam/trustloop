@@ -19,7 +19,7 @@ type OnCallData = {
   schedule: ScheduleEntry[];
 };
 
-export function OnCallPanel() {
+export function OnCallPanel({ disabled }: { disabled?: boolean }) {
   const [data, setData] = useState<OnCallData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +48,7 @@ export function OnCallPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${disabled ? "opacity-50 pointer-events-none select-none" : ""}`}>
       <div className="flex flex-wrap gap-6 text-sm">
         <div className="space-y-1">
           <p className="text-[10px] uppercase tracking-widest text-[var(--color-ghost)] font-medium">Rotation interval</p>

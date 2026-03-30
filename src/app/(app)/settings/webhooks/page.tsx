@@ -1,5 +1,6 @@
 import { IntegrationsPanel } from "@/components/integrations-panel";
 import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
+import { appOrigin } from "@/lib/app-url";
 import { requireAuth } from "@/lib/auth";
 import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { isFeatureAllowed } from "@/lib/feature-gate";
@@ -21,16 +22,16 @@ export default async function SettingsWebhooksPage() {
     trialEndsAt: workspace.trialEndsAt,
   });
   const webhooksAllowed = isFeatureAllowed(effectivePlanTier, "webhooks");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const baseUrl = appOrigin();
   const endpoints = {
-    DATADOG: `${appUrl}/api/webhooks/datadog`,
-    PAGERDUTY: `${appUrl}/api/webhooks/pagerduty`,
-    SENTRY: `${appUrl}/api/webhooks/sentry`,
-    GENERIC: `${appUrl}/api/webhooks/generic`,
-    LANGFUSE: `${appUrl}/api/webhooks/langfuse`,
-    HELICONE: `${appUrl}/api/webhooks/helicone`,
-    ARIZE_PHOENIX: `${appUrl}/api/webhooks/arize-phoenix`,
-    BRAINTRUST: `${appUrl}/api/webhooks/braintrust`,
+    DATADOG: `${baseUrl}/api/webhooks/datadog`,
+    PAGERDUTY: `${baseUrl}/api/webhooks/pagerduty`,
+    SENTRY: `${baseUrl}/api/webhooks/sentry`,
+    GENERIC: `${baseUrl}/api/webhooks/generic`,
+    LANGFUSE: `${baseUrl}/api/webhooks/langfuse`,
+    HELICONE: `${baseUrl}/api/webhooks/helicone`,
+    ARIZE_PHOENIX: `${baseUrl}/api/webhooks/arize-phoenix`,
+    BRAINTRUST: `${baseUrl}/api/webhooks/braintrust`,
   } as const;
 
   return (

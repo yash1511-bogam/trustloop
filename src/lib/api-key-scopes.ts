@@ -416,6 +416,7 @@ export function requestIpAddress(request: NextRequest): string | null {
   const fallbacks = [
     request.headers.get("cf-connecting-ip"),
     request.headers.get("x-real-ip"),
+    request.headers.get("x-forwarded-for")?.split(",")[0],
   ];
 
   for (const value of fallbacks) {

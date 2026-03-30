@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { HTMLMotionProps, Variants } from "motion/react";
 import { motion, useAnimation, useReducedMotion } from "motion/react";
-import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
 export interface WebhookHandle {
  startAnimation: () => void;
@@ -50,6 +50,8 @@ const WebhookIcon = forwardRef<WebhookHandle, WebhookProps>(
    };
   });
 
+  useEffect(() => { controls.start("normal"); }, [controls]);
+
   const handleEnter = useCallback(
    async (e?: React.MouseEvent<HTMLDivElement>) => {
     if (!isAnimated || reduced) return;
@@ -58,7 +60,7 @@ const WebhookIcon = forwardRef<WebhookHandle, WebhookProps>(
      await controls.start("emit");
      await controls.start("flow");
      await controls.start("settle");
-    } else onMouseEnter?.(e as any);
+    } else onMouseEnter?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [controls, reduced, isAnimated, onMouseEnter],
   );
@@ -66,7 +68,7 @@ const WebhookIcon = forwardRef<WebhookHandle, WebhookProps>(
   const handleLeave = useCallback(
    (e?: React.MouseEvent<HTMLDivElement>) => {
     if (!isControlled.current) controls.start("normal");
-    else onMouseLeave?.(e as any);
+    else onMouseLeave?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [controls, onMouseLeave],
   );
@@ -129,6 +131,7 @@ const WebhookIcon = forwardRef<WebhookHandle, WebhookProps>(
     },
    },
   });
+
 
   return (
    <motion.div

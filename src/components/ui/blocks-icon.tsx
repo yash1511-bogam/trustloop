@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { HTMLMotionProps, Variants } from "motion/react";
 import { motion, useAnimation, useReducedMotion } from "motion/react";
-import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
 export interface BlocksIconHandle {
  startAnimation: () => void;
@@ -42,11 +42,13 @@ const BlocksIcon = forwardRef<BlocksIconHandle, BlocksIconProps>(
    };
   });
 
+  useEffect(() => { controls.start("normal"); }, [controls]);
+
   const handleEnter = useCallback(
    (e?: React.MouseEvent<HTMLDivElement>) => {
     if (!isAnimated || reduced) return;
     if (!isControlled.current) controls.start("animate");
-    else onMouseEnter?.(e as any);
+    else onMouseEnter?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [controls, reduced, isAnimated, onMouseEnter],
   );
@@ -54,7 +56,7 @@ const BlocksIcon = forwardRef<BlocksIconHandle, BlocksIconProps>(
   const handleLeave = useCallback(
    (e?: React.MouseEvent<HTMLDivElement>) => {
     if (!isControlled.current) controls.start("normal");
-    else onMouseLeave?.(e as any);
+    else onMouseLeave?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [controls, onMouseLeave],
   );

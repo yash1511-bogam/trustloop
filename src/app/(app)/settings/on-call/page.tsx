@@ -1,5 +1,5 @@
 import { OnCallPanel } from "@/components/on-call-panel";
-import { PlanBadge, UpgradeGate } from "@/components/upgrade-gate";
+import { PlanBadge } from "@/components/upgrade-gate";
 import { requireAuth } from "@/lib/auth";
 import { resolveEffectivePlanTier } from "@/lib/billing-plan";
 import { isFeatureAllowed } from "@/lib/feature-gate";
@@ -24,23 +24,18 @@ export default async function SettingsOnCallPage() {
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Integrations</p>
-            <h1 className="page-title">On-Call Rotation</h1>
+            <h1 className="page-title">On-Call Rotation <PlanBadge allowed={onCallAllowed} planLabel="Pro" /></h1>
           </div>
         </div>
       </section>
       <section className="section-enter">
         <div className="dash-section-header">
-          <h2 className="dash-chart-title">
-            On-call rotation
-            <PlanBadge allowed={onCallAllowed} planLabel="Pro" />
-          </h2>
+          <h2 className="dash-chart-title">On-call rotation</h2>
           <p className="dash-chart-desc">Review the current escalation schedule for P1 incidents and verify who will be paged next.</p>
         </div>
-        <UpgradeGate allowed={onCallAllowed} planLabel="Pro">
-          <div className="dash-chart-card">
-            <OnCallPanel />
-          </div>
-        </UpgradeGate>
+        <div className="dash-chart-card">
+          <OnCallPanel disabled={!onCallAllowed} />
+        </div>
       </section>
     </div>
   );

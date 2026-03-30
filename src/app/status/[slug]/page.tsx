@@ -2,7 +2,6 @@ import { IncidentStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { StatusSubscribeForm } from "@/components/status-subscribe-form";
-import { StatusTimelineChart } from "@/components/status-timeline-chart";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 
 function statusTone(status: IncidentStatus): string {

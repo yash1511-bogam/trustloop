@@ -59,7 +59,7 @@ const ShieldCheckIcon = forwardRef<ShieldCheckIconHandle, ShieldCheckIconProps>(
     if (!isControlled.current) {
      shieldControls.start("animate");
      checkControls.start("animate");
-    } else onMouseEnter?.(e as any);
+    } else onMouseEnter?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [shieldControls, checkControls, reduced, onMouseEnter, isAnimated],
   );
@@ -69,7 +69,7 @@ const ShieldCheckIcon = forwardRef<ShieldCheckIconHandle, ShieldCheckIconProps>(
     if (!isControlled.current) {
      shieldControls.start("normal");
      checkControls.start("normal");
-    } else onMouseLeave?.(e as any);
+    } else onMouseLeave?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [shieldControls, checkControls, onMouseLeave],
   );

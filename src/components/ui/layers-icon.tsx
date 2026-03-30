@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { HTMLMotionProps, Variants } from "motion/react";
 import { motion, useAnimation, useReducedMotion } from "motion/react";
-import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
 export interface LayersIconHandle {
  startAnimation: () => void;
@@ -23,7 +23,7 @@ const LayersIcon = forwardRef<LayersIconHandle, LayersIconProps>(
    onMouseLeave,
    className,
    size = 24,
-   duration = 0.2,
+   duration = 1,
    isAnimated = true,
    ...props
   },
@@ -42,11 +42,13 @@ const LayersIcon = forwardRef<LayersIconHandle, LayersIconProps>(
    };
   });
 
+  useEffect(() => { controls.start("normal"); }, [controls]);
+
   const handleEnter = useCallback(
    (e?: React.MouseEvent<HTMLDivElement>) => {
     if (!isAnimated || reduced) return;
     if (!isControlled.current) controls.start("animate");
-    else onMouseEnter?.(e as any);
+    else onMouseEnter?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [controls, reduced, isAnimated, onMouseEnter],
   );
@@ -54,7 +56,7 @@ const LayersIcon = forwardRef<LayersIconHandle, LayersIconProps>(
   const handleLeave = useCallback(
    (e?: React.MouseEvent<HTMLDivElement>) => {
     if (!isControlled.current) controls.start("normal");
-    else onMouseLeave?.(e as any);
+    else onMouseLeave?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [controls, onMouseLeave],
   );
@@ -62,10 +64,10 @@ const LayersIcon = forwardRef<LayersIconHandle, LayersIconProps>(
   const iconVariants: Variants = {
    normal: { scale: 1 },
    animate: {
-    scale: 1.05,
+    scale: [1, 1.05, 1],
     transition: {
-     duration,
-     ease: "easeOut",
+     duration: 0.6 * duration,
+     ease: "easeInOut",
     },
    },
   };
@@ -73,11 +75,11 @@ const LayersIcon = forwardRef<LayersIconHandle, LayersIconProps>(
   const layerVariants: Variants = {
    normal: { y: 0, opacity: 1 },
    animate: (i: number) => ({
-    y: -(i + 1) * 4,
+    y: [0, -(i + 1) * 4, 0],
     opacity: 1,
     transition: {
-     duration,
-     ease: "easeOut",
+     duration: 0.6 * duration,
+     ease: "easeInOut",
      delay: i * 0.07,
     },
    }),

@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import type { HTMLMotionProps, Variants } from "motion/react";
 import { motion, useAnimation, useReducedMotion } from "motion/react";
-import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
 export interface CardHandle {
  startAnimation: () => void;
@@ -57,6 +57,8 @@ const CreditCardIcon = forwardRef<CardHandle, CardProps>(
    };
   });
 
+  useEffect(() => { controls.start("normal"); }, [controls]);
+
   const handleEnter = useCallback(
    (e?: React.MouseEvent<HTMLDivElement>) => {
     if (!isAnimated || reduced) return;
@@ -64,9 +66,9 @@ const CreditCardIcon = forwardRef<CardHandle, CardProps>(
      controls.start("animate");
      stripeControls.start("animate");
      swipeControls.start("animate");
-    } else onMouseEnter?.(e as any);
+    } else onMouseEnter?.(e as React.MouseEvent<HTMLDivElement>);
    },
-   [controls, stripeControls, swipeControls, reduced, isAnimated, onMouseLeave],
+   [controls, stripeControls, swipeControls, reduced, isAnimated, onMouseEnter],
   );
 
   const handleLeave = useCallback(
@@ -75,9 +77,9 @@ const CreditCardIcon = forwardRef<CardHandle, CardProps>(
      controls.start("normal");
      stripeControls.start("normal");
      swipeControls.start("normal");
-    } else onMouseLeave?.(e as any);
+    } else onMouseLeave?.(e as React.MouseEvent<HTMLDivElement>);
    },
-   [controls, stripeControls, swipeControls],
+   [controls, stripeControls, swipeControls, onMouseLeave],
   );
 
   const cardTilt: Variants = {

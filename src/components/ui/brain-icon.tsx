@@ -75,7 +75,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      pulseControls.start("animate");
      sparkControlsL.start("animate");
      sparkControlsR.start("animate");
-    } else onMouseEnter?.(e as any);
+    } else onMouseEnter?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [
     groupControls,
@@ -95,7 +95,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      pulseControls.start("normal");
      sparkControlsL.start("normal");
      sparkControlsR.start("normal");
-    } else onMouseLeave?.(e as any);
+    } else onMouseLeave?.(e as React.MouseEvent<HTMLDivElement>);
    },
    [groupControls, pulseControls, sparkControlsL, sparkControlsR, onMouseLeave],
   );
@@ -109,7 +109,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      transition: { duration: 0.7 * duration, ease: "easeInOut" },
     },
    }),
-   [],
+   [duration],
   );
 
   const spinePulse: Variants = useMemo(
@@ -125,7 +125,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      },
     },
    }),
-   [],
+   [duration],
   );
 
   const lobeBreatheA: Variants = useMemo(
@@ -142,7 +142,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      },
     },
    }),
-   [],
+   [duration],
   );
 
   const lobeBreatheB: Variants = useMemo(
@@ -159,7 +159,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      },
     },
    }),
-   [],
+   [duration],
   );
 
   const synapseSparkL: Variants = useMemo(
@@ -175,7 +175,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      },
     },
    }),
-   [],
+   [duration],
   );
 
   const synapseSparkR: Variants = useMemo(
@@ -191,7 +191,7 @@ const BrainIcon = forwardRef<BrainHandle, BrainProps>(
      },
     },
    }),
-   [],
+   [duration],
   );
 
   return (

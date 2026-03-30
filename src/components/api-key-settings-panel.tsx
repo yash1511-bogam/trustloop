@@ -36,266 +36,141 @@ type ApiKeyRow = {
 type Props = {
   initialKeys: ApiKeyRow[];
   turnstileSiteKey?: string | null;
+  disabled?: boolean;
 };
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "short",
-  day: "numeric",
-  year: "numeric",
-});
+const dateFmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" });
+function fmtDate(v: string | null) { return v ? dateFmt.format(new Date(v)) : "Never"; }
+function isExpired(v: string | null) { return Boolean(v && new Date(v).getTime() <= Date.now()); }
 
-function formatDate(value: string | null): string {
-  return value ? dateFormatter.format(new Date(value)) : "Never";
-}
-
-function isExpired(value: string | null): boolean {
-  return Boolean(value && new Date(value).getTime() <= Date.now());
-}
-
-export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
+export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey, disabled }: Props) {
   const turnstileRef = useRef<TurnstileWidgetHandle | null>(null);
   const defaultPreset = getApiKeyUsagePreset(DEFAULT_API_KEY_USAGE_PRESET);
   const [keys, setKeys] = useState(initialKeys);
   const [name, setName] = useState("Monitoring pipeline");
   const [usagePreset, setUsagePreset] = useState<ApiKeyUsagePresetId>(DEFAULT_API_KEY_USAGE_PRESET);
-  const [selectedScopes, setSelectedScopes] = useState<ApiKeyScope[]>(
-    defaultPreset ? [...defaultPreset.scopes] : [],
-  );
-  const [expiryOption, setExpiryOption] = useState<ApiKeyExpiryOptionId>(
-    DEFAULT_API_KEY_EXPIRY_OPTION,
-  );
+  const [selectedScopes, setSelectedScopes] = useState<ApiKeyScope[]>(defaultPreset ? [...defaultPreset.scopes] : []);
+  const [expiryOption, setExpiryOption] = useState<ApiKeyExpiryOptionId>(DEFAULT_API_KEY_EXPIRY_OPTION);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
   const requiresTurnstile = Boolean(turnstileSiteKey);
-
-  const selectedPreset = getApiKeyUsagePreset(usagePreset);
-  const selectedExpiry = API_KEY_EXPIRY_OPTIONS.find((option) => option.id === expiryOption) ?? null;
+  const selectedExpiry = API_KEY_EXPIRY_OPTIONS.find((o) => o.id === expiryOption) ?? null;
 
   async function refresh() {
-    const response = await fetch("/api/workspace/api-keys");
-    if (!response.ok) {
-      return;
-    }
-    const payload = (await response.json()) as { keys: ApiKeyRow[] };
-    setKeys(payload.keys);
+    const r = await fetch("/api/workspace/api-keys");
+    if (r.ok) { const p = (await r.json()) as { keys: ApiKeyRow[] }; setKeys(p.keys); }
   }
-
-  function showMessage(msg: string) {
-    setMessage(msg);
-    setTimeout(() => setMessage(null), 4000);
-  }
-
-  function applyPreset(nextPreset: ApiKeyUsagePresetId) {
-    setUsagePreset(nextPreset);
-    setSelectedScopes(scopesForApiKeyUsagePreset(nextPreset));
-  }
-
-  function toggleScope(scope: ApiKeyScope) {
-    setSelectedScopes((current) =>
-      current.includes(scope)
-        ? current.filter((value) => value !== scope)
-        : [...current, scope],
-    );
-  }
+  function flash(msg: string) { setMessage(msg); setTimeout(() => setMessage(null), 4000); }
+  function applyPreset(id: ApiKeyUsagePresetId) { setUsagePreset(id); setSelectedScopes(scopesForApiKeyUsagePreset(id)); }
+  function toggleScope(scope: ApiKeyScope) { setSelectedScopes((c) => c.includes(scope) ? c.filter((s) => s !== scope) : [...c, scope]); }
 
   async function createKey() {
-    if (requiresTurnstile && !turnstileToken) {
-      setError("Complete the security check before creating an API key.");
-      return;
-    }
-
-    if (selectedScopes.length === 0) {
-      setError("Select at least one permission before creating an API key.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-    setRevealedKey(null);
-
-    const response = await fetch("/api/workspace/api-keys", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        usagePreset,
-        scopes: selectedScopes,
-        expiryOption,
-        turnstileToken,
-      }),
-    });
-
-    setLoading(false);
-    turnstileRef.current?.reset();
-    setTurnstileToken(null);
-
-    const payload = (await response.json().catch(() => null)) as
-      | { apiKey?: string; message?: string; error?: string }
-      | null;
-
-    if (!response.ok) {
-      setError(payload?.error ?? "Failed to create API key.");
-      return;
-    }
-
-    showMessage(payload?.message ?? "API key created.");
-    setRevealedKey(payload?.apiKey ?? null);
-    setName("");
-    if (defaultPreset) {
-      setUsagePreset(DEFAULT_API_KEY_USAGE_PRESET);
-      setSelectedScopes([...defaultPreset.scopes]);
-    }
-    setExpiryOption(DEFAULT_API_KEY_EXPIRY_OPTION);
-    await refresh();
+    if (requiresTurnstile && !turnstileToken) { setError("Complete the security check first."); return; }
+    if (selectedScopes.length === 0) { setError("Select at least one permission."); return; }
+    setLoading(true); setError(null); setMessage(null); setRevealedKey(null);
+    const r = await fetch("/api/workspace/api-keys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, usagePreset, scopes: selectedScopes, expiryOption, turnstileToken }) });
+    setLoading(false); turnstileRef.current?.reset(); setTurnstileToken(null);
+    const p = (await r.json().catch(() => null)) as { apiKey?: string; message?: string; error?: string } | null;
+    if (!r.ok) { setError(p?.error ?? "Failed to create API key."); return; }
+    flash(p?.message ?? "API key created."); setRevealedKey(p?.apiKey ?? null); setName("");
+    if (defaultPreset) { setUsagePreset(DEFAULT_API_KEY_USAGE_PRESET); setSelectedScopes([...defaultPreset.scopes]); }
+    setExpiryOption(DEFAULT_API_KEY_EXPIRY_OPTION); await refresh();
   }
 
   async function revokeKey(id: string) {
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-
-    const response = await fetch("/api/workspace/api-keys", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-
+    setLoading(true); setError(null); setMessage(null);
+    const r = await fetch("/api/workspace/api-keys", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     setLoading(false);
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
-      setError(payload?.error ?? "Failed to revoke key.");
-      return;
-    }
-
-    showMessage("API key revoked.");
-    await refresh();
+    if (!r.ok) { const p = (await r.json().catch(() => null)) as { error?: string } | null; setError(p?.error ?? "Failed to revoke."); return; }
+    flash("API key revoked."); await refresh();
   }
 
   return (
-    <div className="space-y-8">
+    <div className={`space-y-10 ${disabled ? "opacity-50 pointer-events-none select-none" : ""}`}>
+      {/* Toast */}
       {(message || error) && (
-        <div
-          className={`p-4 text-sm rounded-xl border flex items-center gap-2 ${
-            error
-              ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]"
-              : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"
-          }`}
-        >
-          {error ? <AlertCircle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-          <span>{error || message}</span>
+        <div className={`p-3 text-sm rounded-lg border flex items-center gap-2 ${error ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
+          {error ? <AlertCircle className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
+          <span className="flex-1">{error || message}</span>
         </div>
       )}
 
-      <div className="space-y-6 rounded-3xl border border-[var(--color-rim)] bg-[var(--color-void)] p-6">
+      {/* Revealed key */}
+      {revealedKey && (
+        <div className="rounded-xl border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.06)] p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 text-[var(--color-warning)]" />
+            <span className="text-sm font-medium text-[var(--color-warning)]">Copy your key now — it won&apos;t be shown again</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg bg-[var(--color-void)] border border-[var(--color-rim)] px-3 py-2.5">
+            <code className="flex-1 text-sm font-mono text-[var(--color-title)] truncate">{revealedKey}</code>
+            <button onClick={() => navigator.clipboard.writeText(revealedKey)} className="btn btn-ghost !min-h-[28px] text-xs text-[var(--color-warning)]" type="button">Copy</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create form ── */}
+      <div className="space-y-6">
         <div>
-          <p className="text-sm font-medium text-[var(--color-title)]">Create new key</p>
-          <p className="mt-1 text-sm text-[var(--color-ghost)]">
-            Choose the permissions this key needs and how long it should stay valid.
-          </p>
+          <h3 className="text-sm font-semibold text-[var(--color-title)]">Create new key</h3>
+          <p className="text-xs text-[var(--color-ghost)] mt-1">Choose permissions and expiry for this key.</p>
         </div>
 
+        {/* Name + Expiry row */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-ghost)]">Key name</label>
+            <input className="input w-full" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. CI/CD Pipeline" disabled={loading} />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-ghost)]">Expiry</label>
+            <select className="input w-full" value={expiryOption} onChange={(e) => setExpiryOption(e.target.value as ApiKeyExpiryOptionId)} disabled={loading}>
+              {API_KEY_EXPIRY_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+            {selectedExpiry && <p className="text-[10px] text-[var(--color-ghost)]">{selectedExpiry.description}</p>}
+          </div>
+        </div>
+
+        {/* Presets */}
         <div className="space-y-2">
-          <label className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
-            Key name
-          </label>
-          <input
-            className="w-full max-w-xl rounded-2xl border border-[var(--color-rim)] bg-[var(--color-void)] px-4 py-3 text-[var(--color-title)] outline-none transition focus:border-[var(--color-signal)] placeholder:text-[var(--color-ghost)]"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="e.g. CI/CD Pipeline"
-            disabled={loading}
-          />
+          <label className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-ghost)]">Usage preset</label>
+          <div className="flex flex-wrap gap-2">
+            {API_KEY_USAGE_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p.id)}
+                disabled={loading}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors border ${p.id === usagePreset ? "border-[var(--color-signal)] bg-[var(--color-signal-dim)] text-[var(--color-signal)]" : "border-[var(--color-rim)] text-[var(--color-subtext)] hover:bg-[var(--color-surface)]"}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
-              Usage preset
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-ghost)]">
-              Start from a recommended permission set, then adjust the individual scopes below if needed.
-            </p>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {API_KEY_USAGE_PRESETS.map((preset) => {
-              const isSelected = preset.id === usagePreset;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => applyPreset(preset.id)}
-                  disabled={loading}
-                  className={`rounded-2xl border p-4 text-left transition ${
-                    isSelected
-                      ? "border-[rgba(212, 98, 43,0.28)] bg-[var(--color-signal-dim)] text-[var(--color-title)]"
-                      : "border-[var(--color-rim)] bg-[var(--color-void)] text-[var(--color-body)] hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-sm font-medium">{preset.label}</span>
-                    {isSelected ? (
-                      <span className="rounded-full border border-[rgba(212, 98, 43,0.28)] bg-[var(--color-signal-dim)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-signal)]">
-                        Selected
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-2 text-sm text-[var(--color-subtext)]">{preset.description}</p>
-                </button>
-              );
-            })}
-          </div>
-          {selectedPreset ? (
-            <p className="text-xs text-[var(--color-ghost)]">
-              {selectedPreset.label} preset enables {selectedPreset.scopes.length} permission
-              {selectedPreset.scopes.length === 1 ? "" : "s"} by default.
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-3">
+        {/* Scopes */}
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]">
-                Permissions
-              </p>
-              <p className="mt-1 text-sm text-[var(--color-ghost)]">
-                These scopes are enforced when the key calls protected API routes.
-              </p>
-            </div>
+            <label className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-ghost)]">Permissions</label>
             <div className="flex gap-2">
-              <button className="btn btn-ghost btn-sm text-xs" onClick={() => setSelectedScopes(API_KEY_ASSIGNABLE_SCOPE_OPTIONS.map(s => s.id))} type="button">Select all</button>
-              <button className="btn btn-ghost btn-sm text-xs" onClick={() => setSelectedScopes([])} type="button">Deselect all</button>
+              <button className="text-[10px] text-[var(--color-ghost)] hover:text-[var(--color-body)] transition-colors" onClick={() => setSelectedScopes(API_KEY_ASSIGNABLE_SCOPE_OPTIONS.map(s => s.id))} type="button">All</button>
+              <span className="text-[10px] text-[var(--color-rim)]">·</span>
+              <button className="text-[10px] text-[var(--color-ghost)] hover:text-[var(--color-body)] transition-colors" onClick={() => setSelectedScopes([])} type="button">None</button>
             </div>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {API_KEY_ASSIGNABLE_SCOPE_OPTIONS.map((scope) => {
-              const checked = selectedScopes.includes(scope.id);
+              const on = selectedScopes.includes(scope.id);
               return (
-                <label
-                  key={scope.id}
-                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
-                    checked
-                      ? "border-[rgba(212, 98, 43,0.24)] bg-[var(--color-signal-dim)]"
-                      : "border-[var(--color-rim)] bg-[var(--color-void)] hover:border-[var(--color-rim)] hover:bg-[var(--color-surface)]"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 rounded border-[var(--color-rim)] bg-transparent text-[var(--color-signal)] focus:ring-[var(--color-signal)]"
-                    checked={checked}
-                    disabled={loading}
-                    onChange={() => toggleScope(scope.id)}
-                  />
+                <label key={scope.id} className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-colors ${on ? "border-[var(--color-signal)] bg-[var(--color-signal-dim)]" : "border-[var(--color-rim)] hover:bg-[var(--color-surface)]"}`}>
+                  <input type="checkbox" className="mt-0.5 h-3.5 w-3.5 rounded border-[var(--color-rim)] bg-transparent text-[var(--color-signal)] focus:ring-[var(--color-signal)]" checked={on} disabled={loading} onChange={() => toggleScope(scope.id)} />
                   <div>
-                    <p className="text-sm font-medium text-[var(--color-title)]">{scope.label}</p>
-                    <p className="mt-1 text-sm text-[var(--color-ghost)]">{scope.description}</p>
+                    <p className="text-xs font-medium text-[var(--color-title)] leading-tight">{scope.label}</p>
+                    <p className="text-[10px] text-[var(--color-ghost)] mt-0.5 leading-snug">{scope.description}</p>
                   </div>
                 </label>
               );
@@ -303,186 +178,74 @@ export function ApiKeySettingsPanel({ initialKeys, turnstileSiteKey }: Props) {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-[minmax(0,320px)_1fr]">
-          <div className="space-y-2">
-            <label
-              htmlFor="api-key-expiry"
-              className="text-xs font-medium uppercase tracking-[0.24em] text-[var(--color-ghost)]"
-            >
-              Expiry
-            </label>
-            <select
-              id="api-key-expiry"
-              className="w-full rounded-2xl border border-[var(--color-rim)] bg-[var(--color-void)] px-4 py-3 text-[var(--color-title)] outline-none transition focus:border-[var(--color-signal)]"
-              value={expiryOption}
-              onChange={(event) => setExpiryOption(event.target.value as ApiKeyExpiryOptionId)}
-              disabled={loading}
-            >
-              {API_KEY_EXPIRY_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="rounded-2xl border border-[var(--color-rim)] bg-[var(--color-void)] p-4">
-            <p className="text-sm font-medium text-[var(--color-title)]">
-              {selectedExpiry?.label ?? "Custom expiry"}
-            </p>
-            <p className="mt-2 text-sm text-[var(--color-ghost)]">
-              {selectedExpiry?.description ?? "Set how long the key should remain active."}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4">
-          <TurnstileWidget
-            ref={turnstileRef}
-            siteKey={turnstileSiteKey}
-            onTokenChange={setTurnstileToken}
-          />
-          <button
-            className="btn btn-primary"
-            disabled={
-              loading ||
-              !name.trim() ||
-              selectedScopes.length === 0 ||
-              (requiresTurnstile && !turnstileToken)
-            }
-            onClick={createKey}
-            type="button"
-          >
+        {/* Generate */}
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[var(--color-rim)]">
+          <TurnstileWidget ref={turnstileRef} siteKey={turnstileSiteKey} onTokenChange={setTurnstileToken} />
+          <button className="btn btn-primary" disabled={loading || !name.trim() || selectedScopes.length === 0 || (requiresTurnstile && !turnstileToken)} onClick={createKey} type="button">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
             Generate key
           </button>
+          <span className="text-[10px] text-[var(--color-ghost)]">{selectedScopes.length} permission{selectedScopes.length !== 1 ? "s" : ""} selected</span>
         </div>
       </div>
 
-      {revealedKey ? (
-        <div className="rounded-2xl border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] p-6">
-          <p className="text-sm font-medium text-[var(--color-warning)] mb-2">One-time key reveal</p>
-          <p className="text-xs text-[var(--color-warning)] mb-4">Copy this key now. It will not be shown again.</p>
-          <div className="flex items-center gap-4">
-            <code className="flex-1 block overflow-x-auto rounded-xl border border-[rgba(217,119,6,0.24)] bg-[var(--color-void)] p-4 text-sm text-[var(--color-title)] font-mono">
-              {revealedKey}
-            </code>
-            <button
-              onClick={() => navigator.clipboard.writeText(revealedKey)}
-              type="button"
-              className="btn btn-ghost shrink-0 border-[rgba(217,119,6,0.24)] text-[var(--color-warning)] hover:bg-[rgba(217,119,6,0.12)]"
-            >
-              Copy
-            </button>
+      {/* ── Key list ── */}
+      <div className="space-y-3">
+        <h3 className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-ghost)]">Active & revoked keys ({keys.length})</h3>
+
+        {keys.length === 0 ? (
+          <div className="rounded-xl border border-[var(--color-rim)]">
+            <EmptyState icon={Key} title="No API keys yet." description="Create a scoped key when you need external systems to write into TrustLoop." />
           </div>
-        </div>
-      ) : null}
+        ) : (
+          <div className="divide-y divide-[var(--color-rim)] border border-[var(--color-rim)] rounded-xl overflow-hidden">
+            {keys.map((k) => {
+              const expired = isExpired(k.expiresAt);
+              const dead = !k.isActive || expired;
+              const scopes = k.scopes.map((s) => API_KEY_SCOPE_OPTIONS.find((o) => o.id === s)?.label ?? s).slice(0, 4);
 
-      <div className="pt-4">
-        <p className="text-sm tracking-wide text-[var(--color-ghost)] mb-4 uppercase">
-          Active & Revoked Keys ({keys.length})
-        </p>
-        <div className="flex flex-col gap-3">
-          {keys.map((key) => {
-            const expired = isExpired(key.expiresAt);
-            const scopeSummary = key.scopes
-              .map(
-                (scope) =>
-                  API_KEY_SCOPE_OPTIONS.find((option) => option.id === scope)?.label ??
-                  scope,
-              )
-              .slice(0, 6);
+              return (
+                <div key={k.id} className={`group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-[var(--color-surface)] ${dead ? "opacity-50" : ""}`}>
+                  {/* Icon */}
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${dead ? "bg-[var(--color-surface)] text-[var(--color-ghost)]" : "bg-[var(--color-signal-dim)] text-[var(--color-signal)]"}`}>
+                    <KeyRound className="h-3.5 w-3.5" />
+                  </div>
 
-            return (
-              <div
-                className={`group rounded-2xl border p-4 transition ${
-                  key.isActive && !expired
-                    ? "border-[var(--color-rim)] bg-[var(--color-surface)] hover:border-[var(--color-rim)]"
-                    : "border-[var(--color-rim)] bg-[var(--color-surface)] opacity-70"
-                }`}
-                key={key.id}
-              >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div
-                      className={`mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border ${
-                        key.isActive && !expired
-                          ? "border-[var(--color-rim)] bg-[var(--color-surface)] text-[var(--color-body)]"
-                          : "border-[var(--color-rim)] bg-[var(--color-surface)] text-[var(--color-ghost)]"
-                      }`}
-                    >
-                      <KeyRound className="h-4 w-4" />
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-medium ${k.isActive ? "text-[var(--color-title)]" : "text-[var(--color-ghost)] line-through"}`}>{k.name}</span>
+                      {!k.isActive && <span className="text-[9px] uppercase tracking-widest font-bold text-[var(--color-danger)]">Revoked</span>}
+                      {expired && <span className="text-[9px] uppercase tracking-widest font-bold text-[var(--color-warning)]">Expired</span>}
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p
-                          className={`font-medium ${
-                            key.isActive ? "text-[var(--color-body)]" : "text-[var(--color-ghost)] line-through"
-                          }`}
-                        >
-                          {key.name}
-                        </p>
-                        {!key.isActive ? (
-                          <span className="rounded-full border border-[rgba(232,66,66,0.24)] bg-[rgba(232,66,66,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-danger)]">
-                            Revoked
-                          </span>
-                        ) : null}
-                        {expired ? (
-                          <span className="rounded-full border border-[rgba(217,119,6,0.24)] bg-[rgba(217,119,6,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--color-warning)]">
-                            Expired
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="text-sm text-[var(--color-ghost)] font-mono">{key.keyPrefix}••••••••••••</p>
-                      <div className="flex flex-wrap gap-2">
-                        {scopeSummary.map((scope) => (
-                          <span
-                            key={`${key.id}-${scope}`}
-                            className="rounded-full border border-[var(--color-rim)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] text-[var(--color-body)]"
-                          >
-                            {scope}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-[11px] font-mono text-[var(--color-ghost)]">{k.keyPrefix}••••••</span>
+                      <span className="text-[10px] text-[var(--color-ghost)]">Created {fmtDate(k.createdAt)}</span>
+                      <span className="text-[10px] text-[var(--color-ghost)]">Used {k.lastUsedAt ? fmtDate(k.lastUsedAt) : "never"}</span>
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-                    <div className="min-w-[190px] text-sm text-[var(--color-subtext)]">
-                      <p>Created {formatDate(key.createdAt)}</p>
-                      <p className="mt-1">Last used: {key.lastUsedAt ? formatDate(key.lastUsedAt) : "Never"}</p>
-                      <p className="mt-1">
-                        {expired ? "Expired" : "Expires"}: {formatDate(key.expiresAt)}
-                      </p>
-                    </div>
+                  {/* Scopes */}
+                  <div className="hidden lg:flex flex-wrap gap-1 max-w-[240px]">
+                    {scopes.map((s) => (
+                      <span key={`${k.id}-${s}`} className="text-[9px] px-1.5 py-0.5 rounded border border-[var(--color-rim)] text-[var(--color-ghost)]">{s}</span>
+                    ))}
+                    {k.scopes.length > 4 && <span className="text-[9px] text-[var(--color-ghost)]">+{k.scopes.length - 4}</span>}
+                  </div>
 
-                    <div className="w-10 flex justify-end">
-                      {key.isActive ? (
-                        <button
-                          className="rounded-lg p-2 text-[var(--color-ghost)] transition-colors hover:bg-[rgba(232,66,66,0.08)] hover:text-[var(--color-danger)] lg:opacity-0 lg:group-hover:opacity-100 lg:focus:opacity-100"
-                          disabled={loading}
-                          onClick={() => revokeKey(key.id)}
-                          type="button"
-                          title="Revoke key"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      ) : null}
-                    </div>
+                  {/* Revoke */}
+                  <div className="w-8 flex justify-end">
+                    {k.isActive && (
+                      <button className="p-1.5 rounded-md text-[var(--color-ghost)] hover:text-[var(--color-danger)] hover:bg-[rgba(232,66,66,0.08)] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" disabled={loading} onClick={() => revokeKey(k.id)} type="button" title="Revoke">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-          {keys.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)]">
-              <EmptyState
-                icon={Key}
-                title="No API keys yet."
-                description="Create a scoped key when you need external systems to write into TrustLoop."
-              />
-            </div>
-          ) : null}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

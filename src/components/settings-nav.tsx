@@ -9,6 +9,8 @@ import {
   Notebook,
   Robot,
   ShieldCheck,
+  Sliders,
+  SquaresFour,
   UsersThree,
   Waves,
 } from "@phosphor-icons/react";
@@ -24,7 +26,8 @@ const groups = [
   {
     label: "Workspace",
     items: [
-      { href: "/settings", icon: Buildings, label: "General" },
+      { href: "/settings", icon: SquaresFour, label: "Overview" },
+      { href: "/settings/general", icon: Sliders, label: "General" },
       { href: "/settings/workspace", icon: Buildings, label: "Quotas" },
       { href: "/settings/team", icon: UsersThree, label: "Team" },
       { href: "/settings/billing", icon: CreditCard, label: "Billing" },
@@ -33,7 +36,7 @@ const groups = [
   {
     label: "Integrations",
     items: [
-      { href: "/settings/ai", icon: Robot, label: "AI & API Keys" },
+      { href: "/settings/ai", icon: Robot, label: "AI Providers" },
       { href: "/settings/webhooks", icon: LinkSimple, label: "Webhooks" },
       { href: "/settings/on-call", icon: Waves, label: "On-Call" },
     ],
@@ -41,6 +44,7 @@ const groups = [
   {
     label: "Security",
     items: [
+      { href: "/settings/api-keys", icon: ShieldCheck, label: "API Keys" },
       { href: "/settings/sso", icon: ShieldCheck, label: "SAML SSO" },
       { href: "/settings/audit", icon: Notebook, label: "Audit Log" },
     ],

@@ -59,7 +59,7 @@ function CoverageDonut({ triage, update }: { triage: number; update: number }) {
         <circle cx={70} cy={70} r={r} fill="none" stroke="var(--color-rim)" strokeWidth={12} />
         <circle
           cx={70} cy={70} r={r} fill="none"
-          stroke="#d4622b" strokeWidth={12}
+          stroke="#8b5cf6" strokeWidth={12}
           strokeDasharray={`${triageLen} ${c - triageLen}`}
           strokeDashoffset={c * 0.25}
           strokeLinecap="round"
@@ -67,7 +67,7 @@ function CoverageDonut({ triage, update }: { triage: number; update: number }) {
         />
         <circle
           cx={70} cy={70} r={r} fill="none"
-          stroke="#e8944a" strokeWidth={12}
+          stroke="#06b6d4" strokeWidth={12}
           strokeDasharray={`${updateLen} ${c - updateLen}`}
           strokeDashoffset={c * 0.25 - triageLen - gap}
           strokeLinecap="round"
@@ -89,12 +89,12 @@ function CoverageDonut({ triage, update }: { triage: number; update: number }) {
       </svg>
       <div className="flex flex-col gap-2 text-[13px]">
         <div className="flex items-center gap-2">
-          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#d4622b" }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#8b5cf6" }} />
           <span className="text-[var(--color-subtext)]">Triage</span>
           <span className="ml-auto font-semibold text-[var(--color-title)]">{triage}%</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#e8944a" }} />
+          <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "#06b6d4" }} />
           <span className="text-[var(--color-subtext)]">Updates</span>
           <span className="ml-auto font-semibold text-[var(--color-title)]">{update}%</span>
         </div>
@@ -206,17 +206,17 @@ export function DashboardPageClient({
               <p className="dash-chart-desc">Severity breakdown of your queue</p>
             </div>
             <div className="flex items-center gap-2">
-              <Lightning size={16} weight="duotone" color="#d4622b" />
+              <Lightning size={16} weight="duotone" color="#6366f1" />
               <span className="text-[12px] text-[var(--color-ghost)]">Live</span>
             </div>
           </div>
           <div className="h-[280px] w-full">
             <ResponsiveBar
               data={[
-                { id: "P1 Critical", value: counts.p1, color: "#c2571f" },
-                { id: "Open", value: counts.open, color: "#d4622b" },
-                { id: "Resolved", value: counts.resolved, color: "#e8944a" },
-                { id: "Created", value: counts.created7d, color: "#f0b27a" },
+                { id: "P1 Critical", value: counts.p1, color: "#ef4444" },
+                { id: "Open", value: counts.open, color: "#f97316" },
+                { id: "Resolved", value: counts.resolved, color: "#22c55e" },
+                { id: "Created", value: counts.created7d, color: "#6366f1" },
               ]}
               keys={["value"]}
               indexBy="id"
