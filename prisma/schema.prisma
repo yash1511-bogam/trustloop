@@ -91,6 +91,7 @@ enum EmailNotificationType {
   PAYMENT_RECEIPT
   PAYMENT_FAILURE_REMINDER
   PLAN_CANCELED
+  PLAN_DOWNGRADED
   AUTH_OTP
   AUTH_RECOVERY
   ONBOARDING_WELCOME
@@ -825,6 +826,12 @@ model StatusPageSubscriber {
 
   @@unique([workspaceId, email])
   @@index([workspaceId])
+}
+
+model PlatformStatusSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
 }
 
 model EarlyAccessRequest {

@@ -199,7 +199,7 @@ export function MarketingLanding() {
 
             <div className="hidden items-center gap-2 md:flex">
               <HoverLink className="btn btn-ghost btn-sm" href="/login">Sign in</HoverLink>
-              <HoverLink className="btn btn-ghost btn-sm border border-[var(--color-rim)] transition-colors hover:border-[var(--color-signal)] hover:text-[var(--color-signal)]" href="/register">Request access</HoverLink>
+              <HoverLink className="btn btn-ghost btn-sm border border-[var(--color-rim)] transition-colors hover:border-[var(--color-signal)] hover:text-[var(--color-signal)]" href="/early-access">Request access</HoverLink>
             </div>
 
             <button
@@ -373,11 +373,11 @@ export function MarketingLanding() {
               initial={{ opacity: 0, y: 12 }}
               transition={{ delay: 0.65, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-              <HoverLink className="btn btn-primary btn-lg relative z-[2]" href="/register">
+              <HoverLink className="btn btn-primary btn-lg relative z-[2]" href="/register?plan=starter&interval=monthly">
                 Start free trial
               </HoverLink>
-              <a className="btn btn-lg group relative z-[2] border border-black text-black hover:bg-black/10" href="#how-it-works" onClick={(e) => { e.preventDefault(); document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" }); history.replaceState(null, "", "/how-it-works"); }}>
-                See how it works
+              <a className="btn btn-lg group relative z-[2] border border-black text-black hover:bg-black/10" href="/docs" target="_blank" rel="noreferrer">
+                Documentation
                 <ArrowRight className="text-black transition-transform group-hover:translate-x-1" size={16} weight="regular" />
               </a>
             </framerMotion.div>

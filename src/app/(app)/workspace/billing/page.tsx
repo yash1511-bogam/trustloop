@@ -6,7 +6,7 @@ import {
   quotasForPlan,
   resolveEffectivePlanTier,
 } from "@/lib/billing-plan";
-import { dodoCheckoutMode } from "@/lib/dodo";
+import { dodoCheckoutMode, hasAnnualProducts, intervalForDodoProductId } from "@/lib/dodo";
 import { prisma } from "@/lib/prisma";
 
 type SearchParams = Promise<{
@@ -15,7 +15,7 @@ type SearchParams = Promise<{
 
 function billingNoticeFromQuery(value?: string): string | null {
   if (value === "return" || value === "success") {
-    return "Checkout returned to TrustLoop. Billing status may take a moment to refresh after payment confirmation.";
+    return "verifying";
   }
   if (value === "cancelled") {
     return "Checkout was cancelled before payment completed.";
@@ -46,6 +46,8 @@ export default async function SettingsBillingPage({
         select: {
           status: true,
           discountCode: true,
+          dodoSubscriptionId: true,
+          dodoProductId: true,
           lastPaymentAt: true,
           lastPaymentAmount: true,
           lastPaymentCurrency: true,
@@ -108,6 +110,8 @@ export default async function SettingsBillingPage({
           canManageBilling={hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])}
           checkoutMode={dodoCheckoutMode()}
           planTier={effectivePlanTier}
+          annualAvailable={hasAnnualProducts()}
+          currentInterval={intervalForDodoProductId(workspace.billing?.dodoProductId)}
           usage={{
             incidentsCreated: usage.incidentsCreated,
             triageRuns: usage.triageRuns,
@@ -125,6 +129,8 @@ export default async function SettingsBillingPage({
               ? {
                   status: workspace.billing.status,
                   discountCode: workspace.billing.discountCode,
+                  dodoSubscriptionId: workspace.billing.dodoSubscriptionId,
+                  dodoProductId: workspace.billing.dodoProductId,
                   currentPeriodStart: workspace.billing.currentPeriodStart?.toISOString() ?? null,
                   currentPeriodEnd: workspace.billing.currentPeriodEnd?.toISOString() ?? null,
                   canceledAt: workspace.billing.canceledAt?.toISOString() ?? null,

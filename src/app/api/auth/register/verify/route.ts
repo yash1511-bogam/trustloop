@@ -23,6 +23,8 @@ import { workspacePath } from "@/lib/workspace-url";
 const registerVerifySchema = z.object({
   methodId: z.string().min(6).max(200),
   code: z.string().min(4).max(12),
+  plan: z.enum(["starter", "pro"]).optional(),
+  interval: z.enum(["monthly", "annual"]).optional(),
 });
 
 type PendingRegisterPayload = {
@@ -239,9 +241,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    const redirectTo = created.workspace.slug
-      ? workspacePath("/dashboard", created.workspace.slug, created.user.role)
-      : "/dashboard";
+    const plan = parsed.data.plan;
+    const interval = parsed.data.interval;
+    let redirectTo: string;
+    if (plan === "starter" || plan === "pro") {
+      const params = new URLSearchParams({ plan });
+      if (interval) params.set("interval", interval);
+      redirectTo = `/workspace/billing/checkout?${params.toString()}`;
+    } else {
+      redirectTo = created.workspace.slug
+        ? workspacePath("/dashboard", created.workspace.slug, created.user.role)
+        : "/dashboard";
+    }
 
     const response = NextResponse.json({
       user: {

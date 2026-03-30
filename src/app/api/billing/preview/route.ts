@@ -15,6 +15,8 @@ const schema = z.object({
   plan: z.enum(["starter", "pro", "enterprise"]),
   interval: z.enum(["monthly", "annual"]).optional().default("monthly"),
   couponCode: z.string().trim().min(2).max(64).optional().nullable(),
+  billingCountry: z.string().trim().length(2).optional(),
+  billingZip: z.string().trim().max(20).optional(),
 });
 
 type PreviewPlan = PlanTier;
@@ -76,6 +78,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         interval,
         plan,
         workspaceId: workspace.id,
+        billingCountry: parsed.data.billingCountry,
+        billingZip: parsed.data.billingZip,
       }),
     );
 

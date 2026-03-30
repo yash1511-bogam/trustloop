@@ -20,16 +20,23 @@ function componentHealth(incidents: { status: IncidentStatus }[]): "Operational"
 
 function generateUptimeDays(
   incidents: { status: IncidentStatus; updatedAt: Date }[],
-  days = 90
+  days = 90,
+  since?: Date,
 ): UptimeDay[] {
   const now = new Date();
   const result: UptimeDay[] = [];
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now);
     d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
     const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const dayEnd = new Date(dayStart.getTime() + 86400000);
+
+    if (since && dayEnd <= since) {
+      result.push({ date: dateStr, status: "no-data", label: "No data" });
+      continue;
+    }
+
     const dayIncidents = incidents.filter((inc) => inc.updatedAt >= dayStart && inc.updatedAt < dayEnd);
     let status: DayStatus = "operational";
     let label = "No issues";
@@ -62,7 +69,7 @@ export default async function PublicStatusPage({
 
   const workspace = await prisma.workspace.findFirst({
     where: { slug, statusPageEnabled: true },
-    select: { id: true, name: true, customDomain: true, customDomainVerified: true },
+    select: { id: true, name: true, customDomain: true, customDomainVerified: true, createdAt: true },
   });
 
   if (!workspace) notFound();
@@ -162,7 +169,7 @@ export default async function PublicStatusPage({
                   key={name}
                   componentName={name}
                   currentStatus={componentHealth(incidents.filter((i) => i.status !== IncidentStatus.RESOLVED))}
-                  days={generateUptimeDays(incidents)}
+                  days={generateUptimeDays(incidents, 90, workspace.createdAt)}
                 />
               ))}
           </div>
@@ -312,7 +319,7 @@ export default async function PublicStatusPage({
 
         {/* Footer */}
         <footer className="pt-8 text-xs" style={{ borderTop: "1px solid var(--color-rim)", color: "var(--color-ghost)" }}>
-          Powered by <span style={{ color: "var(--color-signal)" }}>TrustLoop</span>
+          Powered by <a href="/" target="_blank" rel="noreferrer" style={{ color: "var(--color-signal)", cursor: "pointer" }}>TrustLoop</a>
         </footer>
       </div>
     </main>

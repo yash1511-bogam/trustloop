@@ -49,6 +49,8 @@ export default async function RegisterPage({
     provider?: string;
     stytch_token_type?: string;
     invite_code?: string;
+    plan?: string;
+    interval?: string;
   }>;
 }) {
   const params = await redirectToOAuthCallbackIfPresent(searchParams);
@@ -111,6 +113,8 @@ export default async function RegisterPage({
                 initialInviteCode={params.invite_code}
                 inviteToken={invite?.token}
                 turnstileSiteKey={siteKey}
+                selectedPlan={params.plan}
+                selectedInterval={params.interval}
               />
             </div>
 

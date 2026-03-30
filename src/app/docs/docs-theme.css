@@ -1,12 +1,12 @@
 .docs-theme {
   color-scheme: dark;
-  --color-fd-background: #050507;
+  --color-fd-background: #0a0b0d;
   --color-fd-foreground: #ffffff;
-  --color-fd-muted: #0f0f13;
+  --color-fd-muted: #101113;
   --color-fd-muted-foreground: #8a8b95;
-  --color-fd-popover: #0c0c10;
+  --color-fd-popover: #101113;
   --color-fd-popover-foreground: #f4f5f9;
-  --color-fd-card: #0c0c10;
+  --color-fd-card: #101113;
   --color-fd-card-foreground: #ffffff;
   --color-fd-border: rgba(255, 255, 255, 0.07);
   --color-fd-primary: #f4f5f9;
@@ -18,10 +18,7 @@
   --color-fd-ring: rgba(255, 255, 255, 0.22);
   --color-fd-overlay: rgba(0, 0, 0, 0.6);
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse at top, rgba(28, 41, 74, 0.14), transparent 45%),
-    radial-gradient(ellipse at bottom right, rgba(212, 98, 43, 0.06), transparent 45%),
-    var(--bg-base);
+  background: var(--color-void);
   color: var(--color-fd-foreground);
 }
 
@@ -82,14 +79,14 @@
 .docs-theme :where(code):not(pre code) {
   border: 1px solid var(--color-fd-border);
   border-radius: 8px;
-  background: #121218;
+  background: #101113;
   color: #f5f5f7;
   padding: 0.15rem 0.4rem;
 }
 
 .docs-theme pre {
   border: 1px solid var(--color-fd-border);
-  background: #09090c !important;
+  background: #0a0b0d !important;
 }
 
 .docs-theme input,

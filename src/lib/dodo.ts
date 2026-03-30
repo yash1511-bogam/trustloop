@@ -22,6 +22,10 @@ export function dodoCheckoutMode(): "test" | "live" {
   return dodoEnvironment() === "live_mode" ? "live" : "test";
 }
 
+export function hasAnnualProducts(): boolean {
+  return !!(process.env.DODO_PRODUCT_ID_STARTER_ANNUAL?.trim() || process.env.DODO_PRODUCT_ID_PRO_ANNUAL?.trim());
+}
+
 export function dodoClient(): DodoPayments {
   if (globalForDodo.dodoClient) {
     return globalForDodo.dodoClient;
@@ -80,4 +84,13 @@ export function planForDodoProductId(productId: string | null | undefined): Plan
     }
   }
   return ids[productId] ?? null;
+}
+
+export function intervalForDodoProductId(productId: string | null | undefined): BillingInterval {
+  if (!productId) return "monthly";
+  const annualIds = [
+    process.env.DODO_PRODUCT_ID_STARTER_ANNUAL?.trim(),
+    process.env.DODO_PRODUCT_ID_PRO_ANNUAL?.trim(),
+  ].filter(Boolean);
+  return annualIds.includes(productId) ? "annual" : "monthly";
 }

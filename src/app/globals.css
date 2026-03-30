@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -1526,6 +1525,27 @@ button.app-nav-link {
   color: var(--color-subtext);
 }
 
+.legal-prose ul,
+.legal-prose ol {
+  padding-left: var(--space-5);
+}
+
+.legal-prose ul {
+  list-style-type: disc;
+}
+
+.legal-prose ol {
+  list-style-type: decimal;
+}
+
+.legal-prose li {
+  margin-top: var(--space-1);
+}
+
+.legal-prose section {
+  margin-top: var(--space-8);
+}
+
 .marketing-shell {
   width: min(100%, calc(var(--content-max-landing) + var(--space-12)));
   margin: 0 auto;
@@ -1938,4 +1958,23 @@ details > summary::-webkit-details-marker {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* Phone input dark theme overrides */
+.billing-phone-input .PhoneInputInput {
+  background: transparent;
+  border: none;
+  color: var(--color-title);
+  font-size: 14px;
+  outline: none;
+}
+.billing-phone-input .PhoneInputInput::placeholder {
+  color: var(--color-ghost);
+}
+.billing-phone-input .PhoneInputCountrySelect {
+  background: var(--color-surface);
+  color: var(--color-title);
+}
+.billing-phone-input .PhoneInputCountryIcon--border {
+  box-shadow: none;
 }

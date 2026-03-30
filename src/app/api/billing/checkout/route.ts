@@ -22,6 +22,14 @@ const schema = z.object({
     .max(64)
     .optional()
     .nullable(),
+  billingName: z.string().trim().min(1).max(128).optional(),
+  billingEmail: z.string().email().optional(),
+  billingCountry: z.string().trim().length(2).optional(),
+  billingZip: z.string().trim().max(20).optional(),
+  billingStreet: z.string().trim().max(256).optional(),
+  billingCity: z.string().trim().max(128).optional(),
+  billingState: z.string().trim().max(128).optional(),
+  billingPhone: z.string().trim().max(20).optional(),
 });
 
 function appUrl(): string {
@@ -56,6 +64,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       billing: {
         select: {
           dodoCustomerId: true,
+          dodoSubscriptionId: true,
+          status: true,
         },
       },
     },
@@ -65,23 +75,28 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return forbidden();
   }
 
+  if (workspace.billing?.dodoSubscriptionId && workspace.billing.status === "ACTIVE") {
+    return NextResponse.json(
+      { error: "You already have an active subscription. Use plan change instead of a new checkout." },
+      { status: 409 },
+    );
+  }
+
   const couponCode = parsed.data.couponCode?.trim() || null;
   const plan = parsed.data.plan;
   const interval = parsed.data.interval;
 
   // Idempotency: prevent duplicate checkout sessions from rapid clicks.
   const idempotencyKey = `checkout:idem:${workspace.id}:${plan}:${interval}:${couponCode ?? "none"}`;
-  type CachedSession = { checkoutUrl: string; sessionId: string };
+  type CachedSession = { checkoutUrl: string };
   const cached = await redisGetJson<CachedSession>(idempotencyKey);
   if (cached) {
     log.billing.info("Returning cached checkout session (idempotency)", {
       workspaceId: workspace.id,
       plan,
-      sessionId: cached.sessionId,
     });
     return NextResponse.json({
       checkoutUrl: cached.checkoutUrl,
-      sessionId: cached.sessionId,
     });
   }
 
@@ -90,13 +105,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       buildBillingCheckoutPayload({
         actorUserId: auth.user.id,
         couponCode,
-        customerEmail: auth.user.email,
-        customerName: auth.user.name,
+        customerEmail: parsed.data.billingEmail || auth.user.email,
+        customerName: parsed.data.billingName || auth.user.name,
+        customerPhone: parsed.data.billingPhone || undefined,
         dodoCustomerId: workspace.billing?.dodoCustomerId,
         interval,
         plan,
         returnUrl: `${appUrl()}/workspace/billing?billing=return`,
         workspaceId: workspace.id,
+        billingCountry: parsed.data.billingCountry,
+        billingZip: parsed.data.billingZip,
+        billingStreet: parsed.data.billingStreet,
+        billingCity: parsed.data.billingCity,
+        billingState: parsed.data.billingState,
       }),
     );
 
@@ -104,7 +125,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (session.checkout_url && session.session_id) {
       await redisSetJson<CachedSession>(
         idempotencyKey,
-        { checkoutUrl: session.checkout_url, sessionId: session.session_id },
+        { checkoutUrl: session.checkout_url },
         60,
       ).catch((e: unknown) => {
         log.billing.warn("Failed to cache checkout session", {
@@ -128,7 +149,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         dodoCheckoutSessionId: session.session_id,
         dodoProductId: dodoProductIdForPlan(plan, interval),
         discountCode: couponCode,
-        status: BillingSubscriptionStatus.PENDING,
       },
     });
 
@@ -146,7 +166,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({
       checkoutUrl: session.checkout_url,
-      sessionId: session.session_id,
     });
   } catch (error) {
     return NextResponse.json(

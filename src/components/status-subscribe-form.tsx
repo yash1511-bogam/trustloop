@@ -7,7 +7,7 @@ import {
 } from "@/components/turnstile-widget";
 
 interface Props {
-  slug: string;
+  slug?: string;
   turnstileSiteKey?: string | null;
 }
 
@@ -26,7 +26,7 @@ export function StatusSubscribeForm({ slug, turnstileSiteKey }: Props) {
     }
     setState("loading");
     try {
-      const res = await fetch(`/api/${slug}/status/subscribe`, {
+      const res = await fetch(slug ? `/api/${slug}/status/subscribe` : `/api/status/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, turnstileToken }),

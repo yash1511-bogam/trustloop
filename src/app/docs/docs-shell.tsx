@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useSyncExternalStore, type ReactNode } from "react";
-import { BookOpenText, House } from "@/components/icon-compat";
+import { House } from "@/components/icon-compat";
+import { TrustLoopLogo } from "@/components/trustloop-logo";
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import { docsSource } from "@/lib/docs-source";
@@ -19,8 +20,7 @@ export function DocsShell({ children }: { children: ReactNode }) {
       <div className="min-h-screen px-6 py-8 md:px-10">
         <div className="mx-auto flex max-w-6xl items-center justify-between rounded-2xl border border-[var(--color-rim)] bg-[var(--color-surface)] px-5 py-4 backdrop-blur-sm">
           <span className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--color-bright)]">
-            <BookOpenText className="h-4 w-4" />
-            TrustLoop Docs
+            <TrustLoopLogo size={14} variant="full" />
           </span>
           <Link className="text-sm text-[var(--color-subtext)] transition-colors hover:text-[var(--color-bright)]" href="/">
             Product Home
@@ -44,10 +44,7 @@ export function DocsShell({ children }: { children: ReactNode }) {
         tree={docsSource.getPageTree()}
         nav={{
           title: (
-            <span className="inline-flex items-center gap-2 font-semibold">
-              <BookOpenText className="h-4 w-4" />
-              TrustLoop Docs
-            </span>
+            <TrustLoopLogo size={14} variant="full" />
           ),
           url: "/docs",
         }}

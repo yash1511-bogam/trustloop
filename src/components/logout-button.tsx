@@ -12,7 +12,7 @@ export function LogoutButton({ compact }: { compact?: boolean }) {
     setLoading(true);
     await fetch("/api/auth/logout", { method: "POST" });
     setLoading(false);
-    router.push("/login");
+    router.push("/dashboard");
     router.refresh();
   }
 

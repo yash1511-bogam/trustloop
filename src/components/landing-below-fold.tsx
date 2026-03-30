@@ -114,10 +114,10 @@ const plans: MarketingPlan[] = [
   {
     name: "Starter",
     monthly: 49,
-    annual: 39,
+    annual: 44,
     description: "For early-stage AI product teams handling customer incidents weekly.",
     featured: false,
-    cta: { href: "/register", label: "Start trial", primary: false },
+    cta: { href: "/register?plan=starter", label: "Start trial", primary: false },
     hoverGradient: "linear-gradient(to bottom, #283048, #859398)",
     features: [
       ["50 incidents/day", true],
@@ -130,10 +130,10 @@ const plans: MarketingPlan[] = [
   {
     name: "Pro",
     monthly: 149,
-    annual: 119,
+    annual: 134,
     description: "For teams running incident operations daily with tighter approval and reporting needs.",
     featured: true,
-    cta: { href: "/register", label: "Start trial", primary: true },
+    cta: { href: "/register?plan=pro", label: "Get started", primary: true },
     hoverGradient: "linear-gradient(to bottom, #0c0c6d, #de512b)",
     features: [
       ["200 incidents/day", true],
@@ -149,7 +149,7 @@ const plans: MarketingPlan[] = [
     annual: null,
     description: "For regulated or high-throughput organizations with stricter access and governance requirements.",
     featured: false,
-    cta: { href: "mailto:hello@trustloop.dev", label: "Talk to sales", primary: false },
+    cta: { href: "/contact-sales", label: "Talk to sales", primary: false },
     hoverGradient: "linear-gradient(to bottom, #1a1a2e, #16213e)",
     features: [
       ["Unlimited incidents", true],
@@ -327,7 +327,7 @@ export function LandingBelowFold() {
                 type="button"
               >
                 Annual
-                <span className="rounded-full bg-[var(--color-signal)] px-1.5 py-0.5 text-[10px] font-bold text-white">−20%</span>
+                <span className="rounded-full bg-[var(--color-signal)] px-1.5 py-0.5 text-[10px] font-bold text-white">−10%</span>
               </button>
             </div>
           </div>
@@ -364,19 +364,16 @@ export function LandingBelowFold() {
                             exit={{ opacity: 0, y: -10 }}
                             transition={{ duration: 0.25 }}
                           >
-                            ${annual ? plan.annual : plan.monthly}
+                            ${annual ? plan.annual : plan.monthly}<span className="text-[15px] font-normal text-[var(--color-ghost)] group-hover:text-white/70">/mo +tax</span>
                           </framerMotion.span>
                         </AnimatePresence>
                       )}
                     </span>
-                    {plan.monthly !== null && (
-                      <span className="text-[15px] text-[var(--color-ghost)] group-hover:text-white/70">/mo</span>
-                    )}
                   </div>
                   <p className="mt-3 text-[14px] leading-relaxed text-[var(--color-subtext)] group-hover:text-white/80">{plan.description}</p>
                   <Link
                     className={`mt-auto inline-flex w-full justify-center ${plan.cta.primary ? "btn btn-primary" : "btn btn-ghost"}`}
-                    href={plan.cta.href}
+                    href={plan.cta.href.includes("plan=") ? `${plan.cta.href}&interval=${annual ? "annual" : "monthly"}` : plan.cta.href}
                   >
                     {plan.cta.label}
                   </Link>
@@ -453,7 +450,7 @@ export function LandingBelowFold() {
             viewport={{ once: true, amount: 0.4 }}
             whileInView={{ opacity: 1, y: 0 }}
           >
-            <Link className="btn btn-primary btn-lg" href="/register">Start free trial</Link>
+            <Link className="btn btn-primary btn-lg" href="/register?plan=starter&interval=monthly">Start free trial</Link>
           </framerMotion.div>
         </div>
       </section>
@@ -473,7 +470,7 @@ export function LandingBelowFold() {
 
             <div className="grid content-start gap-3">
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-ghost)]">Product</p>
-              {[["Changelog", "/changelog"], ["Pricing", "/pricing"], ["Docs", "/docs"], ["Status", "/status"], ["API", "/api-docs"]].map(([label, href]) => (
+              {[["Changelog", "/changelog"], ["Pricing", "/#pricing"], ["Docs", "/docs"], ["Status", "/status"]].map(([label, href]) => (
                 <Link className="text-[13px] text-[var(--color-subtext)] transition-colors hover:text-[var(--color-bright)]" href={href} key={label}>{label}</Link>
               ))}
             </div>

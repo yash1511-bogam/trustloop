@@ -42,7 +42,7 @@ function getResendClient(): Resend | null {
 }
 
 function senderAddress(): string {
-  return process.env.RESEND_FROM_EMAIL ?? "TrustLoop <onboarding@resend.dev>";
+  return process.env.RESEND_FROM_EMAIL ?? "TrustLoop <trustloop@ticket.yashbogam.me>";
 }
 
 function appBaseUrl(): string {
@@ -82,30 +82,69 @@ async function getUnsubscribeToken(email: string): Promise<string | null> {
 }
 
 function brandedHtml(bodyHtml: string, unsub?: string | null): string {
-  const footer = unsub
-    ? `<p style="margin-top:32px;padding-top:16px;border-top:1px solid #222;font-size:12px;color:#666;">
-        <a href="${unsub}" style="color:#06b6d4;text-decoration:underline;">Unsubscribe</a> from TrustLoop emails
-      </p>`
+  const logoUrl = `${appBaseUrl()}/Logo/trustloop-full.png`;
+  const year = new Date().getFullYear();
+  const unsubBlock = unsub
+    ? `<tr><td style="padding-top:12px;font-size:12px;color:#8a8b95;"><a href="${unsub}" style="color:#d4622b;text-decoration:underline;">Unsubscribe</a> from TrustLoop emails</td></tr>`
     : "";
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
-<body style="margin:0;padding:0;background:#020203;color:#e5e5e5;font-family:Inter,system-ui,sans-serif;">
-<div style="max-width:560px;margin:0 auto;padding:40px 24px;">
-  <div style="margin-bottom:24px;">
-    <span style="font-size:20px;font-weight:700;color:#fff;">TrustLoop</span>
-  </div>
-  <div style="font-size:15px;line-height:1.6;color:#d4d4d4;">
-    ${bodyHtml}
-  </div>
-  <div style="margin-top:40px;font-size:12px;color:#555;">
-    <p>© ${new Date().getFullYear()} TrustLoop · AI Incident Operations</p>
-    ${footer}
-  </div>
-</div></body></html>`;
+  // Ensure every <a> without an existing style gets inline link color (Gmail strips <style> blocks)
+  const styledBody = bodyHtml
+    .replace(/<a href="([^"]*)">/g, '<a href="$1" style="color:#d4622b;text-decoration:underline;">')
+    .replace(/<p>/g, '<p style="margin:0 0 12px 0;color:#d4d4d4;">')
+    .replace(/<strong>/g, '<strong style="color:#ecedf1;font-weight:600;">')
+    .replace(/<ol>/g, '<ol style="margin:0 0 12px 0;padding-left:20px;color:#d4d4d4;">')
+    .replace(/<ul>/g, '<ul style="margin:0 0 12px 0;padding-left:20px;color:#d4d4d4;">')
+    .replace(/<li>/g, '<li style="margin:0 0 6px 0;color:#d4d4d4;">');
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="color-scheme" content="dark"/>
+<meta name="supported-color-schemes" content="dark"/>
+<title>TrustLoop</title>
+<!--[if mso]><style>body,table,td{font-family:Arial,sans-serif!important;}</style><![endif]-->
+<style>
+body,table,td,p,a,li{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+table,td{mso-table-lspace:0;mso-table-rspace:0;}
+img{-ms-interpolation-mode:bicubic;border:0;outline:none;text-decoration:none;}
+a{color:#d4622b;}
+@media only screen and (max-width:600px){
+  .email-container{width:100%!important;padding:24px 16px!important;}
+}
+</style>
+</head>
+<body style="margin:0;padding:0;width:100%;background-color:#0a0b0d;color:#ecedf1;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0b0d;">
+<tr><td align="center" style="padding:0;">
+  <table role="presentation" class="email-container" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;margin:0 auto;padding:40px 24px;">
+    <!-- Logo -->
+    <tr><td style="padding-bottom:24px;border-bottom:1px solid #232428;">
+      <img src="${logoUrl}" alt="TrustLoop" width="140" height="20" style="display:block;max-width:140px;height:auto;" />
+    </td></tr>
+    <!-- Body -->
+    <tr><td style="padding-top:32px;font-size:15px;line-height:1.7;color:#d4d4d4;">
+      ${styledBody}
+    </td></tr>
+    <!-- Footer -->
+    <tr><td style="padding-top:48px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="padding-top:24px;border-top:1px solid #232428;font-size:12px;line-height:1.6;color:#8a8b95;">
+          &copy; ${year} TrustLoop &middot; AI Incident Operations<br/>
+          Plot No 25, Hyderabad, 500001, Telangana, India
+        </td></tr>
+        ${unsubBlock}
+      </table>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body></html>`;
 }
 
 function brandedText(bodyText: string, unsub?: string | null): string {
   const footer = unsub ? `\n---\nUnsubscribe: ${unsub}` : "";
-  return `${bodyText}\n\n© ${new Date().getFullYear()} TrustLoop · AI Incident Operations${footer}`;
+  return `${bodyText}\n\n© ${new Date().getFullYear()} TrustLoop · AI Incident Operations\nPlot No 25, Hyderabad, 500001, Telangana, India${footer}`;
 }
 
 export async function upsertEmailSubscription(input: {
@@ -221,6 +260,7 @@ async function sendLoggedEmail(input: LoggedEmailInput): Promise<LoggedEmailResu
   try {
     const result = await client.emails.send({
       from: senderAddress(),
+      replyTo: "hello@yashbogam.me",
       to: [input.toEmail],
       subject: input.subject,
       html,
@@ -327,7 +367,7 @@ export async function sendAuthOtpCodeEmail(input: {
     html: [
       "<p>Hi,</p>",
       `<p>Use the code below to ${actionLabel}:</p>`,
-      `<p style="font-size:32px;font-weight:bold;letter-spacing:4px;padding:16px;background:#111;border-radius:8px;text-align:center;color:#fff;">${input.code}</p>`,
+      `<p style="font-size:32px;font-weight:bold;letter-spacing:4px;padding:16px;background:#101113;border:1px solid #232428;border-radius:8px;text-align:center;color:#fff;">${input.code}</p>`,
       "<p>This code expires in 15 minutes.</p>",
       "<p>If you did not request this, you can safely ignore this email.</p>",
     ].join(""),
@@ -681,6 +721,33 @@ export async function sendPaymentFailureReminderEmail(input: {
   });
 }
 
+export async function sendPlanDowngradedEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  previousPlanTier: string;
+  newPlanTier: string;
+}): Promise<LoggedEmailResult> {
+  const settingsUrl = `${appBaseUrl()}/workspace/billing`;
+
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.PLAN_DOWNGRADED,
+    toEmail: input.toEmail,
+    subject: `TrustLoop plan changed to ${input.newPlanTier}`,
+    html: [
+      `<p><strong>${input.workspaceName}</strong> has been downgraded from <strong>${input.previousPlanTier}</strong> to <strong>${input.newPlanTier}</strong>.</p>`,
+      "<p>Your new plan limits are now in effect. Quotas have been adjusted accordingly.</p>",
+      `<p><a href="${settingsUrl}">View billing settings</a></p>`,
+    ].join(""),
+    text: [
+      `${input.workspaceName} has been downgraded from ${input.previousPlanTier} to ${input.newPlanTier}.`,
+      "Your new plan limits are now in effect. Quotas have been adjusted accordingly.",
+      `View billing settings: ${settingsUrl}`,
+    ].join("\n"),
+  });
+}
+
 export async function sendPlanCanceledEmail(input: {
   workspaceId: string;
   toEmail: string;
@@ -819,9 +886,9 @@ export async function sendEarlyAccessInviteEmail(input: {
     html: [
       `<p>Hi ${input.userName},</p>`,
       "<p>Your early access request has been approved! Use the link below to create your TrustLoop workspace — your invite code will be filled in automatically.</p>",
-      `<p style="text-align:center;margin:24px 0;"><a href="${registerLink}" style="display:inline-block;padding:12px 32px;background:#06b6d4;color:#fff;font-weight:bold;border-radius:8px;text-decoration:none;">Create your workspace</a></p>`,
+      `<p style="text-align:center;margin:24px 0;"><a href="${registerLink}" style="display:inline-block;padding:12px 32px;background:#d4622b;color:#fff;font-weight:bold;border-radius:8px;text-decoration:none;">Create your workspace</a></p>`,
       `<p>Or enter this invite code manually on the <a href="${baseUrl}/register">registration page</a>:</p>`,
-      `<p style="font-size:24px;font-weight:bold;letter-spacing:2px;padding:16px;background:#111;border-radius:8px;text-align:center;color:#fff;">${input.inviteCode}</p>`,
+      `<p style="font-size:24px;font-weight:bold;letter-spacing:2px;padding:16px;background:#101113;border:1px solid #232428;border-radius:8px;text-align:center;color:#fff;">${input.inviteCode}</p>`,
       "<p>This code is single-use and tied to your email. Once you register, it cannot be reused.</p>",
     ].join(""),
     text: [
@@ -879,7 +946,7 @@ export async function sendEarlyAccessOtpEmail(input: {
     html: [
       "<p>Hi,</p>",
       "<p>Use the code below to verify your email for TrustLoop early access:</p>",
-      `<p style="font-size:32px;font-weight:bold;letter-spacing:4px;padding:16px;background:#111;border-radius:8px;text-align:center;color:#fff;">${input.code}</p>`,
+      `<p style="font-size:32px;font-weight:bold;letter-spacing:4px;padding:16px;background:#101113;border:1px solid #232428;border-radius:8px;text-align:center;color:#fff;">${input.code}</p>`,
       "<p>This code expires in 15 minutes.</p>",
       "<p>If you didn't request this, you can safely ignore this email.</p>",
     ].join(""),

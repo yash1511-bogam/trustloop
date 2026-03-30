@@ -20,6 +20,8 @@ type Props = {
   initialInviteCode?: string;
   inviteToken?: string;
   turnstileSiteKey?: string | null;
+  selectedPlan?: string;
+  selectedInterval?: string;
 };
 
 export function RegisterForm({
@@ -28,6 +30,8 @@ export function RegisterForm({
   initialInviteCode,
   inviteToken,
   turnstileSiteKey,
+  selectedPlan,
+  selectedInterval,
 }: Props) {
   useCleanUrl(["error", "email", "token", "provider", "stytch_token_type", "invite_code"]);
   const router = useRouter();
@@ -129,7 +133,7 @@ export function RegisterForm({
     const response = await fetch("/api/auth/register/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ methodId, code }),
+      body: JSON.stringify({ methodId, code, plan: selectedPlan, interval: selectedInterval }),
     });
 
     setSubmitting(false);
