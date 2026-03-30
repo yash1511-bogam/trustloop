@@ -1,5 +1,5 @@
 import { PlanTier } from "@/lib/billing-plan";
-import { dodoProductIdForPlan } from "@/lib/dodo";
+import { BillingInterval, dodoProductIdForPlan } from "@/lib/dodo";
 
 type BuildBillingCheckoutInput = {
   actorUserId: string;
@@ -7,6 +7,7 @@ type BuildBillingCheckoutInput = {
   customerEmail: string;
   customerName: string | null;
   dodoCustomerId?: string | null;
+  interval: BillingInterval;
   plan: PlanTier;
   returnUrl?: string;
   workspaceId: string;
@@ -59,7 +60,7 @@ export function buildBillingCheckoutPayload(input: BuildBillingCheckoutInput) {
   return {
     product_cart: [
       {
-        product_id: dodoProductIdForPlan(input.plan),
+        product_id: dodoProductIdForPlan(input.plan, input.interval),
         quantity: 1,
       },
     ],
@@ -90,6 +91,7 @@ export function buildBillingCheckoutPayload(input: BuildBillingCheckoutInput) {
     },
     metadata: {
       actorUserId: input.actorUserId,
+      interval: input.interval,
       plan: input.plan,
       workspaceId: input.workspaceId,
     },

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: featureGateError("on_call") }, { status: 403 });
   }
 
-  recordAuditForAccess({ access: access.auth, request, action: "settings.on_call_view", targetType: "workspace", targetId: auth.workspaceId, summary: "Viewed on-call schedule" }).catch(() => {});
+  recordAuditForAccess({ access: access.auth, request, action: "integrations.on_call_view", targetType: "workspace", targetId: auth.workspaceId, summary: "Viewed on-call schedule" }).catch(() => {});
 
   const [quota, managers] = await Promise.all([
     prisma.workspaceQuota.findUnique({

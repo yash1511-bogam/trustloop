@@ -77,7 +77,6 @@ export default async function CustomDomainStatusPage({
   const openIncidents = allIncidents.filter((i) => i.status !== IncidentStatus.RESOLVED);
   const componentMap = new Map<string, typeof allIncidents>();
   for (const inc of allIncidents) { const key = inc.category ?? "General"; if (!componentMap.has(key)) componentMap.set(key, []); componentMap.get(key)!.push(inc); }
-  for (const c of ["API", "AI Triage", "Webhooks", "Dashboard"]) { if (!componentMap.has(c)) componentMap.set(c, []); }
   const allOperational = openIncidents.length === 0;
   const slug = workspace.slug ?? "";
 

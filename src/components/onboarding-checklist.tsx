@@ -25,9 +25,9 @@ type OnboardingProps = {
 const steps = [
   { id: "hasIncident", label: "Create your first incident", desc: "Log an incident manually or route one in from a webhook.", href: "/incidents", icon: Siren },
   { id: "hasTriaged", label: "Run AI triage", desc: "Let the system propose severity, owner, and safe next steps.", href: "/incidents", icon: Robot },
-  { id: "hasAiKey", label: "Add an AI provider key", desc: "Connect OpenAI, Gemini, or Anthropic before the next incident lands.", href: "/settings/ai", icon: Robot },
-  { id: "hasSlack", label: "Connect Slack", desc: "Keep responders aligned with alerting and approved status updates.", href: "/settings/webhooks", icon: SlackLogo },
-  { id: "hasWebhook", label: "Set up a webhook integration", desc: "Accept incidents from Datadog, Sentry, PagerDuty, or custom sources.", href: "/settings/webhooks", icon: Plug },
+  { id: "hasAiKey", label: "Add an AI provider key", desc: "Connect OpenAI, Gemini, or Anthropic before the next incident lands.", href: "/integrations/ai", icon: Robot },
+  { id: "hasSlack", label: "Connect Slack", desc: "Keep responders aligned with alerting and approved status updates.", href: "/integrations/webhooks", icon: SlackLogo },
+  { id: "hasWebhook", label: "Set up a webhook integration", desc: "Accept incidents from Datadog, Sentry, PagerDuty, or custom sources.", href: "/integrations/webhooks", icon: Plug },
 ] as const;
 
 export function OnboardingChecklist({ onboarding }: OnboardingProps) {

@@ -30,7 +30,7 @@ const entries: Entry[] = [
       { text: "14-day trial with quota-based gating", tag: "Feature" },
       { text: "Security headers (CSP, HSTS, X-Frame-Options)", tag: "Security" },
       { text: "SSRF protection for outbound webhooks", tag: "Security" },
-      { text: "Audit log system with UI at /settings/audit", tag: "Feature" },
+      { text: "Audit log system with UI at /security/audit", tag: "Feature" },
       { text: "OpenAPI documentation at /api-docs", tag: "Feature" },
       { text: "Pricing page and legal pages (terms, privacy, DPA)", tag: "Feature" },
       { text: "Onboarding checklist component", tag: "Improvement" },

@@ -40,10 +40,9 @@ export function dodoClient(): DodoPayments {
   return client;
 }
 
-export function dodoProductIdForPlan(plan: PlanTier): string {
-  if (plan === "starter") {
-    return requiredValue("DODO_PRODUCT_ID_STARTER");
-  }
+export type BillingInterval = "monthly" | "annual";
+
+export function dodoProductIdForPlan(plan: PlanTier, interval: BillingInterval = "monthly"): string {
   if (plan === "enterprise") {
     const id = requiredValue("DODO_PRODUCT_ID_ENTERPRISE");
     if (id === "custom") {
@@ -53,21 +52,32 @@ export function dodoProductIdForPlan(plan: PlanTier): string {
     }
     return id;
   }
+  if (plan === "starter") {
+    if (interval === "annual") {
+      return process.env.DODO_PRODUCT_ID_STARTER_ANNUAL?.trim() || requiredValue("DODO_PRODUCT_ID_STARTER");
+    }
+    return requiredValue("DODO_PRODUCT_ID_STARTER");
+  }
+  // pro
+  if (interval === "annual") {
+    return process.env.DODO_PRODUCT_ID_PRO_ANNUAL?.trim() || requiredValue("DODO_PRODUCT_ID_PRO");
+  }
   return requiredValue("DODO_PRODUCT_ID_PRO");
 }
 
 export function planForDodoProductId(productId: string | null | undefined): PlanTier | null {
-  if (!productId) {
-    return null;
+  if (!productId) return null;
+  const ids: Record<string, PlanTier> = {};
+  for (const key of [
+    "DODO_PRODUCT_ID_STARTER", "DODO_PRODUCT_ID_STARTER_ANNUAL",
+    "DODO_PRODUCT_ID_PRO", "DODO_PRODUCT_ID_PRO_ANNUAL",
+    "DODO_PRODUCT_ID_ENTERPRISE",
+  ]) {
+    const val = process.env[key]?.trim();
+    if (val) {
+      const plan = key.includes("STARTER") ? "starter" : key.includes("PRO") ? "pro" : "enterprise";
+      ids[val] = plan;
+    }
   }
-  if (productId === process.env.DODO_PRODUCT_ID_STARTER) {
-    return "starter";
-  }
-  if (productId === process.env.DODO_PRODUCT_ID_PRO) {
-    return "pro";
-  }
-  if (productId === process.env.DODO_PRODUCT_ID_ENTERPRISE) {
-    return "enterprise";
-  }
-  return null;
+  return ids[productId] ?? null;
 }

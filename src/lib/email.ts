@@ -659,7 +659,7 @@ export async function sendPaymentFailureReminderEmail(input: {
   cancelAfterHours: number;
 }): Promise<LoggedEmailResult> {
   const remaining = Math.max(0, input.cancelAfterHours - input.hoursSinceFailure);
-  const settingsUrl = `${appBaseUrl()}/settings`;
+  const settingsUrl = `${appBaseUrl()}/workspace/billing`;
 
   return sendLoggedEmail({
     workspaceId: input.workspaceId,
@@ -688,7 +688,7 @@ export async function sendPlanCanceledEmail(input: {
   previousPlanTier: string;
   reason: string;
 }): Promise<LoggedEmailResult> {
-  const settingsUrl = `${appBaseUrl()}/settings`;
+  const settingsUrl = `${appBaseUrl()}/workspace/billing`;
 
   return sendLoggedEmail({
     workspaceId: input.workspaceId,
@@ -733,14 +733,14 @@ export async function sendTrialStartedEmail(input: {
       `<p>Your 14-day free trial of the <strong>${input.planTier}</strong> plan for <strong>${input.workspaceName}</strong> is now active.</p>`,
       `<p>You have full access to all ${input.planTier} features until <strong>${endsFormatted}</strong>.</p>`,
       "<p>No charges will be made during the trial. Add a payment method before the trial ends to continue uninterrupted.</p>",
-      `<p><a href="${baseUrl}/settings/billing">Set up billing</a> · <a href="${baseUrl}/dashboard">Open dashboard</a></p>`,
+      `<p><a href="${baseUrl}/workspace/billing">Set up billing</a> · <a href="${baseUrl}/dashboard">Open dashboard</a></p>`,
     ].join(""),
     text: [
       `Hi ${input.userName},`,
       `Your 14-day free trial of the ${input.planTier} plan for ${input.workspaceName} is now active.`,
       `You have full access until ${endsFormatted}.`,
       "No charges during the trial. Add a payment method before it ends to continue.",
-      `Set up billing: ${baseUrl}/settings/billing`,
+      `Set up billing: ${baseUrl}/workspace/billing`,
     ].join("\n"),
   });
 }
@@ -763,12 +763,12 @@ export async function sendTrialReminderEmail(input: {
     html: [
       `<p>Your <strong>${input.planTier}</strong> trial for <strong>${input.workspaceName}</strong> ${urgency}.</p>`,
       "<p>Subscribe now to keep your current plan features and quotas. Without a subscription, your workspace will be downgraded to Free.</p>",
-      `<p><a href="${baseUrl}/settings/billing">Subscribe now</a></p>`,
+      `<p><a href="${baseUrl}/workspace/billing">Subscribe now</a></p>`,
     ].join(""),
     text: [
       `Your ${input.planTier} trial for ${input.workspaceName} ${urgency}.`,
       "Subscribe now to keep your plan features. Without a subscription, you'll be downgraded to Free.",
-      `Subscribe: ${baseUrl}/settings/billing`,
+      `Subscribe: ${baseUrl}/workspace/billing`,
     ].join("\n"),
   });
 }
@@ -789,12 +789,12 @@ export async function sendTrialExpiredEmail(input: {
     html: [
       `<p>The <strong>${input.previousPlanTier}</strong> trial for <strong>${input.workspaceName}</strong> has expired.</p>`,
       "<p>Your workspace has been downgraded to the <strong>Free</strong> plan. Subscribe anytime to restore your previous plan and quotas.</p>",
-      `<p><a href="${baseUrl}/settings/billing">Choose a plan</a></p>`,
+      `<p><a href="${baseUrl}/workspace/billing">Choose a plan</a></p>`,
     ].join(""),
     text: [
       `The ${input.previousPlanTier} trial for ${input.workspaceName} has expired.`,
       "Your workspace has been downgraded to Free. Subscribe anytime to restore your plan.",
-      `Choose a plan: ${baseUrl}/settings/billing`,
+      `Choose a plan: ${baseUrl}/workspace/billing`,
     ].join("\n"),
   });
 }
@@ -894,5 +894,41 @@ export async function sendEarlyAccessOtpEmail(input: {
       "If you didn't request this, you can safely ignore this email.",
     ].join("\n"),
     idempotencyKey: input.idempotencyKey,
+  });
+}
+
+export async function sendEnterpriseContactEmail(input: {
+  toEmail: string;
+  name: string;
+  company: string;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+
+  return sendLoggedEmail({
+    workspaceId: "system",
+    type: EmailNotificationType.ENTERPRISE_CONTACT,
+    toEmail: input.toEmail,
+    subject: "We received your TrustLoop Enterprise inquiry",
+    html: [
+      `<p>Hi ${input.name},</p>`,
+      `<p>Thank you for your interest in TrustLoop Enterprise for <strong>${input.company}</strong>.</p>`,
+      "<p>Our team has received your inquiry and will be in touch within <strong>24–48 hours</strong> to discuss your requirements and put together a tailored plan.</p>",
+      "<p>In the meantime, feel free to reply to this email if you have any immediate questions.</p>",
+      `<p><a href="${baseUrl}/dashboard">Back to dashboard</a></p>`,
+      "<p>— The TrustLoop Team</p>",
+    ].join(""),
+    text: [
+      `Hi ${input.name},`,
+      "",
+      `Thank you for your interest in TrustLoop Enterprise for ${input.company}.`,
+      "",
+      "Our team has received your inquiry and will be in touch within 24–48 hours to discuss your requirements and put together a tailored plan.",
+      "",
+      "Feel free to reply to this email if you have any immediate questions.",
+      "",
+      `Back to dashboard: ${baseUrl}/dashboard`,
+      "",
+      "— The TrustLoop Team",
+    ].join("\n"),
   });
 }

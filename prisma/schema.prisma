@@ -100,6 +100,7 @@ enum EmailNotificationType {
   TRIAL_EXPIRED
   EARLY_ACCESS_INVITE
   EARLY_ACCESS_CONFIRMATION
+  ENTERPRISE_CONTACT
 }
 
 enum EmailDeliveryStatus {
@@ -865,4 +866,17 @@ model EmailSubscription {
 
   @@index([email])
   @@index([unsubscribeToken])
+}
+
+model EnterpriseContactInquiry {
+  id            String   @id @default(cuid())
+  workspaceId   String?
+  name          String
+  email         String
+  company       String
+  phone         String?
+  message       String?
+  createdAt     DateTime @default(now())
+
+  @@index([email])
 }

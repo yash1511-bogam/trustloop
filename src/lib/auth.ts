@@ -155,7 +155,7 @@ export async function invalidateSessionAuthCache(sessionToken: string): Promise<
 export const requireAuth: () => Promise<AuthContext> = cache(async () => {
   const auth = await getAuth();
   if (!auth) {
-    redirect("/login");
+    redirect("/");
   }
   return auth;
 });

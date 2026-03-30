@@ -10,7 +10,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const auth = access.auth;
   if (auth.kind !== "session") return forbidden();
 
-  recordAuditForAccess({ access: access.auth, request, action: "settings.audit_log_view", targetType: "audit_log", summary: "Viewed audit log" }).catch(() => {});
+  recordAuditForAccess({ access: access.auth, request, action: "security.audit_log_view", targetType: "audit_log", summary: "Viewed audit log" }).catch(() => {});
 
   const url = new URL(request.url);
   const cursor = url.searchParams.get("cursor");

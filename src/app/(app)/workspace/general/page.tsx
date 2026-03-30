@@ -28,7 +28,7 @@ export default async function SettingsGeneralPage() {
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Workspace</p>
-            <h1 className="page-title">General Settings</h1>
+            <h1 className="page-title">General</h1>
           </div>
         </div>
       </section>

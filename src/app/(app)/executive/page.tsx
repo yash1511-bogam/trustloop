@@ -28,7 +28,7 @@ export default async function ExecutivePage() {
 
   const operatingStats = [
     { label: "Open incidents", value: snapshot?.openIncidents ?? 0, sub: "Currently active across the workspace" },
-    { label: "P1 open", value: snapshot?.p1OpenIncidents ?? 0, sub: "Highest-severity incidents in flight", highlight: true },
+    { label: "P1 open", value: snapshot?.p1OpenIncidents ?? 0, sub: "Highest-severity incidents in flight" },
     { label: "Created (7d)", value: snapshot?.incidentsCreatedLast7d ?? 0, sub: "New incidents over the last week" },
     { label: "Resolved (7d)", value: snapshot?.incidentsResolvedLast7d ?? 0, sub: "Closed incidents over the last week" },
     { label: "Failed reminders", value: failedReminders7d, sub: "Reminder jobs that failed in seven days" },
@@ -59,7 +59,7 @@ export default async function ExecutivePage() {
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Analytics</p>
-            <h1 className="page-title">Reporting & insights</h1>
+            <h1 className="page-title">Analytics</h1>
           </div>
           <div className="page-header-actions">
             <Link className="btn btn-ghost btn-sm" href="/api/incidents/export?format=csv">
@@ -78,7 +78,7 @@ export default async function ExecutivePage() {
         </div>
         <div className="dash-stats" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
           {operatingStats.map((s) => (
-            <div key={s.label} className={`dash-stat-card${s.highlight ? " dash-stat-card-p1" : ""}`}>
+            <div key={s.label} className="dash-stat-card">
               <div className="dash-stat-value" style={{ fontSize: 28 }}>{s.value}</div>
               <div className="dash-stat-label">{s.label}</div>
               <div className="dash-stat-sub">{s.sub}</div>

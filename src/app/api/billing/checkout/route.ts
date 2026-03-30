@@ -14,6 +14,7 @@ import { log } from "@/lib/logger";
 
 const schema = z.object({
   plan: z.enum(["starter", "pro", "enterprise"]),
+  interval: z.enum(["monthly", "annual"]).optional().default("monthly"),
   couponCode: z
     .string()
     .trim()
@@ -66,10 +67,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const couponCode = parsed.data.couponCode?.trim() || null;
   const plan = parsed.data.plan;
+  const interval = parsed.data.interval;
 
   // Idempotency: prevent duplicate checkout sessions from rapid clicks.
-  // Cache key scoped to workspace + plan + coupon for a short window.
-  const idempotencyKey = `checkout:idem:${workspace.id}:${plan}:${couponCode ?? "none"}`;
+  const idempotencyKey = `checkout:idem:${workspace.id}:${plan}:${interval}:${couponCode ?? "none"}`;
   type CachedSession = { checkoutUrl: string; sessionId: string };
   const cached = await redisGetJson<CachedSession>(idempotencyKey);
   if (cached) {
@@ -92,8 +93,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         customerEmail: auth.user.email,
         customerName: auth.user.name,
         dodoCustomerId: workspace.billing?.dodoCustomerId,
+        interval,
         plan,
-        returnUrl: `${appUrl()}/settings/billing?billing=return`,
+        returnUrl: `${appUrl()}/workspace/billing?billing=return`,
         workspaceId: workspace.id,
       }),
     );
@@ -118,13 +120,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         workspaceId: workspace.id,
         dodoCustomerId: workspace.billing?.dodoCustomerId ?? undefined,
         dodoCheckoutSessionId: session.session_id,
-        dodoProductId: dodoProductIdForPlan(plan),
+        dodoProductId: dodoProductIdForPlan(plan, interval),
         discountCode: couponCode,
         status: BillingSubscriptionStatus.PENDING,
       },
       update: {
         dodoCheckoutSessionId: session.session_id,
-        dodoProductId: dodoProductIdForPlan(plan),
+        dodoProductId: dodoProductIdForPlan(plan, interval),
         discountCode: couponCode,
         status: BillingSubscriptionStatus.PENDING,
       },

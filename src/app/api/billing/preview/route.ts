@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
   plan: z.enum(["starter", "pro", "enterprise"]),
+  interval: z.enum(["monthly", "annual"]).optional().default("monthly"),
   couponCode: z.string().trim().min(2).max(64).optional().nullable(),
 });
 
@@ -57,9 +58,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const couponCode = parsed.data.couponCode?.trim() || null;
   const plan = parsed.data.plan as PreviewPlan;
+  const interval = parsed.data.interval;
 
   fireAndForget(
-    recordAuditForAccess({ access: access.auth, request, action: "billing.preview", targetType: "billing", summary: `Billing preview for plan: ${plan}` }),
+    recordAuditForAccess({ access: access.auth, request, action: "billing.preview", targetType: "billing", summary: `Billing preview for plan: ${plan} (${interval})` }),
     "billing.preview audit",
   );
 
@@ -71,6 +73,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         customerEmail: auth.user.email,
         customerName: auth.user.name,
         dodoCustomerId: workspace.billing?.dodoCustomerId,
+        interval,
         plan,
         workspaceId: workspace.id,
       }),

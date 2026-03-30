@@ -44,7 +44,7 @@ export function IncidentsPageClient({ counts }: Props) {
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Incidents</p>
-            <h1 className="page-title">All incidents</h1>
+            <h1 className="page-title">Incidents</h1>
           </div>
           <div className="page-header-actions">
             <button className="btn btn-primary" onClick={() => setDrawerOpen(true)} type="button">

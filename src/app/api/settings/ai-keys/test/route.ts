@@ -39,7 +39,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     apiKey: parsed.data.apiKey.trim(),
   });
 
-  recordAuditForAccess({ access: access.auth, request, action: "settings.ai_key_test", targetType: "ai_key", summary: `Tested ${parsed.data.provider} key (${result.success ? "ok" : "failed"})` }).catch(() => {});
+  recordAuditForAccess({ access: access.auth, request, action: "integrations.ai_key_test", targetType: "ai_key", summary: `Tested ${parsed.data.provider} key (${result.success ? "ok" : "failed"})` }).catch(() => {});
 
   await prisma.aiProviderKey.updateMany({
     where: {

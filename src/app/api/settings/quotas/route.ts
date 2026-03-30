@@ -179,7 +179,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     request,
     action: "quota.updated",
     targetType: "WorkspaceQuota",
-    summary: "Updated workspace quota/SLA settings",
+    summary: "Updated workspace quota/SLA",
   }).catch(() => {});
 
   return NextResponse.json({ quota });

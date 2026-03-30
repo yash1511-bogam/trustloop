@@ -162,7 +162,7 @@ export function DashboardPageClient({
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Dashboard</p>
-            <h1 className="page-title">Command center</h1>
+            <h1 className="page-title">Dashboard</h1>
           </div>
           <div className="page-header-actions">
             <Link className="btn btn-ghost" href="/executive">

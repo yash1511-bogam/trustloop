@@ -24,7 +24,7 @@ export default async function SettingsOnCallPage() {
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Integrations</p>
-            <h1 className="page-title">On-Call Rotation <PlanBadge allowed={onCallAllowed} planLabel="Pro" /></h1>
+            <h1 className="page-title">On-Call <PlanBadge allowed={onCallAllowed} planLabel="Pro" /></h1>
           </div>
         </div>
       </section>

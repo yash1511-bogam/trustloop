@@ -47,32 +47,32 @@ const settingsGroups: readonly NavGroup[] = [
   {
     label: "Account",
     items: [
-      { href: "/settings/profile", label: "Profile", icon: UserIcon },
+      { href: "/account/profile", label: "Profile", icon: UserIcon },
     ],
   },
   {
     label: "Workspace",
     items: [
-      { href: "/settings", label: "Overview", icon: LayersIcon, exact: true },
-      { href: "/settings/general", label: "General", icon: BlocksIcon },
-      { href: "/settings/team", label: "Team", icon: UsersIcon },
-      { href: "/settings/billing", label: "Billing", icon: CreditCardIcon },
+      { href: "/workspace", label: "Overview", icon: LayersIcon, exact: true },
+      { href: "/workspace/general", label: "General", icon: BlocksIcon },
+      { href: "/workspace/team", label: "Team", icon: UsersIcon },
+      { href: "/workspace/billing", label: "Billing", icon: CreditCardIcon },
     ],
   },
   {
     label: "Integrations",
     items: [
-      { href: "/settings/ai", label: "AI Providers", icon: SparklesIcon },
-      { href: "/settings/webhooks", label: "Webhooks", icon: WebhookIcon },
-      { href: "/settings/on-call", label: "On-Call", icon: ZapIcon },
+      { href: "/integrations/ai", label: "AI Providers", icon: SparklesIcon },
+      { href: "/integrations/webhooks", label: "Webhooks", icon: WebhookIcon },
+      { href: "/integrations/on-call", label: "On-Call", icon: ZapIcon },
     ],
   },
   {
     label: "Security",
     items: [
-      { href: "/settings/api-keys", label: "API Keys", icon: KeyRoundIcon },
-      { href: "/settings/audit", label: "Audit Log", icon: ScanIcon },
-      { href: "/settings/sso", label: "SAML SSO", icon: ShieldCheckIcon },
+      { href: "/security/api-keys", label: "API Keys", icon: KeyRoundIcon },
+      { href: "/security/audit", label: "Audit Log", icon: ScanIcon },
+      { href: "/security/sso", label: "SAML SSO", icon: ShieldCheckIcon },
     ],
   },
 ];
@@ -102,7 +102,7 @@ export function AppShellNav({ onNavigate, compact = false, role, slug }: AppShel
   const navRef = useRef<HTMLElement>(null);
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
   const iconRefs = useRef<Record<string, AnimatedIconHandle | null>>({});
-  const inSettings = pathname.startsWith("/settings");
+  const inSettings = pathname.startsWith("/workspace") || pathname.startsWith("/account") || pathname.startsWith("/integrations") || pathname.startsWith("/security");
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};

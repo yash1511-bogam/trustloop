@@ -205,7 +205,7 @@ export default async function IncidentDetailPage({
                     Use the &quot;Generate Post-Mortem&quot; action above to create one with AI.
                   </p>
                 ) : (
-                  <Link className="btn btn-ghost btn-sm mt-3 text-[var(--color-warning)]" href="/settings/ai">
+                  <Link className="btn btn-ghost btn-sm mt-3 text-[var(--color-warning)]" href="/integrations/ai">
                     Add an AI key to enable generation
                   </Link>
                 )}

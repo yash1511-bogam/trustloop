@@ -1,13 +1,11 @@
-import { ProfileSettingsPanel } from "@/components/profile-settings-panel";
 import { TeamManagementPanel } from "@/components/team-management-panel";
 import { requireAuth } from "@/lib/auth";
-import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
 import { prisma } from "@/lib/prisma";
 
 export default async function SettingsTeamPage() {
   const auth = await requireAuth();
 
-  const [members, invites, profile, planTier] = await Promise.all([
+  const [members, invites] = await Promise.all([
     prisma.workspaceMembership.findMany({
       where: { workspaceId: auth.user.workspaceId },
       include: {
@@ -39,17 +37,6 @@ export default async function SettingsTeamPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.user.findUniqueOrThrow({
-      where: { id: auth.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-      },
-    }),
-    getWorkspacePlanTier(auth.user.workspaceId),
   ]);
 
   return (
@@ -86,16 +73,6 @@ export default async function SettingsTeamPage() {
               createdAt: member.user.createdAt.toISOString(),
             }))}
           />
-        </div>
-      </section>
-
-      <section className="section-enter" id="profile">
-        <div className="dash-section-header">
-          <h2 className="dash-chart-title">Profile & on-call</h2>
-          <p className="dash-chart-desc">Keep personal contact details accurate so P1 escalations reach the right person immediately.</p>
-        </div>
-        <div className="dash-chart-card">
-          <ProfileSettingsPanel profile={profile} planTier={planTier} />
         </div>
       </section>
     </div>

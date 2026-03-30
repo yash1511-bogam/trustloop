@@ -16,6 +16,7 @@ type AppShellFrameProps = {
   currentRole: string;
   currentSlug: string | null;
   complianceMode: boolean;
+  trialDaysLeft: number | null;
   workspaces: Array<{
     id: string;
     name: string;
@@ -32,6 +33,7 @@ export function AppShellFrame({
   currentRole,
   currentSlug,
   complianceMode,
+  trialDaysLeft,
   workspaces,
   children,
 }: AppShellFrameProps) {
@@ -88,6 +90,11 @@ export function AppShellFrame({
             <div className="app-sidebar-workspace-name">{workspaceName}</div>
             <span className="app-sidebar-plan">{planLabel}</span>
           </div>
+          {trialDaysLeft !== null && (
+            <div className="text-[11px] font-medium px-2 py-0.5 rounded-full w-fit" style={{ background: trialDaysLeft <= 3 ? "rgba(232,66,66,0.12)" : "rgba(14,165,233,0.12)", color: trialDaysLeft <= 3 ? "var(--color-danger)" : "var(--color-info)" }}>
+              {trialDaysLeft === 0 ? "Trial expires today" : `${trialDaysLeft}d left in trial`}
+            </div>
+          )}
           <WorkspaceSwitcher currentWorkspaceId={currentWorkspaceId} workspaces={workspaces} />
           {complianceMode ? <div className="badge badge-warning badge-sm w-fit">Compliance mode</div> : null}
         </div>

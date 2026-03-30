@@ -20,33 +20,33 @@ const groups = [
   {
     label: "Account",
     items: [
-      { href: "/settings/profile", icon: GearSix, label: "Profile" },
+      { href: "/account/profile", icon: GearSix, label: "Profile" },
     ],
   },
   {
     label: "Workspace",
     items: [
-      { href: "/settings", icon: SquaresFour, label: "Overview" },
-      { href: "/settings/general", icon: Sliders, label: "General" },
-      { href: "/settings/workspace", icon: Buildings, label: "Quotas" },
-      { href: "/settings/team", icon: UsersThree, label: "Team" },
-      { href: "/settings/billing", icon: CreditCard, label: "Billing" },
+      { href: "/workspace", icon: SquaresFour, label: "Overview" },
+      { href: "/workspace/general", icon: Sliders, label: "General" },
+      { href: "/workspace/quotas", icon: Buildings, label: "Quotas" },
+      { href: "/workspace/team", icon: UsersThree, label: "Team" },
+      { href: "/workspace/billing", icon: CreditCard, label: "Billing" },
     ],
   },
   {
     label: "Integrations",
     items: [
-      { href: "/settings/ai", icon: Robot, label: "AI Providers" },
-      { href: "/settings/webhooks", icon: LinkSimple, label: "Webhooks" },
-      { href: "/settings/on-call", icon: Waves, label: "On-Call" },
+      { href: "/integrations/ai", icon: Robot, label: "AI Providers" },
+      { href: "/integrations/webhooks", icon: LinkSimple, label: "Webhooks" },
+      { href: "/integrations/on-call", icon: Waves, label: "On-Call" },
     ],
   },
   {
     label: "Security",
     items: [
-      { href: "/settings/api-keys", icon: ShieldCheck, label: "API Keys" },
-      { href: "/settings/sso", icon: ShieldCheck, label: "SAML SSO" },
-      { href: "/settings/audit", icon: Notebook, label: "Audit Log" },
+      { href: "/security/api-keys", icon: ShieldCheck, label: "API Keys" },
+      { href: "/security/sso", icon: ShieldCheck, label: "SAML SSO" },
+      { href: "/security/audit", icon: Notebook, label: "Audit Log" },
     ],
   },
 ] as const;
@@ -61,8 +61,8 @@ export function SettingsNav() {
           <div className="app-nav-group-label">{group.label}</div>
           {group.items.map((item) => {
             const active =
-              item.href === "/settings"
-                ? pathname === "/settings"
+              item.href === "/workspace"
+                ? pathname === "/workspace"
                 : pathname.startsWith(item.href);
 
             return (

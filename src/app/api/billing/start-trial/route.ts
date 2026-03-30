@@ -12,7 +12,7 @@ import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
-  plan: z.enum(["starter", "pro", "enterprise"]),
+  plan: z.literal("starter"),
 });
 
 const TRIAL_DAYS = 14;

@@ -9,7 +9,10 @@ export default async function DashboardPage() {
   const [executiveData, totalIncidents, workspace, aiKeyCount, triagedCount, webhookCount] = await Promise.all([
     getExecutiveDashboard(auth.user.workspaceId),
     prisma.incident.count({ where: { workspaceId: auth.user.workspaceId } }),
-    prisma.workspace.findUniqueOrThrow({ where: { id: auth.user.workspaceId } }),
+    prisma.workspace.findUniqueOrThrow({
+      where: { id: auth.user.workspaceId },
+      select: { slackBotToken: true, onboardingDismissedAt: true },
+    }),
     prisma.aiProviderKey.count({ where: { workspaceId: auth.user.workspaceId } }),
     prisma.incident.count({ where: { workspaceId: auth.user.workspaceId, triagedAt: { not: null } } }),
     prisma.workspaceWebhookIntegration.count({ where: { workspaceId: auth.user.workspaceId } }),
@@ -33,7 +36,7 @@ export default async function DashboardPage() {
         updatedAt: snapshot.updatedAt ?? null,
       } : null}
       onboarding={{
-        dismissed: (workspace as Record<string, unknown>).onboardingDismissedAt !== null && (workspace as Record<string, unknown>).onboardingDismissedAt !== undefined,
+        dismissed: workspace.onboardingDismissedAt != null,
         hasIncident: totalIncidents > 0,
         hasTriaged: triagedCount > 0,
         hasAiKey: aiKeyCount > 0,

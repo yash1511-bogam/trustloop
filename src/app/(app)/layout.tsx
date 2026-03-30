@@ -1,6 +1,7 @@
 import { AppShellFrame } from "@/components/app-shell-frame";
 import { AnnounceProvider } from "@/components/announce-provider";
 import { requireAuth } from "@/lib/auth";
+import { isTrialActive } from "@/lib/billing-plan";
 import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
 import { prisma } from "@/lib/prisma";
 import { listUserWorkspaceMemberships } from "@/lib/workspace-membership";
@@ -16,6 +17,7 @@ export default async function AppLayout({
       where: { id: auth.user.workspaceId },
       select: {
         complianceMode: true,
+        trialEndsAt: true,
       },
     }),
     listUserWorkspaceMemberships(auth.user.id),
@@ -26,12 +28,19 @@ export default async function AppLayout({
     (m) => m.workspace.id === auth.user.workspaceId,
   );
 
+  let trialDaysLeft: number | null = null;
+  if (workspace?.trialEndsAt && isTrialActive(workspace.trialEndsAt)) {
+    const now = new Date();
+    trialDaysLeft = Math.max(0, Math.ceil((new Date(workspace.trialEndsAt).getTime() - now.getTime()) / 86_400_000));
+  }
+
   return (
     <AppShellFrame
       complianceMode={workspace?.complianceMode ?? false}
       currentWorkspaceId={auth.user.workspaceId}
       currentRole={auth.user.role}
       currentSlug={currentMembership?.workspace.slug ?? null}
+      trialDaysLeft={trialDaysLeft}
       workspaceName={auth.user.workspaceName}
       workspacePlanTier={planTier}
       workspaces={memberships.map((membership) => ({

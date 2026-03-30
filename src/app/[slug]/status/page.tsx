@@ -99,15 +99,12 @@ export default async function PublicStatusPage({
     (i) => i.status !== IncidentStatus.RESOLVED
   );
 
-  // Group by category
+  // Group by category — only show categories that have incidents
   const componentMap = new Map<string, typeof allIncidents>();
   for (const inc of allIncidents) {
     const key = inc.category ?? "General";
     if (!componentMap.has(key)) componentMap.set(key, []);
     componentMap.get(key)!.push(inc);
-  }
-  for (const c of ["API", "AI Triage", "Webhooks", "Dashboard"]) {
-    if (!componentMap.has(c)) componentMap.set(c, []);
   }
 
   const allOperational = openIncidents.length === 0;

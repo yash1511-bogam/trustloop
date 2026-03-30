@@ -282,7 +282,7 @@ export function IncidentActions({
             </button>
           </>
         ) : (
-          <Link className="btn btn-ghost text-[var(--color-warning)] border-[rgba(217,119,6,0.24)]" href="/settings/ai">
+          <Link className="btn btn-ghost text-[var(--color-warning)] border-[rgba(217,119,6,0.24)]" href="/integrations/ai">
             Add AI key to enable triage & drafts
           </Link>
         )}

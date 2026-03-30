@@ -123,13 +123,6 @@ jobs:
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
 
-      - name: Update ECS services
-        working-directory: infra/terraform
-        run: |
-          CLUSTER=$(terraform output -raw ecs_cluster_name)
-          aws ecs update-service --cluster "$CLUSTER" --service "trustloop-staging-web" --force-new-deployment --no-cli-pager
-          aws ecs update-service --cluster "$CLUSTER" --service "trustloop-staging-worker" --force-new-deployment --no-cli-pager
-
       - name: Run Prisma migrations
         working-directory: infra/terraform
         run: |
@@ -146,6 +139,13 @@ jobs:
           EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
             --query 'tasks[0].containers[0].exitCode' --output text)
           if [ "$EXIT_CODE" != "0" ]; then echo "::error::Migration failed"; exit 1; fi
+
+      - name: Update ECS services
+        working-directory: infra/terraform
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          aws ecs update-service --cluster "$CLUSTER" --service "trustloop-staging-web" --force-new-deployment --no-cli-pager
+          aws ecs update-service --cluster "$CLUSTER" --service "trustloop-staging-worker" --force-new-deployment --no-cli-pager
 
       - name: Smoke test staging
         working-directory: infra/terraform
@@ -214,15 +214,7 @@ jobs:
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
 
-      # ── Force ECS to pick up new image ──────────────────────────────────────
-      - name: Update ECS services
-        working-directory: infra/terraform
-        run: |
-          CLUSTER=$(terraform output -raw ecs_cluster_name)
-          aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-web" --force-new-deployment --no-cli-pager
-          aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-worker" --force-new-deployment --no-cli-pager
-
-      # ── Database migrations ─────────────────────────────────────────────────
+      # ── Database migrations (before new code rolls out) ─────────────────────
       - name: Run Prisma migrations
         working-directory: infra/terraform
         run: |
@@ -253,6 +245,14 @@ jobs:
             exit 1
           fi
           echo "Migrations applied successfully"
+
+      # ── Force ECS to pick up new image ──────────────────────────────────────
+      - name: Update ECS services
+        working-directory: infra/terraform
+        run: |
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-web" --force-new-deployment --no-cli-pager
+          aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-worker" --force-new-deployment --no-cli-pager
 
       # ── Verify deployment ───────────────────────────────────────────────────
       - name: Wait for ECS services to stabilize

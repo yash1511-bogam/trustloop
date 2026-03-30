@@ -53,7 +53,7 @@ const plans: Array<{
     description: "For large or regulated teams needing higher throughput and access controls.",
     highlighted: false,
     cta: "Contact sales",
-    href: "mailto:hello@trustloop.dev",
+    href: "/contact-sales",
     features: [
       ["Unlimited incidents", true],
       ["Unlimited triage", true],

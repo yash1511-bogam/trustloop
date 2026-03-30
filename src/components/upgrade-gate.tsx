@@ -29,8 +29,8 @@ export function UpgradeGate({ allowed, planLabel, children }: Props) {
             role="link"
             tabIndex={0}
             className="underline underline-offset-2 hover:text-[var(--color-body)] cursor-pointer"
-            onClick={() => { window.location.href = "/settings/billing"; }}
-            onKeyDown={(e) => { if (e.key === "Enter") window.location.href = "/settings/billing"; }}
+            onClick={() => { window.location.href = "/workspace/billing"; }}
+            onKeyDown={(e) => { if (e.key === "Enter") window.location.href = "/workspace/billing"; }}
           >
             Upgrade
           </span>

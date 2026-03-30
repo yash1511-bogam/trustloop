@@ -13,7 +13,7 @@ export default async function AuditLogPage() {
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
             <p className="page-kicker">Security</p>
-            <h1 className="page-title">Audit log</h1>
+            <h1 className="page-title">Audit Log</h1>
           </div>
         </div>
       </section>

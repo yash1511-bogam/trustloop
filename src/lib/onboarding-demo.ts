@@ -105,6 +105,11 @@ export async function createSampleIncidentsForWorkspace(
     ownerUserId: string;
   },
 ): Promise<number> {
+  // Skip sample data in production
+  if (process.env.NODE_ENV === "production") {
+    return 0;
+  }
+
   if (
     typeof executor.incident?.count !== "function" ||
     typeof executor.incident?.create !== "function"

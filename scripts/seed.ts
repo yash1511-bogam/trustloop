@@ -364,7 +364,7 @@ async function seed(): Promise<void> {
     { action: "incident.create", targetType: "Incident", targetId: inc3.id, summary: "Created incident: Customer PII leaked in chatbot response", createdAt: daysAgo(3) },
     { action: "incident.triage", targetType: "Incident", targetId: inc3.id, summary: "Ran AI triage on incident", createdAt: daysAgo(3) },
     { action: "incident.create", targetType: "Incident", targetId: inc5.id, summary: "Created incident: Inference API returning 503", createdAt: daysAgo(1) },
-    { action: "settings.update", targetType: "Workspace", targetId: workspace.id, summary: "Updated SLA policy", createdAt: daysAgo(10) },
+    { action: "workspace.update", targetType: "Workspace", targetId: workspace.id, summary: "Updated SLA policy", createdAt: daysAgo(10) },
     { action: "incident.create", targetType: "Incident", targetId: inc7.id, summary: "Created incident: Summarization quality dropped", createdAt: hoursAgo(5) },
   ];
   await prisma.auditLog.createMany({
