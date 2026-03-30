@@ -72,7 +72,7 @@ export default function TermsOfServicePage() {
           <li>Maintaining the confidentiality of your account credentials, session tokens, and API keys</li>
           <li>Safeguarding any AI provider keys you configure within your Workspace</li>
           <li>All activities that occur under your account or Workspace, whether or not authorized by you</li>
-          <li>Promptly notifying TrustLoop at hello@yashbogam.me of any unauthorized access or security breach</li>
+          <li>Promptly notifying TrustLoop at <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a> of any unauthorized access or security breach</li>
         </ul>
         <p>TrustLoop encrypts AI provider keys at rest using AES-256-GCM and enforces role-based access controls. However, you acknowledge that no security measure is absolute, and you accept the residual risk of using cloud-based services.</p>
       </section>
@@ -127,7 +127,7 @@ export default function TermsOfServicePage() {
       <section id="availability">
         <h2>11. Service Availability and SLA</h2>
         <p>TrustLoop targets 99.9% uptime for the production Service, measured on a monthly basis, excluding scheduled maintenance windows. Scheduled maintenance will be communicated at least 24 hours in advance via email or in-app notification.</p>
-        <p>Enterprise Plan customers may be eligible for a Service Level Agreement (SLA) with defined uptime commitments and service credits. Contact hello@yashbogam.me for Enterprise SLA terms.</p>
+        <p>Enterprise Plan customers may be eligible for a Service Level Agreement (SLA) with defined uptime commitments and service credits. Contact <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a> for Enterprise SLA terms.</p>
         <p>TrustLoop is not responsible for downtime caused by: (a) factors outside our reasonable control, including force majeure events; (b) your equipment, software, or network connections; (c) third-party services or AI providers configured by you; or (d) your violation of these Terms.</p>
       </section>
 
@@ -159,7 +159,7 @@ export default function TermsOfServicePage() {
       <section id="governing">
         <h2>16. Governing Law and Dispute Resolution</h2>
         <p>These Terms are governed by and construed in accordance with the laws of India. Any dispute arising out of or relating to these Terms shall be resolved exclusively in the courts located in Hyderabad, Telangana, India, and you consent to the personal jurisdiction of such courts.</p>
-        <p>Before initiating any formal dispute resolution, you agree to first attempt to resolve the dispute informally by contacting hello@yashbogam.me. If the dispute is not resolved within 30 days, either party may proceed with formal legal action.</p>
+        <p>Before initiating any formal dispute resolution, you agree to first attempt to resolve the dispute informally by contacting <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a>. If the dispute is not resolved within 30 days, either party may proceed with formal legal action.</p>
       </section>
 
       <section id="changes">
@@ -172,7 +172,7 @@ export default function TermsOfServicePage() {
         <h2>18. Contact</h2>
         <p>If you have questions about these Terms, please contact us:</p>
         <ul>
-          <li>Email: hello@yashbogam.me</li>
+          <li>Email: <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a></li>
           <li>Address: Plot No 25, Hyderabad, 500001, Telangana, India</li>
         </ul>
       </section>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowLeft } from "@phosphor-icons/react/dist/ssr";
 import { TrustLoopLogo } from "@/components/trustloop-logo";
 
 type Props = {
@@ -11,9 +12,13 @@ type Props = {
 export function PageShell({ kicker, title, subtitle, children }: Props) {
   return (
     <main className="legal-page">
-      <header className="mb-10">
+      <header className="mb-10 flex items-center justify-between">
         <Link href="/">
           <TrustLoopLogo size={18} variant="full" />
+        </Link>
+        <Link href="/" className="flex items-center gap-1.5 text-sm text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]">
+          <ArrowLeft size={14} weight="bold" />
+          Back
         </Link>
       </header>
       <p className="page-kicker">{kicker}</p>

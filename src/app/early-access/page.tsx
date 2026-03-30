@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { TrustLoopLogo } from "@/components/trustloop-logo";
 
 export default function EarlyAccessPage() {
   const [name, setName] = useState("");
@@ -38,6 +39,13 @@ export default function EarlyAccessPage() {
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-[var(--color-void)] px-6">
+      <header className="fixed top-0 left-0 right-0 z-50 px-6">
+        <div className="flex justify-center" style={{ paddingTop: 8 }}>
+          <div className="relative flex w-full max-w-[1160px] items-center justify-between px-4 py-3 md:px-6">
+            <Link href="/"><TrustLoopLogo size={18} variant="full" /></Link>
+          </div>
+        </div>
+      </header>
       <div className="w-full max-w-[400px]">
         <Link href="/" className="mb-8 inline-block text-sm text-[var(--color-ghost)] hover:text-[var(--color-body)] transition-colors">
           ← Back to home

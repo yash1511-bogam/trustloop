@@ -1,19 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CircleNotch, SignOut } from "@phosphor-icons/react";
 
 export function LogoutButton({ compact }: { compact?: boolean }) {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function onLogout() {
     setLoading(true);
     await fetch("/api/auth/logout", { method: "POST" });
     setLoading(false);
-    router.push("/dashboard");
-    router.refresh();
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+    const proto = rootDomain.startsWith("localhost") ? "http" : "https";
+    window.location.href = `${proto}://${rootDomain}`;
   }
 
   return (

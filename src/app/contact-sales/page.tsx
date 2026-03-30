@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { Loader2, CheckCircle2, AlertCircle } from "@/components/icon-compat";
 
 export default function ContactSalesPage() {
@@ -59,6 +60,10 @@ export default function ContactSalesPage() {
     <main className="min-h-dvh flex items-center justify-center px-4 py-16" style={{ background: "var(--color-void)" }}>
       <div className="max-w-lg w-full">
         <div className="mb-10">
+          <Link href="/" className="mb-6 inline-flex items-center gap-1.5 text-sm text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]">
+            <ArrowLeft size={14} weight="bold" />
+            Back
+          </Link>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] mb-3" style={{ color: "var(--color-signal)" }}>Enterprise</p>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--color-title)]">Talk to our team</h1>
           <p className="mt-3 text-sm text-[var(--color-subtext)] leading-relaxed">

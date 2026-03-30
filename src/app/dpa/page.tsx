@@ -197,9 +197,9 @@ export default function DpaPage() {
         <h2>13. Contact</h2>
         <p>To execute this DPA, request a signed copy, or for data protection inquiries:</p>
         <ul>
-          <li>DPA and legal inquiries: hello@yashbogam.me</li>
-          <li>Data protection officer: hello@yashbogam.me</li>
-          <li>Security incidents: hello@yashbogam.me</li>
+          <li>DPA and legal inquiries: <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a></li>
+          <li>Data protection officer: <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a></li>
+          <li>Security incidents: <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a></li>
           <li>Address: Plot No 25, Hyderabad, 500001, Telangana, India</li>
         </ul>
       </section>

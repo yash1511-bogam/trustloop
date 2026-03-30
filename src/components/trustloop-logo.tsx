@@ -28,9 +28,11 @@ export function TrustLoopLogo({
 }: TrustLoopLogoProps) {
   const invert = color === "black" ? "invert(1)" : undefined;
 
+  const prevent = (e: React.MouseEvent) => e.preventDefault();
+
   if (variant === "mark") {
     return (
-      <div className={className} style={{ display: "flex", alignItems: "center" }}>
+      <div className={className} style={{ display: "flex", alignItems: "center" }} onContextMenu={prevent}>
         <Image src="/Logo/T.svg" alt="TrustLoop" width={size} height={size} style={{ filter: invert }} draggable={false} />
       </div>
     );
@@ -45,6 +47,7 @@ export function TrustLoopLogo({
       role="img"
       className={className}
       style={{ display: "flex", alignItems: "flex-end", gap }}
+      onContextMenu={prevent}
     >
       {letters.map((l, i) => (
         <Image

@@ -147,14 +147,14 @@ export default function PrivacyPolicyPage() {
           <li><strong>Objection:</strong> Object to processing of your information for certain purposes</li>
           <li><strong>Withdraw consent:</strong> Where processing is based on consent, withdraw your consent at any time</li>
         </ul>
-        <p>To exercise any of these rights, contact hello@yashbogam.me. We will respond to verified requests within 30 days (or within the timeframe required by applicable law). We may request additional information to verify your identity before processing your request.</p>
+        <p>To exercise any of these rights, contact <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a>. We will respond to verified requests within 30 days (or within the timeframe required by applicable law). We may request additional information to verify your identity before processing your request.</p>
         <p><strong>EEA, UK, and Swiss residents:</strong> You have the right to lodge a complaint with your local data protection authority if you believe your rights have been violated.</p>
         <p><strong>California residents:</strong> Under the California Consumer Privacy Act (CCPA), you have the right to know what personal information we collect, request deletion, and opt out of the sale of personal information. TrustLoop does not sell personal information.</p>
       </section>
 
       <section id="children">
         <h2>11. Children&apos;s Privacy</h2>
-        <p>The Service is not directed to individuals under the age of 16. We do not knowingly collect personal information from children. If we become aware that we have collected personal information from a child under 16, we will take steps to delete that information promptly. If you believe a child has provided us with personal information, please contact hello@yashbogam.me.</p>
+        <p>The Service is not directed to individuals under the age of 16. We do not knowingly collect personal information from children. If we become aware that we have collected personal information from a child under 16, we will take steps to delete that information promptly. If you believe a child has provided us with personal information, please contact <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a>.</p>
       </section>
 
       <section id="changes">
@@ -166,8 +166,8 @@ export default function PrivacyPolicyPage() {
         <h2>13. Contact</h2>
         <p>If you have questions or concerns about this Privacy Policy or our data practices, please contact us:</p>
         <ul>
-          <li>Privacy inquiries: hello@yashbogam.me</li>
-          <li>Data protection officer: hello@yashbogam.me</li>
+          <li>Privacy inquiries: <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a></li>
+          <li>Data protection officer: <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a></li>
           <li>Address: Plot No 25, Hyderabad, 500001, Telangana, India</li>
         </ul>
       </section>

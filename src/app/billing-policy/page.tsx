@@ -40,7 +40,7 @@ export default function BillingPolicyPage() {
         <ul>
           <li><strong>Starter:</strong> Designed for early-stage AI product teams handling customer incidents weekly. Includes core incident management, AI triage, webhook integrations, and standard quotas.</li>
           <li><strong>Pro:</strong> Designed for teams running incident operations daily with tighter approval and reporting needs. Includes all Starter features plus higher quotas, API key access, priority support, and advanced reporting.</li>
-          <li><strong>Enterprise:</strong> Custom pricing for organizations requiring SAML SSO, dedicated support, custom SLAs, and tailored onboarding. Contact hello@yashbogam.me for Enterprise terms.</li>
+          <li><strong>Enterprise:</strong> Custom pricing for organizations requiring SAML SSO, dedicated support, custom SLAs, and tailored onboarding. Contact <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a> for Enterprise terms.</li>
         </ul>
         <p>Both Starter and Pro plans are available with monthly or annual billing. Annual plans are billed upfront for the full year at a discounted rate. Current pricing is displayed on the <Link className="text-[var(--color-signal)] hover:underline" href="/#pricing">pricing page</Link> and within the Workspace billing settings.</p>
         <p>TrustLoop reserves the right to change pricing with at least 30 days&apos; notice. Price changes apply at the next renewal date and do not affect the current billing period.</p>
@@ -142,7 +142,7 @@ export default function BillingPolicyPage() {
         <h2>11. Contact</h2>
         <p>For billing questions, refund requests, or payment issues:</p>
         <ul>
-          <li>Email: hello@yashbogam.me</li>
+          <li>Email: <a className="text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a></li>
           <li>Address: Plot No 25, Hyderabad, 500001, Telangana, India</li>
         </ul>
       </section>
