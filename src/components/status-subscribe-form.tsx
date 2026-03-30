@@ -26,7 +26,7 @@ export function StatusSubscribeForm({ slug, turnstileSiteKey }: Props) {
     }
     setState("loading");
     try {
-      const res = await fetch(`/api/status/${slug}/subscribe`, {
+      const res = await fetch(`/api/${slug}/status/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, turnstileToken }),

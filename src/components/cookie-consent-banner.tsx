@@ -9,13 +9,17 @@ function subscribe(cb: () => void) {
   return () => window.removeEventListener("storage", cb);
 }
 
+function getConsent() {
+  return localStorage.getItem(CONSENT_KEY);
+}
+
+function isStatusPage() {
+  return !!document.querySelector("[data-status-page]");
+}
+
 export function CookieConsentBanner() {
-  const hasConsent = useSyncExternalStore(
-    subscribe,
-    () => localStorage.getItem(CONSENT_KEY),
-    () => null,
-  );
-  const visible = hasConsent === null;
+  const hasConsent = useSyncExternalStore(subscribe, getConsent, () => null);
+  const onStatusPage = useSyncExternalStore(() => () => {}, isStatusPage, () => true);
 
   const accept = useCallback(() => {
     localStorage.setItem(CONSENT_KEY, "accepted");
@@ -27,7 +31,7 @@ export function CookieConsentBanner() {
     window.dispatchEvent(new Event("storage"));
   }, []);
 
-  if (!visible) return null;
+  if (hasConsent !== null || onStatusPage) return null;
 
   return (
     <div

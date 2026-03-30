@@ -105,10 +105,22 @@ export function GeneralSettingsPanel({ workspace, slackInstallUrl, planTier, com
     form.slackChannelId !== (workspace.slackChannelId ?? "") ||
     form.complianceMode !== workspace.complianceMode;
 
+  const [customDomainUrl, setCustomDomainUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/custom-domain")
+      .then((r) => r.json())
+      .then((d: { domain?: string; verified?: boolean }) => {
+        if (d.domain && d.verified) setCustomDomainUrl(`https://${d.domain}`);
+      })
+      .catch(() => {});
+  }, []);
+
   const statusPageUrl = useMemo(() => {
+    if (customDomainUrl) return customDomainUrl;
     if (!form.slug) return null;
-    return `/status/${form.slug}`;
-  }, [form.slug]);
+    return `/${form.slug}/status`;
+  }, [form.slug, customDomainUrl]);
 
   async function save() {
     setLoading(true); setMessage(null); setError(null);
@@ -207,6 +219,16 @@ export function GeneralSettingsPanel({ workspace, slackInstallUrl, planTier, com
 
       <div className="h-px bg-[var(--color-rim)]" />
 
+      {/* ── Custom Domain ── */}
+      <SectionAccordion
+        title="Custom status page domain"
+        description="Point your own domain to your TrustLoop status page via DNS CNAME."
+      >
+        <CustomDomainSettings />
+      </SectionAccordion>
+
+      <div className="h-px bg-[var(--color-rim)]" />
+
       {/* ── Slack ── */}
       <SectionAccordion
         title="Slack integration"
@@ -293,6 +315,126 @@ export function GeneralSettingsPanel({ workspace, slackInstallUrl, planTier, com
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save changes"}
         </button>
       </div>
+    </div>
+  );
+}
+
+function CustomDomainSettings() {
+  const [domain, setDomain] = useState("");
+  const [input, setInput] = useState("");
+  const [verified, setVerified] = useState(false);
+  const [cnameTarget, setCnameTarget] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/settings/custom-domain")
+      .then((r) => r.json())
+      .then((d: { domain?: string; verified?: boolean; cnameTarget?: string }) => {
+        setDomain(d.domain ?? "");
+        setInput(d.domain ?? "");
+        setVerified(d.verified ?? false);
+        setCnameTarget(d.cnameTarget ?? "");
+      })
+      .catch(() => {});
+  }, []);
+
+  async function saveDomain() {
+    setLoading(true); setMsg(null);
+    const r = await fetch("/api/settings/custom-domain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ domain: input }),
+    });
+    const d = await r.json().catch(() => null) as { domain?: string; verified?: boolean; cnameTarget?: string; error?: string } | null;
+    setLoading(false);
+    if (!r.ok) { setMsg({ type: "err", text: d?.error ?? "Failed to save." }); return; }
+    setDomain(d?.domain ?? input);
+    setVerified(d?.verified ?? false);
+    setCnameTarget(d?.cnameTarget ?? cnameTarget);
+    setMsg({ type: "ok", text: d?.verified ? "Domain verified and active!" : "Domain saved. Add the CNAME record below, then verify." });
+  }
+
+  async function checkVerification() {
+    setChecking(true); setMsg(null);
+    const r = await fetch("/api/settings/custom-domain");
+    const d = await r.json().catch(() => null) as { verified?: boolean } | null;
+    setChecking(false);
+    setVerified(d?.verified ?? false);
+    setMsg({ type: d?.verified ? "ok" : "err", text: d?.verified ? "Domain verified!" : "CNAME not found yet. DNS can take up to 48 hours to propagate." });
+  }
+
+  async function removeDomain() {
+    setLoading(true); setMsg(null);
+    await fetch("/api/settings/custom-domain", { method: "DELETE" });
+    setLoading(false);
+    setDomain(""); setInput(""); setVerified(false);
+    setMsg({ type: "ok", text: "Custom domain removed." });
+  }
+
+  return (
+    <div className="space-y-4">
+      {msg && (
+        <div className={`p-3 text-xs rounded-lg border flex items-center gap-2 ${msg.type === "err" ? "bg-[rgba(232,66,66,0.08)] border-[rgba(232,66,66,0.24)] text-[var(--color-danger)]" : "bg-[rgba(22,163,74,0.08)] border-[rgba(22,163,74,0.24)] text-[var(--color-resolve)]"}`}>
+          {msg.type === "err" ? <AlertCircle className="h-4 w-4 shrink-0" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
+          <span>{msg.text}</span>
+        </div>
+      )}
+
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-ghost)]">Custom domain</label>
+        <div className="flex items-center gap-2">
+          <input
+            className="input flex-1"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="status.yourcompany.com"
+            disabled={loading}
+          />
+          <button className="btn btn-primary text-xs shrink-0" disabled={loading || !input.trim() || input === domain} onClick={saveDomain} type="button">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : domain ? "Update" : "Add domain"}
+          </button>
+        </div>
+      </div>
+
+      {domain && (
+        <>
+          <div className="rounded-lg border border-[var(--color-rim)] p-3 space-y-2">
+            <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-ghost)]">DNS Configuration</p>
+            <p className="text-xs text-[var(--color-subtext)]">
+              Add a <span className="font-mono font-semibold text-[var(--color-bright)]">CNAME</span> record for your domain:
+            </p>
+            <div className="grid grid-cols-[80px_1fr] gap-y-1 text-xs font-mono">
+              <span className="text-[var(--color-ghost)]">Name</span>
+              <span className="text-[var(--color-bright)]">{domain}</span>
+              <span className="text-[var(--color-ghost)]">Type</span>
+              <span className="text-[var(--color-bright)]">CNAME</span>
+              <span className="text-[var(--color-ghost)]">Value</span>
+              <span className="text-[var(--color-bright)]">{cnameTarget}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs">
+              <span className={`inline-block w-2 h-2 rounded-full ${verified ? "bg-[var(--color-resolve)]" : "bg-[var(--color-warning)]"}`} />
+              <span style={{ color: verified ? "var(--color-resolve)" : "var(--color-warning)" }}>
+                {verified ? "Verified — your status page is live at this domain" : "Pending verification"}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              {!verified && (
+                <button className="btn btn-ghost !min-h-[32px] text-xs" disabled={checking} onClick={checkVerification} type="button">
+                  {checking ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Verify DNS"}
+                </button>
+              )}
+              <button className="btn btn-danger !min-h-[32px] text-xs" disabled={loading} onClick={removeDomain} type="button">
+                Remove
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

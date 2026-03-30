@@ -86,7 +86,7 @@ export function WorkspaceSettingsPanel({ workspace, slackInstallUrl }: Props) {
     }
     const origin =
       typeof window !== "undefined" ? window.location.origin : process.env.NEXT_PUBLIC_APP_URL;
-    return `${origin?.replace(/\/$/, "")}/status/${form.slug}`;
+    return `${origin?.replace(/\/$/, "")}/${form.slug}/status`;
   }, [form.slug]);
 
   async function save() {

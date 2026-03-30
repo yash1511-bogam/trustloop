@@ -12,6 +12,7 @@ export default async function SettingsGeneralPage() {
     select: {
       id: true, name: true, slug: true, statusPageEnabled: true, planTier: true,
       slackChannelId: true, slackTeamId: true, complianceMode: true, trialEndsAt: true,
+      customDomain: true, customDomainVerified: true,
       billing: { select: { status: true } },
     },
   });

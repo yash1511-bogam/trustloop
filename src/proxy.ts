@@ -24,15 +24,32 @@ const SECURITY_HEADERS: Record<string, string> = {
 };
 
 export function proxy(request: NextRequest): NextResponse {
+  const host = request.headers.get("host") ?? request.headers.get("x-forwarded-host");
+  const APP_HOST = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").hostname;
+  const hostBase = host?.split(":")[0] ?? "";
+
+  // Custom domain routing — if host is not the app domain, not localhost, and not a subdomain
+  const subdomainSlug = slugFromSubdomain(host);
+  if (
+    hostBase &&
+    hostBase !== APP_HOST &&
+    hostBase !== "localhost" &&
+    hostBase !== "127.0.0.1" &&
+    !subdomainSlug &&
+    request.nextUrl.pathname === "/"
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/_custom-status";
+    url.searchParams.set("domain", hostBase);
+    return NextResponse.rewrite(url);
+  }
+
   const response = NextResponse.next();
 
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     response.headers.set(key, value);
   }
 
-  // Resolve workspace from subdomain (OWNER routing)
-  const host = request.headers.get("host") ?? request.headers.get("x-forwarded-host");
-  const subdomainSlug = slugFromSubdomain(host);
   if (subdomainSlug) {
     response.headers.set("x-workspace-slug", subdomainSlug);
   }
