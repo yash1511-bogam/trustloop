@@ -6,7 +6,7 @@ import {
   findIncidentBySourceTicketRef,
 } from "@/lib/incident-service";
 import { log } from "@/lib/logger";
-import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { resolveWebhookAccess } from "@/lib/webhook-intake";
@@ -128,19 +128,9 @@ export async function handleWebhookIncidentRoute(
     return badRequest(`Unable to create incident from ${config.integrationName} payload.`);
   }
 
-  const [quotaConsumeResult, refreshResult] = await Promise.allSettled([
-    consumeWorkspaceQuota(access.workspaceId, "incidents", 1),
+  const [refreshResult] = await Promise.allSettled([
     refreshWorkspaceReadModels(access.workspaceId),
   ]);
-
-  if (quotaConsumeResult.status === "rejected") {
-    log.app.error("Webhook quota consume failed", {
-      integration: config.type,
-      workspaceId: access.workspaceId,
-      incidentId: incident.id,
-      error: errorMessage(quotaConsumeResult.reason),
-    });
-  }
 
   if (refreshResult.status === "rejected") {
     log.app.error("Webhook read model refresh failed", {

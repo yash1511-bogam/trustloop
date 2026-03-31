@@ -13,7 +13,7 @@ import {
   DEMO_TRIAGE_LIMIT,
   countWorkspaceTriageRuns,
 } from "@/lib/onboarding-demo";
-import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { enforceWorkspaceQuota } from "@/lib/policy";
 import { enqueueReminder } from "@/lib/queue";
 import { log } from "@/lib/logger";
 import { dispatchOutboundWebhookEvent } from "@/lib/outbound-webhooks";
@@ -247,7 +247,6 @@ export async function POST(
     }
   }
 
-  await consumeWorkspaceQuota(auth.workspaceId, "triage", 1);
   await refreshWorkspaceReadModels(auth.workspaceId);
   await recordAuditForAccess({
     access: auth,

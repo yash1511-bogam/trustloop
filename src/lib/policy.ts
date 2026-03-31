@@ -170,18 +170,52 @@ export async function enforceWorkspaceQuota(
   remaining: number;
 }> {
   const policy = await ensureQuotaPolicy(workspaceId);
-  const usage = await loadDailyUsage(workspaceId);
-
   const mapping = metricMap[metric];
   const limit = policy[mapping.policyField];
-  const used = usage[mapping.usageField];
-  const remaining = Math.max(0, limit - used);
+  const usageDate = startOfUtcDay();
+
+  const incrementData = {
+    incidentsCreated: 0,
+    triageRuns: 0,
+    customerUpdates: 0,
+    reminderEmailsSent: 0,
+  };
+  incrementData[mapping.usageField] = 1;
+
+  // Atomic increment — always writes, then check if over limit
+  const row = await prisma.workspaceDailyUsage.upsert({
+    where: {
+      workspaceId_usageDate: { workspaceId, usageDate },
+    },
+    create: {
+      workspaceId,
+      usageDate,
+      ...incrementData,
+    },
+    update: {
+      [mapping.usageField]: { increment: 1 },
+    },
+    select: {
+      [mapping.usageField]: true,
+    },
+  });
+
+  const used = (row as Record<string, number>)[mapping.usageField] ?? 0;
+
+  if (used > limit) {
+    // Roll back the optimistic increment
+    await prisma.workspaceDailyUsage.update({
+      where: { workspaceId_usageDate: { workspaceId, usageDate } },
+      data: { [mapping.usageField]: { decrement: 1 } },
+    });
+    return { allowed: false, limit, used: used - 1, remaining: 0 };
+  }
 
   return {
-    allowed: used < limit,
+    allowed: true,
     limit,
     used,
-    remaining,
+    remaining: Math.max(0, limit - used),
   };
 }
 

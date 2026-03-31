@@ -71,7 +71,7 @@ export async function PATCH(
   }
 
   if (existing.role === Role.OWNER && parsed.data.role !== Role.OWNER) {
-    const allowed = await ensureNotLastOwner(auth.workspaceId, existing.id);
+    const allowed = await ensureNotLastOwner(auth.workspaceId, existing.userId);
     if (!allowed) {
       return badRequest("Workspace must have at least one owner.");
     }
@@ -165,7 +165,7 @@ export async function DELETE(
   }
 
   if (target.role === Role.OWNER) {
-    const allowed = await ensureNotLastOwner(auth.workspaceId, target.id);
+    const allowed = await ensureNotLastOwner(auth.workspaceId, target.userId);
     if (!allowed) {
       return badRequest("Workspace must have at least one owner.");
     }

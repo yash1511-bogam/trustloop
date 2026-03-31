@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AiProvider } from "@prisma/client";
+import { AiProvider, Role } from "@prisma/client";
 import { z } from "zod";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
 import { recordAuditForAccess } from "@/lib/audit";
 import { last4 } from "@/lib/encryption";
 import { featureGateError } from "@/lib/feature-gate";
 import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
-import { badRequest } from "@/lib/http";
+import { badRequest, forbidden } from "@/lib/http";
+import { hasRole } from "@/lib/auth";
 import { testProviderKey } from "@/lib/ai/service";
 import { prisma } from "@/lib/prisma";
 
@@ -24,6 +25,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const auth = access.auth;
+  if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
+    return forbidden();
+  }
   if (!(await isWorkspaceFeatureAllowed(auth.workspaceId, "ai_keys"))) {
     return NextResponse.json({ error: featureGateError("ai_keys") }, { status: 403 });
   }

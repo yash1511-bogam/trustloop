@@ -20,7 +20,7 @@ type IncidentSearchResult = {
 };
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true });
+  const access = await requireApiAuthAndRateLimit(request, { allowApiKey: true, requiredApiKeyScopes: ["incidents:read"] });
   if (access.response) return access.response;
   const auth = access.auth;
 

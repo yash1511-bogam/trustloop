@@ -267,7 +267,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   if (parsed.data.action === "triage" && updatedIds.length > 0) {
-    await consumeWorkspaceQuota(auth.workspaceId, "triage", updatedIds.length);
+    // enforceWorkspaceQuota already reserved 1, consume the rest
+    if (updatedIds.length > 1) {
+      await consumeWorkspaceQuota(auth.workspaceId, "triage", updatedIds.length - 1);
+    }
   }
 
   await refreshWorkspaceReadModels(auth.workspaceId);

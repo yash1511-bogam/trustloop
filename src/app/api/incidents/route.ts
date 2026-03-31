@@ -17,7 +17,7 @@ import {
   loadIncidentTemplate,
   normalizeTagNames,
 } from "@/lib/incident-metadata";
-import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { notifyIncidentPush } from "@/lib/incident-push";
@@ -407,7 +407,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     ),
   );
 
-  await consumeWorkspaceQuota(auth.workspaceId, "incidents", 1);
   await refreshWorkspaceReadModels(auth.workspaceId);
   await recordAuditForAccess({
     access: auth,

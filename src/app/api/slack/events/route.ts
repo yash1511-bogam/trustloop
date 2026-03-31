@@ -3,7 +3,7 @@ import { IncidentChannel, IncidentSeverity } from "@prisma/client";
 import { createIncidentRecord } from "@/lib/incident-service";
 import { recordAuditLog } from "@/lib/audit";
 import { unauthorized } from "@/lib/http";
-import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { enforceWorkspaceQuota } from "@/lib/policy";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
 import { verifySlackRequestSignature } from "@/lib/slack";
@@ -117,7 +117,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   });
 
-  await consumeWorkspaceQuota(workspace.id, "incidents", 1);
   await refreshWorkspaceReadModels(workspace.id);
 
   recordAuditLog({ workspaceId: workspace.id, action: "slack.incident_created", targetType: "incident", summary: `Incident created via Slack modal: "${title}"` }).catch(() => {});

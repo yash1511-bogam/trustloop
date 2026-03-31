@@ -108,12 +108,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
+  const resolvedScopes =
+    parsed.data.scopes ??
+    (parsed.data.usagePreset ? scopesForApiKeyUsagePreset(parsed.data.usagePreset) : null);
+
+  if (!resolvedScopes || resolvedScopes.length === 0) {
+    return badRequest("Either scopes or usagePreset must be provided.");
+  }
+
   const created = await createWorkspaceApiKey({
     workspaceId: auth.workspaceId,
     name: parsed.data.name,
-    scopes:
-      parsed.data.scopes ??
-      (parsed.data.usagePreset ? scopesForApiKeyUsagePreset(parsed.data.usagePreset) : undefined),
+    scopes: resolvedScopes,
     expiresAt: resolveApiKeyExpiryDate(parsed.data.expiryOption),
   });
 
@@ -126,10 +132,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     summary: `Created API key ${parsed.data.name.trim()}`,
     metadata: {
       keyPrefix: created.keyPrefix,
-      scopes:
-        parsed.data.scopes ??
-        (parsed.data.usagePreset ? scopesForApiKeyUsagePreset(parsed.data.usagePreset) : undefined) ??
-        normalizeApiKeyScopes(undefined),
+      scopes: resolvedScopes,
       expiryOption: parsed.data.expiryOption ?? null,
       expiresAt: created.expiresAt?.toISOString() ?? null,
       usagePreset: parsed.data.usagePreset ?? null,

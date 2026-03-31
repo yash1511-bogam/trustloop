@@ -20,7 +20,7 @@ import {
   submitCustomerUpdateDraft,
   updateCustomerUpdateDraft,
 } from "@/lib/customer-updates";
-import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { enforceWorkspaceQuota } from "@/lib/policy";
 import { log } from "@/lib/logger";
 import { dispatchOutboundWebhookEvent } from "@/lib/outbound-webhooks";
 import { prisma } from "@/lib/prisma";
@@ -337,8 +337,6 @@ export async function POST(
       tx,
     );
   });
-
-  await consumeWorkspaceQuota(auth.workspaceId, "customer_updates", 1);
 
   await recordAuditForAccess({
     access: auth,

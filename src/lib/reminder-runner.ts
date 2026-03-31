@@ -5,7 +5,7 @@ import {
   ReminderStatus,
   Role,
 } from "@prisma/client";
-import { consumeWorkspaceQuota, enforceWorkspaceQuota } from "@/lib/policy";
+import { enforceWorkspaceQuota, consumeWorkspaceQuota } from "@/lib/policy";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { refreshWorkspaceReadModels } from "@/lib/read-models";
@@ -243,8 +243,10 @@ export async function processReminderPayload(input: {
         });
 
         if (emailResult.success) {
-          await consumeWorkspaceQuota(payload.workspaceId, "reminder_emails", 1);
+          // Quota already reserved by enforceWorkspaceQuota
         } else {
+          // Roll back the reserved quota on send failure
+          await consumeWorkspaceQuota(payload.workspaceId, "reminder_emails", -1);
           log.worker.warn("Reminder email provider did not confirm send", {
             workspaceId: payload.workspaceId,
             incidentId: incident.id,

@@ -371,7 +371,7 @@ function ipv6MatchesPrefix(ip: string, cidr: string): boolean {
 
 export function normalizeApiKeyScopes(input: string[] | null | undefined): ApiKeyScope[] {
   if (!input || input.length === 0) {
-    return [...API_KEY_SCOPES];
+    return [];
   }
 
   const values = Array.from(
@@ -382,7 +382,7 @@ export function normalizeApiKeyScopes(input: string[] | null | undefined): ApiKe
     ),
   );
 
-  return values.length > 0 ? values : [...API_KEY_SCOPES];
+  return values;
 }
 
 export function normalizeIpAllowlist(input: string[] | null | undefined): string[] {
@@ -402,27 +402,18 @@ export function normalizeIpAllowlist(input: string[] | null | undefined): string
 }
 
 export function requestIpAddress(request: NextRequest): string | null {
+  // Prefer platform-injected headers that cannot be spoofed by clients
+  const cfIp = request.headers.get("cf-connecting-ip")?.trim();
+  if (cfIp) return cfIp;
+
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+
   const forwarded = request.headers.get("x-forwarded-for");
   if (forwarded) {
-    const first = forwarded
-      .split(",")
-      .map((value) => value.trim())
-      .find(Boolean);
-    if (first) {
-      return first;
-    }
-  }
-
-  const fallbacks = [
-    request.headers.get("cf-connecting-ip"),
-    request.headers.get("x-real-ip"),
-    request.headers.get("x-forwarded-for")?.split(",")[0],
-  ];
-
-  for (const value of fallbacks) {
-    if (value?.trim()) {
-      return value.trim();
-    }
+    // Rightmost non-empty entry is the one added by the trusted proxy
+    const parts = forwarded.split(",").map((v) => v.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
   }
 
   return null;

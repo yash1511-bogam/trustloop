@@ -10,17 +10,13 @@ export function appOrigin(request?: NextRequest): string {
     return normalizeBaseUrl(configured);
   }
 
-  if (!request) {
-    return "http://localhost:3000";
+  // In production, always require an explicit origin
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_APP_URL must be set in production.");
   }
 
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  if (forwardedHost) {
-    const forwardedProto =
-      request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() ||
-      request.nextUrl.protocol.replace(/:$/, "") ||
-      "https";
-    return `${forwardedProto}://${forwardedHost}`;
+  if (!request) {
+    return "http://localhost:3000";
   }
 
   const host = request.headers.get("host")?.trim();

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AiProvider, WorkflowType } from "@prisma/client";
+import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
 import { recordAuditForAccess } from "@/lib/audit";
 import { requireApiAuthAndRateLimit } from "@/lib/api-guard";
-import { badRequest } from "@/lib/http";
+import { badRequest, forbidden } from "@/lib/http";
+import { hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const upsertWorkflowSchema = z.object({
@@ -38,6 +39,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const auth = access.auth;
   if (auth.kind !== "session") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (!hasRole({ user: auth.user }, [Role.OWNER, Role.MANAGER])) {
+    return forbidden();
   }
 
   const body = await request.json().catch(() => null);
