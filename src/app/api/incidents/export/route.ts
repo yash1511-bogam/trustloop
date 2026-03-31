@@ -50,30 +50,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const toDateValue = toDate(request.nextUrl.searchParams.get("to"));
   const toExclusive = toDateValue ? new Date(toDateValue.getTime() + 24 * 60 * 60 * 1000) : null;
 
-  const incidents = await prisma.incident.findMany({
-    where: {
-      workspaceId: auth.workspaceId,
-      createdAt: {
-        gte: fromDate ?? undefined,
-        lt: toExclusive ?? undefined,
-      },
+  const where = {
+    workspaceId: auth.workspaceId,
+    createdAt: {
+      gte: fromDate ?? undefined,
+      lt: toExclusive ?? undefined,
     },
-    include: {
-      events: {
-        orderBy: { createdAt: "asc" },
-      },
-      statusUpdates: {
-        orderBy: { publishedAt: "asc" },
-      },
-      emailNotifications: {
-        orderBy: { createdAt: "asc" },
-      },
-      owner: {
-        select: { name: true, email: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  };
 
   const rows: string[] = [];
   rows.push(
@@ -101,7 +84,27 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       .join(","),
   );
 
-  for (const incident of incidents) {
+  const BATCH = 500;
+  let cursor: string | undefined;
+
+  for (;;) {
+    const batch = await prisma.incident.findMany({
+      where,
+      include: {
+        events: { orderBy: { createdAt: "asc" } },
+        statusUpdates: { orderBy: { publishedAt: "asc" } },
+        emailNotifications: { orderBy: { createdAt: "asc" } },
+        owner: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: BATCH,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+    });
+
+    if (batch.length === 0) break;
+    cursor = batch[batch.length - 1].id;
+
+    for (const incident of batch) {
     const maxRows = Math.max(
       incident.events.length,
       incident.statusUpdates.length,
@@ -139,6 +142,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           .join(","),
       );
     }
+    }
+
+    if (batch.length < BATCH) break;
   }
 
   return new NextResponse(rows.join("\n"), {

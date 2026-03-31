@@ -329,7 +329,6 @@ model AiProviderKey {
   updatedAt             DateTime          @updatedAt
 
   @@unique([workspaceId, provider])
-  @@index([workspaceId])
 }
 
 model WorkflowSetting {
@@ -407,7 +406,6 @@ model WorkspaceDailyUsage {
   updatedAt          DateTime  @updatedAt
 
   @@unique([workspaceId, usageDate])
-  @@index([workspaceId, usageDate])
 }
 
 model IncidentAnalyticsDaily {
@@ -427,7 +425,6 @@ model IncidentAnalyticsDaily {
   updatedAt           DateTime  @updatedAt
 
   @@unique([workspaceId, day])
-  @@index([workspaceId, day])
 }
 
 model WorkspaceExecutiveSnapshot {
@@ -793,8 +790,6 @@ model PostMortem {
   publishedAt   DateTime?
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
-
-  @@index([incidentId])
 }
 
 model OutboundWebhookDelivery {
@@ -826,7 +821,6 @@ model StatusPageSubscriber {
   createdAt   DateTime  @default(now())
 
   @@unique([workspaceId, email])
-  @@index([workspaceId])
 }
 
 model PlatformStatusSubscriber {
