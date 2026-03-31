@@ -106,7 +106,7 @@ pnpm dev:full
 | Login | `http://localhost:3000/login` |
 | Register | `http://localhost:3000/register` |
 | Dashboard | `http://localhost:3000/dashboard` |
-| Executive view | `http://localhost:3000/executive` |
+| Analytics | `http://localhost:3000/analytics` |
 | Settings | `http://localhost:3000/settings` |
 | Public status page | `http://localhost:3000/<workspace-slug>/status` |
 | Docs | `http://localhost:3000/docs` |

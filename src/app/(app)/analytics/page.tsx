@@ -58,7 +58,6 @@ export default async function ExecutivePage() {
       <section className="dash-hero section-enter">
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
-            <p className="page-kicker">Analytics</p>
             <h1 className="page-title">Analytics</h1>
           </div>
           <div className="page-header-actions">

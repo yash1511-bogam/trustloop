@@ -204,11 +204,10 @@ export function DashboardPageClient({
       <section className="dash-hero section-enter">
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
-            <p className="page-kicker">Dashboard</p>
             <h1 className="page-title">Dashboard</h1>
           </div>
           <div className="page-header-actions">
-            <Link className="btn btn-ghost" href="/executive">
+            <Link className="btn btn-ghost" href="/analytics">
               Analytics
               <ArrowRight size={14} weight="regular" />
             </Link>
@@ -285,7 +284,6 @@ export function DashboardPageClient({
             <div className="drawer-panel">
               <div className="drawer-header">
                 <div className="section-heading">
-                  <p className="page-kicker">New Incident</p>
                   <h2 className="settings-section-title">Log a new AI failure</h2>
                   <p className="section-description">
                     Capture customer impact, route ownership, and open the incident record immediately.

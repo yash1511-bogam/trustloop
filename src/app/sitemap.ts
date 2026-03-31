@@ -50,7 +50,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
     {
-      url: `${appUrl}/executive`,
+      url: `${appUrl}/analytics`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.3,

@@ -43,7 +43,6 @@ export function IncidentsPageClient({ counts }: Props) {
       <section className="dash-hero section-enter">
         <div className="dash-hero-inner">
           <div className="dash-hero-text">
-            <p className="page-kicker">Incidents</p>
             <h1 className="page-title">Incidents</h1>
           </div>
           <div className="page-header-actions">
@@ -84,7 +83,6 @@ export function IncidentsPageClient({ counts }: Props) {
             <div className="drawer-panel">
               <div className="drawer-header">
                 <div className="section-heading">
-                  <p className="page-kicker">New Incident</p>
                   <h2 className="settings-section-title">Log a new AI failure</h2>
                   <p className="section-description">
                     Capture customer impact, route ownership, and open the incident record immediately.

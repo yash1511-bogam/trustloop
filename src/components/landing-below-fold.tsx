@@ -453,7 +453,7 @@ export function LandingBelowFold() {
 
       <footer className="px-6 pb-10 pt-12 md:px-8">
         <div className="mx-auto max-w-[960px] border-t border-[var(--color-rim)] pt-10">
-          <div className="grid gap-y-8 gap-x-10 justify-items-center text-center sm:justify-items-start sm:text-left sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          <div className="grid gap-y-8 gap-x-16 justify-items-center text-center sm:justify-items-start sm:text-left sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]">
             <div>
               <TrustLoopLogo size={16} variant="full" />
               <p className="mt-3 max-w-[200px] text-[13px] leading-relaxed text-[var(--color-ghost)]">AI incident operations for teams that ship.</p>
@@ -495,9 +495,28 @@ export function LandingBelowFold() {
 
         </div>
       </footer>
-      <div className="mx-auto" style={{ maxWidth: "960px" }}>
+      <div className="relative mx-auto" style={{ maxWidth: "960px" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/Logo/%E2%88%9E.svg" alt="" loading="lazy" className="block w-full opacity-10" style={{ clipPath: "inset(0 0 25% 0)", marginBottom: "-25%", maxWidth: "960px" }} draggable={false} onContextMenu={(e) => e.preventDefault()} />
+        <div
+          className="pointer-events-none"
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.18,
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='6' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+            backgroundRepeat: "repeat",
+            backgroundSize: "200px",
+            WebkitMaskImage: "url(/Logo/%E2%88%9E.svg)",
+            WebkitMaskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskImage: "url(/Logo/%E2%88%9E.svg)",
+            maskSize: "contain",
+            maskRepeat: "no-repeat",
+            maskPosition: "center",
+          }}
+        />
       </div>
     </>
   );

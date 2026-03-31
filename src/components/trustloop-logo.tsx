@@ -5,7 +5,7 @@ import Image from "next/image";
 type TrustLoopLogoProps = {
   size?: number;
   variant?: "full" | "mark" | "white";
-  color?: "white" | "black";
+  color?: "white" | "black" | "orange";
   className?: string;
 };
 
@@ -26,7 +26,7 @@ export function TrustLoopLogo({
   color = "white",
   className,
 }: TrustLoopLogoProps) {
-  const invert = color === "black" ? "invert(1)" : undefined;
+  const invert = color === "black" ? "invert(1)" : color === "orange" ? "brightness(0) saturate(100%) invert(42%) sepia(75%) saturate(600%) hue-rotate(350deg) brightness(92%)" : undefined;
 
   const prevent = (e: React.MouseEvent) => e.preventDefault();
 

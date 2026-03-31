@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useGSAP } from "@gsap/react";
@@ -69,7 +69,6 @@ const dropdownData: Record<string, Array<{ icon: React.ReactNode; title: string;
 export function MarketingLanding() {
   const scope = useRef<HTMLDivElement>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState("");
   const [hoveredNav, setHoveredNav] = useState<string | null>(null);
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeDropdown = hoveredNav && hoveredNav in dropdownData ? hoveredNav : null;
@@ -79,19 +78,6 @@ export function MarketingLanding() {
   const headerBarRef = useRef<HTMLDivElement>(null);
   const [dropdownLeft, setDropdownLeft] = useState(0);
 
-  useEffect(() => {
-    const ids = navLinks.filter((l) => l.href.startsWith("#")).map((l) => l.href.slice(1));
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
-        }
-      },
-      { rootMargin: "-40% 0px -55% 0px" },
-    );
-    ids.forEach((id) => { const el = document.getElementById(id); if (el) observer.observe(el); });
-    return () => observer.disconnect();
-  }, []);
   const { scrollY } = useScroll();
   const shrinkProgress = useSpring(useTransform(scrollY, [0, 120], [0, 1]), {
     stiffness: 120,
@@ -141,8 +127,8 @@ export function MarketingLanding() {
               WebkitBackdropFilter: headerBlur,
             }}
           >
-            <Link href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); history.replaceState(null, "", "/"); }}>
-              <TrustLoopLogo size={18} variant="full" color={scrolled ? "white" : "black"} />
+            <Link href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+              <TrustLoopLogo size={18} variant="full" color={scrolled ? "orange" : "white"} />
             </Link>
 
             <nav
@@ -167,13 +153,11 @@ export function MarketingLanding() {
                     }}
                   >
                     <a
-                      className={`relative z-10 block cursor-pointer rounded-md px-3 py-1.5 transition-colors ${activeSection === item.href ? "text-[var(--color-bright)]" : ""} ${hoveredNav === item.href ? "text-[var(--color-bright)]" : "hover:text-[var(--color-bright)]"}`}
+                      className={`relative z-10 block cursor-pointer rounded-md px-3 py-1.5 transition-colors ${hoveredNav === item.href ? "text-[var(--color-bright)]" : "hover:text-[var(--color-bright)]"}`}
                       href={item.href}
                       onClick={(e) => {
                         e.preventDefault();
-                        const id = item.href.slice(1);
-                        document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-                        history.replaceState(null, "", `/${id}`);
+                        document.getElementById(item.href.slice(1))?.scrollIntoView({ behavior: "smooth" });
                       }}
                     >
                       {hoveredNav === item.href && (

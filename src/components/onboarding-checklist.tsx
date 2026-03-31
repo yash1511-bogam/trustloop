@@ -47,7 +47,6 @@ export function OnboardingChecklist({ onboarding }: OnboardingProps) {
     <div className="surface section-enter p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="section-heading">
-          <p className="page-kicker">Onboarding</p>
           <h2 className="section-title">Operational readiness checklist</h2>
           <p className="section-description">
             Complete the essentials before your first customer-facing AI incident hits the queue.
