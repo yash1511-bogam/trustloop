@@ -19,22 +19,15 @@ import {
   ArrowUp,
   List,
   X,
+  ShieldWarning,
+  Clock,
+  ChartBar,
+  Broadcast,
+  Cpu,
+  ChatCircle,
+  GraduationCap,
 } from "@phosphor-icons/react";
-import {
-  SiDatadog,
-  SiPagerduty,
-  SiSentry,
-  SiSlack,
-} from "react-icons/si";
-import {
-  HiOutlineShieldExclamation,
-  HiOutlineClock,
-  HiOutlineChartBarSquare,
-  HiOutlineSignal,
-  HiOutlineCpuChip,
-  HiOutlineChatBubbleLeftRight,
-  HiOutlineAcademicCap,
-} from "react-icons/hi2";
+import { integrationLogos } from "@/components/integration-logos";
 import { HoverLink } from "@/components/hover-link";
 import { HeroIllustration } from "@/components/hero-illustration";
 import { TrustLoopLogo } from "@/components/trustloop-logo";
@@ -55,21 +48,21 @@ const navLinks = [
 
 const dropdownData: Record<string, Array<{ icon: React.ReactNode; title: string; desc: string }>> = {
   "#why": [
-    { icon: <HiOutlineShieldExclamation size={20} color="#ef4444" />, title: "Built for AI failures", desc: "Understands hallucinations, bias drift, and model degradation." },
-    { icon: <HiOutlineClock size={20} color="#f59e0b" />, title: "Automated updates", desc: "No more copy-pasting under pressure across channels." },
-    { icon: <HiOutlineChartBarSquare size={20} color="#8b5cf6" />, title: "Executive visibility", desc: "Leadership sees incidents before they escalate." },
+    { icon: <ShieldWarning size={20} color="#ef4444" weight="regular" />, title: "Built for AI failures", desc: "Understands hallucinations, bias drift, and model degradation." },
+    { icon: <Clock size={20} color="#f59e0b" weight="regular" />, title: "Automated updates", desc: "No more copy-pasting under pressure across channels." },
+    { icon: <ChartBar size={20} color="#8b5cf6" weight="regular" />, title: "Executive visibility", desc: "Leadership sees incidents before they escalate." },
   ],
   "#how-it-works": [
-    { icon: <HiOutlineSignal size={20} color="#22d3ee" />, title: "Detect", desc: "Signals flow in from Datadog, PagerDuty, Sentry, or your team." },
-    { icon: <HiOutlineCpuChip size={20} color="#a78bfa" />, title: "Triage", desc: "AI suggests severity, root cause, and a customer-safe update." },
-    { icon: <HiOutlineChatBubbleLeftRight size={20} color="#34d399" />, title: "Respond", desc: "Approval gates ensure nothing goes out unreviewed." },
-    { icon: <HiOutlineAcademicCap size={20} color="#fbbf24" />, title: "Learn", desc: "Post-mortems and analytics close the loop." },
+    { icon: <Broadcast size={20} color="#22d3ee" weight="regular" />, title: "Detect", desc: "Signals flow in from Datadog, PagerDuty, Sentry, or your team." },
+    { icon: <Cpu size={20} color="#a78bfa" weight="regular" />, title: "Triage", desc: "AI suggests severity, root cause, and a customer-safe update." },
+    { icon: <ChatCircle size={20} color="#34d399" weight="regular" />, title: "Respond", desc: "Approval gates ensure nothing goes out unreviewed." },
+    { icon: <GraduationCap size={20} color="#fbbf24" weight="regular" />, title: "Learn", desc: "Post-mortems and analytics close the loop." },
   ],
   "#integrations": [
-    { icon: <SiDatadog size={18} color="#632CA6" />, title: "Datadog", desc: "Infrastructure alerts and service health signals." },
-    { icon: <SiPagerduty size={18} color="#06AC38" />, title: "PagerDuty", desc: "Escalation entry points for urgent failures." },
-    { icon: <SiSentry size={18} color="#FB4226" />, title: "Sentry", desc: "Application errors and AI path regressions." },
-    { icon: <SiSlack size={18} color="#E01E5A" />, title: "Slack", desc: "Responder coordination and approved updates." },
+    { icon: <span className="[&_svg]:w-[18px] [&_svg]:h-[18px] text-[#632CA6]">{integrationLogos["Datadog"]}</span>, title: "Datadog", desc: "Infrastructure alerts and service health signals." },
+    { icon: <span className="[&_svg]:w-[18px] [&_svg]:h-[18px] text-[#06AC38]">{integrationLogos["PagerDuty"]}</span>, title: "PagerDuty", desc: "Escalation entry points for urgent failures." },
+    { icon: <span className="[&_svg]:w-[18px] [&_svg]:h-[18px] text-[#FB4226]">{integrationLogos["Sentry"]}</span>, title: "Sentry", desc: "Application errors and AI path regressions." },
+    { icon: <span className="[&_svg]:w-[18px] [&_svg]:h-[18px] text-[#E01E5A]">{integrationLogos["Slack"]}</span>, title: "Slack", desc: "Responder coordination and approved updates." },
   ],
 };
 
@@ -383,8 +376,6 @@ export function MarketingLanding() {
             </framerMotion.div>
           </div>
 
-          <div className="mt-14 text-center">
-          </div>
         </section>
         <div className="mt-24">
           <HeroIllustration />

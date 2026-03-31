@@ -15,7 +15,6 @@ import {
 } from "@phosphor-icons/react";
 import { CreateIncidentForm } from "@/components/create-incident-form";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
-import { ResponsiveBar } from "@nivo/bar";
 
 type Snapshot = {
   updatedAt?: string | null;
@@ -100,6 +99,50 @@ function CoverageDonut({ triage, update }: { triage: number; update: number }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── Bar chart (pure SVG) ── */
+function VelocityBarChart({ counts }: { counts: DashboardPageClientProps["counts"] }) {
+  const bars = [
+    { label: "P1 Critical", value: counts.p1, color: "#ef4444" },
+    { label: "Open", value: counts.open, color: "#f97316" },
+    { label: "Resolved", value: counts.resolved, color: "#22c55e" },
+    { label: "Created", value: counts.created7d, color: "#6366f1" },
+  ];
+  const max = Math.max(...bars.map((b) => b.value), 1);
+  const ml = 36, mr = 12, mt = 12, mb = 36;
+  const w = 500, h = 280;
+  const plotW = w - ml - mr, plotH = h - mt - mb;
+  const barW = plotW / bars.length;
+  const pad = barW * 0.225;
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-full w-full" preserveAspectRatio="xMidYMid meet">
+      {[0, 0.25, 0.5, 0.75, 1].map((t) => {
+        const y = mt + plotH * (1 - t);
+        return (
+          <g key={t}>
+            <line x1={ml} x2={w - mr} y1={y} y2={y} stroke="var(--color-rim)" strokeDasharray="4 4" />
+            <text x={ml - 6} y={y + 4} textAnchor="end" fill="var(--color-ghost)" fontSize={12}>{Math.round(max * t)}</text>
+          </g>
+        );
+      })}
+      {bars.map((bar, i) => {
+        const barH = (bar.value / max) * plotH;
+        const x = ml + i * barW + pad;
+        const bw = barW - pad * 2;
+        return (
+          <g key={bar.label}>
+            <rect x={x} y={mt + plotH - barH} width={bw} height={barH} rx={6} fill={bar.color} />
+            {barH > 20 && (
+              <text x={x + bw / 2} y={mt + plotH - barH + 16} textAnchor="middle" fill="#fff" fontSize={12} fontWeight={600}>{bar.value}</text>
+            )}
+            <text x={x + bw / 2} y={h - mb + 18} textAnchor="middle" fill="var(--color-ghost)" fontSize={12}>{bar.label}</text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
@@ -211,41 +254,7 @@ export function DashboardPageClient({
             </div>
           </div>
           <div className="h-[280px] w-full">
-            <ResponsiveBar
-              data={[
-                { id: "P1 Critical", value: counts.p1, color: "#ef4444" },
-                { id: "Open", value: counts.open, color: "#f97316" },
-                { id: "Resolved", value: counts.resolved, color: "#22c55e" },
-                { id: "Created", value: counts.created7d, color: "#6366f1" },
-              ]}
-              keys={["value"]}
-              indexBy="id"
-              margin={{ top: 12, right: 12, bottom: 36, left: 36 }}
-              padding={0.45}
-              valueScale={{ type: "linear" }}
-              indexScale={{ type: "band", round: true }}
-              colors={{ datum: "data.color" }}
-              borderRadius={6}
-              borderWidth={0}
-              theme={{
-                text: { fill: "var(--color-subtext)", fontSize: 12, fontFamily: "var(--font-ui)" },
-                axis: {
-                  domain: { line: { stroke: "transparent" } },
-                  ticks: { line: { stroke: "transparent" }, text: { fill: "var(--color-ghost)" } },
-                },
-                grid: { line: { stroke: "var(--color-rim)", strokeDasharray: "4 4" } },
-                tooltip: { container: { background: "var(--color-surface)", color: "var(--color-title)", borderRadius: "10px", boxShadow: "0 8px 32px rgba(0,0,0,0.4)", fontSize: 13 } },
-              }}
-              axisTop={null}
-              axisRight={null}
-              axisBottom={{ tickSize: 0, tickPadding: 12, tickRotation: 0 }}
-              axisLeft={{ tickSize: 0, tickPadding: 12, tickRotation: 0, tickValues: 5 }}
-              labelSkipWidth={12}
-              labelSkipHeight={12}
-              labelTextColor="#fff"
-              animate={true}
-              motionConfig="wobbly"
-            />
+            <VelocityBarChart counts={counts} />
           </div>
         </div>
 

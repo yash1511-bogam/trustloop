@@ -12,7 +12,9 @@ import {
   ChatCircle,
   Check,
   Clock,
+  Cpu,
   GithubLogo,
+  GraduationCap,
   LinkedinLogo,
   Notepad,
   Robot,
@@ -21,12 +23,6 @@ import {
   X,
   XLogo,
 } from "@phosphor-icons/react";
-import {
-  HiOutlineSignal,
-  HiOutlineCpuChip,
-  HiOutlineChatBubbleLeftRight,
-  HiOutlineAcademicCap,
-} from "react-icons/hi2";
 
 import { TrustLoopLogo } from "@/components/trustloop-logo";
 import { integrationLogos } from "@/components/integration-logos";
@@ -58,28 +54,28 @@ const workflowSteps = [
     label: "Detect",
     title: "Incidents flow in from the systems you already trust.",
     body: "Incidents flow in from Datadog, PagerDuty, Sentry, or your team and are automatically routed by severity and AI category.",
-    icon: <HiOutlineSignal size={20} color="#22d3ee" />,
+    icon: <Broadcast size={20} color="#22d3ee" weight="regular" />,
   },
   {
     number: "02",
     label: "Triage",
     title: "Provider intelligence stays under your control.",
     body: "Your AI provider analyzes the incident, suggests severity, root cause, and a customer-safe update using your key and your data.",
-    icon: <HiOutlineCpuChip size={20} color="#a78bfa" />,
+    icon: <Cpu size={20} color="#a78bfa" weight="regular" />,
   },
   {
     number: "03",
     label: "Respond",
     title: "Approval gates slow mistakes, not responders.",
     body: "Draft, review, and approve customer communications with configurable approval gates. Nothing goes out unreviewed.",
-    icon: <HiOutlineChatBubbleLeftRight size={20} color="#34d399" />,
+    icon: <ChatCircle size={20} color="#34d399" weight="regular" />,
   },
   {
     number: "04",
     label: "Learn",
     title: "Every incident becomes operational leverage.",
     body: "Post-mortem generation, SLA breach reports, and executive analytics close the loop. The next response starts smarter.",
-    icon: <HiOutlineAcademicCap size={20} color="#fbbf24" />,
+    icon: <GraduationCap size={20} color="#fbbf24" weight="regular" />,
   },
 ];
 
@@ -457,7 +453,7 @@ export function LandingBelowFold() {
 
       <footer className="px-6 pb-10 pt-12 md:px-8">
         <div className="mx-auto max-w-[960px] border-t border-[var(--color-rim)] pt-10">
-          <div className="grid gap-10 justify-items-center text-center sm:justify-items-start sm:text-left sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
+          <div className="grid gap-y-8 gap-x-10 justify-items-center text-center sm:justify-items-start sm:text-left sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
             <div>
               <TrustLoopLogo size={16} variant="full" />
               <p className="mt-3 max-w-[200px] text-[13px] leading-relaxed text-[var(--color-ghost)]">AI incident operations for teams that ship.</p>
@@ -466,6 +462,7 @@ export function LandingBelowFold() {
                 <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]" href="https://github.com" rel="noreferrer" target="_blank"><GithubLogo size={16} weight="regular" /></a>
                 <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]" href="https://linkedin.com" rel="noreferrer" target="_blank"><LinkedinLogo size={16} weight="regular" /></a>
               </div>
+              <p className="mt-4 text-[12px] text-[var(--color-ghost)]">© {new Date().getFullYear()} TrustLoop, Inc.</p>
             </div>
 
             <div className="grid content-start gap-3">

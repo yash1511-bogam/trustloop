@@ -2,14 +2,14 @@
 
 import { motion } from "framer-motion";
 import {
-  HiOutlineShieldExclamation,
-  HiOutlineCpuChip,
-  HiOutlineArrowPath,
-  HiOutlineCheckCircle,
-  HiOutlineSignal,
-  HiOutlineArrowPathRoundedSquare,
-} from "react-icons/hi2";
-import { SiDatadog, SiSentry, SiPagerduty } from "react-icons/si";
+  ShieldWarning,
+  Cpu,
+  ArrowsClockwise,
+  CheckCircle,
+  Broadcast,
+  ArrowsCounterClockwise,
+} from "@phosphor-icons/react";
+import { integrationLogos } from "@/components/integration-logos";
 
 const fade = {
   hidden: { opacity: 0, y: 12 },
@@ -47,7 +47,7 @@ export function HeroIllustration() {
         <motion.div className="border-b border-[var(--color-rim)] px-5 py-4" variants={fade}>
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(239,68,68,0.1)]">
-              <HiOutlineShieldExclamation size={18} color="#ef4444" />
+              <ShieldWarning size={18} color="#ef4444" weight="regular" />
             </span>
             <div>
               <p className="font-[var(--font-heading)] text-[15px] font-bold text-[var(--color-title)]">Inference drift across support tier</p>
@@ -63,11 +63,11 @@ export function HeroIllustration() {
             <p className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.14em] text-[var(--color-ghost)]">Activity</p>
             <div className="mt-4 space-y-0">
               {[
-                { icon: <HiOutlineShieldExclamation size={14} color="#ef4444" />, label: "Incident opened", meta: "Auto-detected via Datadog anomaly", time: "2m ago" },
-                { icon: <HiOutlineCpuChip size={14} color="#a78bfa" />, label: "AI triage complete", meta: "Root cause: prompt regression in v2.1.4", time: "1m ago" },
-                { icon: <HiOutlineArrowPath size={14} color="#f59e0b" />, label: "Routed to Sarah Chen", meta: "On-call · Product Reliability", time: "1m ago" },
-                { icon: <HiOutlineCheckCircle size={14} color="#22c55e" />, label: "Customer update approved", meta: "\"Investigating elevated incorrect outputs…\"", time: "45s ago" },
-                { icon: <HiOutlineSignal size={14} color="#22d3ee" />, label: "Status page updated", meta: "Published to 3 channels", time: "30s ago" },
+                { icon: <ShieldWarning size={14} color="#ef4444" weight="regular" />, label: "Incident opened", meta: "Auto-detected via Datadog anomaly", time: "2m ago" },
+                { icon: <Cpu size={14} color="#a78bfa" weight="regular" />, label: "AI triage complete", meta: "Root cause: prompt regression in v2.1.4", time: "1m ago" },
+                { icon: <ArrowsClockwise size={14} color="#f59e0b" weight="regular" />, label: "Routed to Sarah Chen", meta: "On-call · Product Reliability", time: "1m ago" },
+                { icon: <CheckCircle size={14} color="#22c55e" weight="regular" />, label: "Customer update approved", meta: "\"Investigating elevated incorrect outputs…\"", time: "45s ago" },
+                { icon: <Broadcast size={14} color="#22d3ee" weight="regular" />, label: "Status page updated", meta: "Published to 3 channels", time: "30s ago" },
               ].map((item, i) => (
                 <motion.div className="relative flex gap-3 pb-5 last:pb-0" key={i} variants={fade}>
                   {i < 4 && <span className="absolute left-[11px] top-[26px] h-[calc(100%-14px)] w-px bg-[var(--color-rim)]" />}
@@ -120,9 +120,9 @@ export function HeroIllustration() {
               <p className="font-[var(--font-mono)] text-[10px] uppercase tracking-[0.14em] text-[var(--color-ghost)]">Signals</p>
               <div className="mt-3 space-y-2.5">
                 {[
-                  { name: "Datadog", status: "Degraded", icon: <SiDatadog size={13} color="#632CA6" /> },
-                  { name: "Sentry", status: "Spike", icon: <SiSentry size={13} color="#FB4226" /> },
-                  { name: "PagerDuty", status: "Escalated", icon: <SiPagerduty size={13} color="#06AC38" /> },
+                  { name: "Datadog", status: "Degraded", icon: <span className="[&_svg]:w-[13px] [&_svg]:h-[13px] text-[#632CA6]">{integrationLogos["Datadog"]}</span> },
+                  { name: "Sentry", status: "Spike", icon: <span className="[&_svg]:w-[13px] [&_svg]:h-[13px] text-[#FB4226]">{integrationLogos["Sentry"]}</span> },
+                  { name: "PagerDuty", status: "Escalated", icon: <span className="[&_svg]:w-[13px] [&_svg]:h-[13px] text-[#06AC38]">{integrationLogos["PagerDuty"]}</span> },
                 ].map((item) => (
                   <div className="flex items-center justify-between" key={item.name}>
                     <span className="flex items-center gap-2 text-[12px] text-[var(--color-subtext)]">
@@ -139,7 +139,7 @@ export function HeroIllustration() {
               className="mt-6 flex items-center gap-2 rounded-lg bg-[var(--color-void)] px-3 py-2"
               variants={fade}
             >
-              <HiOutlineArrowPathRoundedSquare className="animate-spin" size={12} color="var(--color-signal)" />
+              <ArrowsCounterClockwise className="animate-spin" size={12} color="var(--color-signal)" weight="regular" />
               <span className="font-[var(--font-mono)] text-[11px] text-[var(--color-ghost)]">Next update in 12m</span>
             </motion.div>
           </motion.div>
