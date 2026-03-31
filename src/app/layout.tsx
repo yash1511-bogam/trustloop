@@ -98,12 +98,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/128.svg", type: "image/svg+xml", sizes: "128x128" },
-      { url: "/256.svg", type: "image/svg+xml", sizes: "256x256" },
-      { url: "/512.svg", type: "image/svg+xml", sizes: "512x512" },
+      { url: "/128.png", type: "image/png", sizes: "128x128" },
+      { url: "/256.png", type: "image/png", sizes: "256x256" },
+      { url: "/512.png", type: "image/png", sizes: "512x512" },
     ],
     apple: [
-      { url: "/512.svg", type: "image/svg+xml", sizes: "512x512" },
+      { url: "/512.png", type: "image/png", sizes: "512x512" },
     ],
   },
   manifest: "/manifest.webmanifest",
