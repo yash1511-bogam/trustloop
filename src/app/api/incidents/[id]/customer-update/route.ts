@@ -590,7 +590,7 @@ export async function PUT(
   });
 
   if (updated.status === CustomerUpdateDraftStatus.APPROVED) {
-    void dispatchOutboundWebhookEvent({
+    await dispatchOutboundWebhookEvent({
       workspaceId: auth.workspaceId,
       eventType: "customer_update.approved",
       incidentId: incident.id,

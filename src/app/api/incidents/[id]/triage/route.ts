@@ -272,7 +272,7 @@ export async function POST(
     severity: triage.severity,
   });
 
-  void dispatchOutboundWebhookEvent({
+  await dispatchOutboundWebhookEvent({
     workspaceId: auth.workspaceId,
     eventType: "incident.triaged",
     incidentId: incident.id,

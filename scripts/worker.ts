@@ -6,10 +6,12 @@ import {
 } from "../src/lib/queue";
 import { processPastDueBillingAutomation } from "../src/lib/billing";
 import { processReminderMessage } from "../src/lib/reminder-runner";
+import { processOutboundWebhookOutbox } from "../src/lib/outbound-webhooks";
 import { prisma } from "../src/lib/prisma";
 import log from "../src/lib/logger";
 
 const BILLING_SWEEP_INTERVAL_MS = 15 * 60 * 1000;
+const OUTBOX_INTERVAL_MS = 5_000;
 
 let shuttingDown = false;
 
@@ -38,6 +40,7 @@ function setupGracefulShutdown(): void {
 async function run(): Promise<void> {
   const once = process.argv.includes("--once");
   let lastBillingSweepAt = 0;
+  let lastOutboxAt = 0;
 
   setupGracefulShutdown();
   await ensureReminderQueue();
@@ -54,6 +57,17 @@ async function run(): Promise<void> {
         log.billing.info("Billing grace automation completed", { result });
       }
       lastBillingSweepAt = now;
+    }
+
+    if (once || now - lastOutboxAt >= OUTBOX_INTERVAL_MS) {
+      const delivered = await processOutboundWebhookOutbox().catch((err) => {
+        log.worker.error("Outbox processing failed", { error: String(err) });
+        return 0;
+      });
+      if (delivered > 0) {
+        log.worker.info("Outbox webhooks delivered", { count: delivered });
+      }
+      lastOutboxAt = now;
     }
 
     const messages = await receiveReminderMessages(10);

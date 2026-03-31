@@ -208,7 +208,7 @@ export async function POST(
     },
   });
 
-  void dispatchOutboundWebhookEvent({
+  await dispatchOutboundWebhookEvent({
     workspaceId: auth.workspaceId,
     eventType: "customer_update.published",
     incidentId: incident.id,

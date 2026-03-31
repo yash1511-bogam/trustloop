@@ -328,7 +328,7 @@ export async function PATCH(
     });
   }
 
-  void dispatchOutboundWebhookEvent({
+  await dispatchOutboundWebhookEvent({
     workspaceId: auth.workspaceId,
     eventType:
       updated.status === IncidentStatus.RESOLVED

@@ -384,28 +384,39 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const incident = await prisma.$transaction(async (tx) =>
-    createIncidentRecord(
-      {
-        workspaceId: auth.workspaceId,
-        actorUserId: auth.actorUserId,
-        title: templatedInput.title ?? parsed.data.title,
-        description: templatedInput.description ?? parsed.data.description,
-        customerName: parsed.data.customerName,
-        customerEmail: parsed.data.customerEmail,
-        channel: templatedInput.channel ?? IncidentChannel.EMAIL,
-        severity: templatedInput.severity ?? IncidentSeverity.P3,
-        category: templatedInput.category ?? null,
-        modelVersion: templatedInput.modelVersion,
-        sourceTicketRef: parsed.data.sourceTicketRef,
-        templateId: template?.id ?? null,
-        tagNames: templatedInput.tagNames,
-        ownerUserId: auth.kind === "session" ? auth.actorUserId : undefined,
-        sourceLabel: auth.kind === "api_key" ? `API key ${auth.apiKey.name}` : "web",
-      },
-      tx,
-    ),
-  );
+  let incident;
+  try {
+    incident = await prisma.$transaction(async (tx) =>
+      createIncidentRecord(
+        {
+          workspaceId: auth.workspaceId,
+          actorUserId: auth.actorUserId,
+          title: templatedInput.title ?? parsed.data.title,
+          description: templatedInput.description ?? parsed.data.description,
+          customerName: parsed.data.customerName,
+          customerEmail: parsed.data.customerEmail,
+          channel: templatedInput.channel ?? IncidentChannel.EMAIL,
+          severity: templatedInput.severity ?? IncidentSeverity.P3,
+          category: templatedInput.category ?? null,
+          modelVersion: templatedInput.modelVersion,
+          sourceTicketRef: parsed.data.sourceTicketRef,
+          templateId: template?.id ?? null,
+          tagNames: templatedInput.tagNames,
+          ownerUserId: auth.kind === "session" ? auth.actorUserId : undefined,
+          sourceLabel: auth.kind === "api_key" ? `API key ${auth.apiKey.name}` : "web",
+        },
+        tx,
+      ),
+    );
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json(
+        { error: "A matching open incident already exists." },
+        { status: 409 },
+      );
+    }
+    throw error;
+  }
 
   await refreshWorkspaceReadModels(auth.workspaceId);
   await recordAuditForAccess({
@@ -431,7 +442,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     severity: incident.severity,
   });
 
-  void dispatchOutboundWebhookEvent({
+  await dispatchOutboundWebhookEvent({
     workspaceId: auth.workspaceId,
     eventType: "incident.created",
     incidentId: incident.id,

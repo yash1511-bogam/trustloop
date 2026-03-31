@@ -1,4 +1,4 @@
-import { WebhookIntegrationType } from "@prisma/client";
+import { Prisma, WebhookIntegrationType } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { badRequest, quotaExceeded, unauthorized } from "@/lib/http";
 import {
@@ -119,6 +119,12 @@ export async function handleWebhookIncidentRoute(
       ),
     );
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json(
+        { error: "A matching open incident already exists." },
+        { status: 409 },
+      );
+    }
     log.app.error("Webhook incident creation failed", {
       integration: config.type,
       workspaceId: access.workspaceId,

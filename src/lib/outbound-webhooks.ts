@@ -1,4 +1,5 @@
 import { createHmac, randomBytes } from "crypto";
+import { Prisma } from "@prisma/client";
 import { decryptSecret, encryptSecret, last4 } from "@/lib/encryption";
 import { prisma } from "@/lib/prisma";
 
@@ -167,6 +168,70 @@ export async function dispatchOutboundWebhookEvent(input: {
   incidentId?: string | null;
   payload: Record<string, unknown>;
 }): Promise<void> {
+  await prisma.outboundWebhookOutbox.create({
+    data: {
+      workspaceId: input.workspaceId,
+      eventType: input.eventType,
+      incidentId: input.incidentId ?? null,
+      payload: input.payload as unknown as Prisma.InputJsonValue,
+    },
+  });
+}
+
+export async function processOutboundWebhookOutbox(batchSize = 20): Promise<number> {
+  const now = new Date();
+  const items = await prisma.$queryRaw<Array<{
+    id: string;
+    workspaceId: string;
+    eventType: string;
+    incidentId: string | null;
+    payload: Record<string, unknown>;
+    attempts: number;
+    maxAttempts: number;
+  }>>`
+    SELECT "id", "workspaceId", "eventType", "incidentId", "payload", "attempts", "maxAttempts"
+    FROM "OutboundWebhookOutbox"
+    WHERE "processAt" <= ${now} AND "attempts" < "maxAttempts"
+    ORDER BY "processAt" ASC
+    LIMIT ${batchSize}
+  `;
+
+  let processed = 0;
+
+  for (const item of items) {
+    try {
+      await deliverOutboundWebhookEvent({
+        workspaceId: item.workspaceId,
+        eventType: item.eventType as OutboundWebhookEvent,
+        incidentId: item.incidentId,
+        payload: item.payload as Record<string, unknown>,
+      });
+      await prisma.outboundWebhookOutbox.delete({ where: { id: item.id } });
+      processed++;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const nextAttempt = item.attempts + 1;
+      const backoffMs = Math.min(30_000, 1000 * Math.pow(2, nextAttempt));
+      await prisma.outboundWebhookOutbox.update({
+        where: { id: item.id },
+        data: {
+          attempts: nextAttempt,
+          lastError: message.slice(0, 500),
+          processAt: new Date(Date.now() + backoffMs),
+        },
+      });
+    }
+  }
+
+  return processed;
+}
+
+async function deliverOutboundWebhookEvent(input: {
+  workspaceId: string;
+  eventType: OutboundWebhookEvent;
+  incidentId?: string | null;
+  payload: Record<string, unknown>;
+}): Promise<void> {
   const hooks = await prisma.workspaceOutboundWebhook.findMany({
     where: {
       workspaceId: input.workspaceId,
@@ -182,6 +247,8 @@ export async function dispatchOutboundWebhookEvent(input: {
   }
 
   const timestamp = Math.floor(Date.now() / 1000).toString();
+
+  const errors: string[] = [];
 
   await Promise.all(
     hooks.map(async (hook) => {
@@ -203,6 +270,7 @@ export async function dispatchOutboundWebhookEvent(input: {
             "x-trustloop-signature": signature,
           },
           body,
+          signal: AbortSignal.timeout(10_000),
         });
 
         const responseBody = await response.text().catch(() => "");
@@ -232,8 +300,13 @@ export async function dispatchOutboundWebhookEvent(input: {
             },
           }),
         ]);
+
+        if (!response.ok) {
+          errors.push(`${hook.name}: HTTP ${response.status}`);
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        errors.push(`${hook.name}: ${message}`);
         await prisma.$transaction([
           prisma.workspaceOutboundWebhook.update({
             where: { id: hook.id },
@@ -258,4 +331,8 @@ export async function dispatchOutboundWebhookEvent(input: {
       }
     }),
   );
+
+  if (errors.length > 0) {
+    throw new Error(`Webhook delivery failed: ${errors.join("; ")}`);
+  }
 }

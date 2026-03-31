@@ -203,6 +203,7 @@ model Workspace {
   webhookIntegrations             WorkspaceWebhookIntegration[]
   outboundWebhooks                WorkspaceOutboundWebhook[]
   outboundWebhookDeliveries       OutboundWebhookDelivery[]
+  outboundWebhookOutbox           OutboundWebhookOutbox[]
   emailNotifications              EmailNotificationLog[]
   billing                         WorkspaceBilling?
   billingEvents                   BillingEventLog[]
@@ -886,4 +887,21 @@ model EnterpriseContactInquiry {
   createdAt     DateTime @default(now())
 
   @@index([email])
+}
+
+model OutboundWebhookOutbox {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  eventType   String
+  incidentId  String?
+  payload     Json
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(5)
+  lastError   String?
+  processAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([processAt, attempts])
+  @@index([workspaceId])
 }
