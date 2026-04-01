@@ -1,4 +1,4 @@
-name: Deploy AWS
+name: Pipeline
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 env:
@@ -16,9 +16,9 @@ env:
   PNPM_VERSION: "10.33.0"
 
 jobs:
-  # ── Stage 1: Validate code quality and build ────────────────────────────────
-  ci:
-    name: Lint & Build
+  # ── Stage 1: Web Build (lint + build) ───────────────────────────────────────
+  web-build:
+    name: Web Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -74,10 +74,72 @@ jobs:
           REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/ci-queue
         run: pnpm run build
 
-  # ── Stage 2: Deploy to staging (only after CI passes) ────────────────────────
+  # ── Stage 2: Build Desktop & Release ────────────────────────────────────────
+  build-desktop:
+    name: Build Desktop & Release
+    needs: web-build
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+        run: pnpm run prisma:generate
+
+      - name: Install desktop dependencies
+        working-directory: trustloop-desktop
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript compile check
+        working-directory: trustloop-desktop
+        run: pnpm compile
+
+      - name: Validate renderer JS
+        working-directory: trustloop-desktop
+        run: node --check src/renderer/app.js
+
+      - name: Build desktop app
+        working-directory: trustloop-desktop
+        env:
+          NODE_ENV: production
+        run: pnpm build
+
+      - name: Get version
+        id: version
+        working-directory: trustloop-desktop
+        run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ steps.version.outputs.version }}-${{ github.run_number }}
+          name: TrustLoop Desktop v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})
+          draft: false
+          prerelease: ${{ github.ref != 'refs/heads/main' }}
+          files: |
+            trustloop-desktop/dist/*.dmg
+            trustloop-desktop/dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Stage 3: Deploy Staging ─────────────────────────────────────────────────
   deploy-staging:
     name: Deploy Staging
-    needs: ci
+    needs: build-desktop
     runs-on: ubuntu-latest
     environment: staging
     env:
@@ -154,7 +216,6 @@ jobs:
           echo "Waiting for staging services to stabilize..."
           aws ecs wait services-stable --cluster "$CLUSTER" --services "trustloop-staging-web" "trustloop-staging-worker"
           echo "All staging services stable"
-
           APP_URL=$(terraform output -raw app_url)
           for ep in /api/health /login; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL$ep" || echo "000")
@@ -162,8 +223,8 @@ jobs:
             else echo "❌ $ep → $STATUS"; exit 1; fi
           done
 
-  # ── Stage 3: Deploy to production (only after staging passes) ──────────────
-  deploy:
+  # ── Stage 4: Deploy Production ──────────────────────────────────────────────
+  deploy-production:
     name: Deploy Production
     needs: deploy-staging
     runs-on: ubuntu-latest
@@ -179,10 +240,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
-
-      # ── Terraform ───────────────────────────────────────────────────────────
       - uses: hashicorp/setup-terraform@v4
 
       - name: Terraform Init
@@ -202,7 +259,6 @@ jobs:
         working-directory: infra/terraform
         run: terraform apply -auto-approve tfplan
 
-      # ── Docker build & push ─────────────────────────────────────────────────
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
@@ -214,7 +270,6 @@ jobs:
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
 
-      # ── Database migrations (before new code rolls out) ─────────────────────
       - name: Run Prisma migrations
         working-directory: infra/terraform
         run: |
@@ -222,31 +277,19 @@ jobs:
           TASK_DEF=$(terraform output -raw web_task_definition_arn)
           SUBNETS=$(terraform output -raw ecs_subnet_ids_csv)
           SG=$(terraform output -raw ecs_security_group_id)
-
-          echo "Starting migration task..."
           TASK_ARN=$(aws ecs run-task \
-            --cluster "$CLUSTER" \
-            --launch-type FARGATE \
-            --task-definition "$TASK_DEF" \
+            --cluster "$CLUSTER" --launch-type FARGATE --task-definition "$TASK_DEF" \
             --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=DISABLED}" \
             --overrides '{"containerOverrides":[{"name":"trustloop-web","command":["sh","-c","cd /prisma-cli && node node_modules/prisma/build/index.js migrate deploy"]}]}' \
             --query 'tasks[0].taskArn' --output text)
-
-          echo "Waiting for migration task to complete: $TASK_ARN"
           aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN"
-
           EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
             --query 'tasks[0].containers[0].exitCode' --output text)
-
           if [ "$EXIT_CODE" != "0" ]; then
             echo "::error::Migration failed (exit code $EXIT_CODE)"
-            aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
-              --query 'tasks[0].containers[0].reason' --output text
             exit 1
           fi
-          echo "Migrations applied successfully"
 
-      # ── Force ECS to pick up new image ──────────────────────────────────────
       - name: Update ECS services
         working-directory: infra/terraform
         run: |
@@ -254,30 +297,21 @@ jobs:
           aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-web" --force-new-deployment --no-cli-pager
           aws ecs update-service --cluster "$CLUSTER" --service "${PROJECT_NAME}-worker" --force-new-deployment --no-cli-pager
 
-      # ── Verify deployment ───────────────────────────────────────────────────
-      - name: Wait for ECS services to stabilize
+      - name: Wait for services to stabilize
         working-directory: infra/terraform
         run: |
           CLUSTER=$(terraform output -raw ecs_cluster_name)
-          echo "Waiting for web service to stabilize..."
           aws ecs wait services-stable --cluster "$CLUSTER" --services "${PROJECT_NAME}-web" "${PROJECT_NAME}-worker"
-          echo "All services stable"
 
-      - name: Smoke test
+      - name: Smoke test production
         working-directory: infra/terraform
         run: |
           APP_URL=$(terraform output -raw app_url)
-          echo "Testing $APP_URL"
           FAILED=0
           for ep in /api/health /login /register; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL$ep" || echo "000")
-            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
-              echo "✅ $ep → $STATUS"
-            else
-              echo "❌ $ep → $STATUS"
-              FAILED=1
-            fi
+            if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then echo "✅ $ep → $STATUS"
+            else echo "❌ $ep → $STATUS"; FAILED=1; fi
           done
           if [ "$FAILED" = "1" ]; then exit 1; fi
-          echo ""
           echo "🚀 Deployed successfully to $APP_URL"
