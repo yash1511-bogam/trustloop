@@ -1,8 +1,10 @@
 // ── Load .env FIRST — before any module that reads process.env ──
-// Must use require() here because TS hoists import statements above runtime code.
+// In production, secrets come from AWS Secrets Manager instead.
 const path = require("path") as typeof import("path");
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
-require("dotenv").config({ path: path.join(repoRoot, ".env") });
+if (process.env.NODE_ENV !== "production") {
+  require("dotenv").config({ path: path.join(repoRoot, ".env") });
+}
 
 import { app, BrowserWindow, Menu, shell, nativeTheme, nativeImage, dialog } from "electron";
 import Module from "module";
@@ -26,9 +28,10 @@ if (typeof (Module as any)._nodeModulePaths === "function") {
   };
 }
 
-import { registerIpcHandlers, getSession, setCurrentSession } from "./ipc";
+import { registerIpcHandlers, setCurrentSession } from "./ipc";
 import { disconnect } from "./db";
 import { disconnectRedis } from "./redis";
+import { loadAwsSecrets } from "./secrets";
 
 // ── Apple Silicon gate ──
 if (process.arch !== "arm64") {
@@ -280,7 +283,8 @@ nativeTheme.on("updated", () => {
 });
 
 // ── Lifecycle ──
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await loadAwsSecrets();
   registerIpcHandlers();
   buildMenu();
   createWindow();

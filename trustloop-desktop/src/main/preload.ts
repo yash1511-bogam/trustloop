@@ -34,7 +34,6 @@ contextBridge.exposeInMainWorld("trustloop", {
   // Workspace
   workspaceInfo: () => ipcRenderer.invoke("workspace:info"),
   workspaceOverview: () => ipcRenderer.invoke("workspace:overview"),
-  workspaceQuotas: () => ipcRenderer.invoke("workspace:quotas"),
 
   // Analytics
   analyticsSummary: () => ipcRenderer.invoke("analytics:summary"),
@@ -49,22 +48,33 @@ contextBridge.exposeInMainWorld("trustloop", {
   workspaceGeneral: () => ipcRenderer.invoke("workspace:general"),
   workspaceUpdate: (data: { name?: string; complianceMode?: boolean }) => ipcRenderer.invoke("workspace:update", data),
   workspaceTeam: () => ipcRenderer.invoke("workspace:team"),
+  inviteTeamMember: (data: any) => ipcRenderer.invoke("team:invite", data),
   workspaceBilling: () => ipcRenderer.invoke("workspace:billing"),
 
   // Integrations
   integrationsAi: () => ipcRenderer.invoke("integrations:ai"),
+  saveAiKey: (data: any) => ipcRenderer.invoke("ai-keys:save", data),
+  testAiKey: (data: any) => ipcRenderer.invoke("ai-keys:test", data),
+  saveWorkflow: (data: any) => ipcRenderer.invoke("workflows:save", data),
   integrationsWebhooks: () => ipcRenderer.invoke("integrations:webhooks"),
+  saveWebhookSecret: (data: any) => ipcRenderer.invoke("webhooks:save-secret", data),
+  rotateWebhookSecret: (type: string) => ipcRenderer.invoke("webhooks:rotate-secret", type),
+  toggleWebhook: (data: any) => ipcRenderer.invoke("webhooks:toggle", data),
   integrationsOnCall: () => ipcRenderer.invoke("integrations:oncall"),
 
   // Security
   securityApiKeys: () => ipcRenderer.invoke("security:apikeys"),
+  createApiKey: (data: any) => ipcRenderer.invoke("apikeys:create", data),
+  revokeApiKey: (id: string) => ipcRenderer.invoke("apikeys:revoke", id),
   securityAudit: (opts?: { page?: number }) => ipcRenderer.invoke("security:audit", opts),
   securitySso: () => ipcRenderer.invoke("security:sso"),
+  saveSso: (data: any) => ipcRenderer.invoke("security:sso-save", data),
 
   // Navigation from native menu
   onNavigate: (cb: (page: string) => void) => {
     ipcRenderer.on("navigate", (_e: any, page: string) => cb(page));
   },
+  openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
   onOAuthCallback: (cb: (token: string, provider: string) => void) => {
     ipcRenderer.on("oauth-callback", (_e: any, token: string, provider: string) => cb(token, provider));
   },

@@ -70,7 +70,6 @@ const app = {
     el.style.alignItems = 'flex-end';
     letters.forEach(l => {
       const w = Math.round(l.w * scale);
-      const h = Math.round(l.h * scale);
       if (l.animated && animated) {
         const wrap = document.createElement('div');
         wrap.className = 'infinity-letter';
@@ -249,7 +248,28 @@ const app = {
     if (el('#user-avatar')) el('#user-avatar').textContent = (user.name || user.email || 'U')[0].toUpperCase();
     if (el('#sidebar-ws-name')) el('#sidebar-ws-name').textContent = user.workspaceName || 'Workspace';
     this.showScreen('screen-dashboard');
+    // Fetch plan tier for feature gating
+    const ws = await window.trustloop.workspaceGeneral?.();
+    this._planTier = (ws?.planTier || 'starter').toLowerCase();
+    const planEl = el('#sidebar-plan');
+    if (planEl) planEl.textContent = this._planTier.toUpperCase();
     this.loadDashboard();
+  },
+
+  _featureAllowed(feature) {
+    const t = this._planTier || 'starter';
+    const gates = { saml:['enterprise'], compliance:['pro','enterprise'], on_call:['pro','enterprise'], api_keys:['pro','enterprise'], webhooks:['starter','pro','enterprise'], ai_keys:['starter','pro','enterprise'] };
+    return (gates[feature]||[]).includes(t);
+  },
+
+  _planBadge(feature, label) {
+    if (this._featureAllowed(feature)) return '';
+    return ` <span style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid rgba(217,119,6,0.24);background:rgba(217,119,6,0.08);font-size:10px;font-weight:600;color:var(--warning);vertical-align:middle">🔒 ${label} · <a style="text-decoration:underline;cursor:pointer" onclick="app.navTo('ws-billing')">Upgrade</a></span>`;
+  },
+
+  _gateWrap(feature, label, html) {
+    if (this._featureAllowed(feature)) return html;
+    return `<div style="pointer-events:none;user-select:none;opacity:0.4;filter:blur(0.5px)">${html}</div>`;
   },
 
   async logout() {
@@ -298,7 +318,7 @@ const app = {
     if (!window.trustloop) return;
     const data = await window.trustloop.dashboardData();
     if (!data) return;
-    const { counts, snapshot, recentIncidents } = data;
+    const { counts, snapshot } = data;
     const stats = [
       { label:'Open incidents', value:counts.open, icon:'⚠', color:'#d4622b', bg:'rgba(212,98,43,0.10)', sub:`${counts.p1} P1 critical`, trend:counts.created7d>counts.resolved?'up':'down', trendText:counts.created7d>0?`+${counts.created7d} this week`:'No new this week' },
       { label:'Resolved (7d)', value:counts.resolved, icon:'✓', color:'#e8944a', bg:'rgba(232,148,74,0.10)', sub:`${counts.total} total all-time`, trend:'up', trendText:counts.resolved>0?`${counts.resolved} closed`:'None yet' },
@@ -756,12 +776,23 @@ const app = {
       <p class="page-kicker">Account</p>
       <div class="settings-card"><h3>Responder profile</h3>
         <p class="muted" style="margin-bottom:12px">Keep your name and phone number current for urgent incident communications.</p>
-        <div class="form-group"><label class="form-label">Name</label><input class="input" id="profile-name" value="${this.esc(p.name||'')}" /></div>
-        <div class="form-group"><label class="form-label">Phone</label><input class="input" id="profile-phone" value="${this.esc(p.phone||'')}" placeholder="+1 555 000 0000" /></div>
-        ${this.row('Email', p.email)}${this.row('Role', p.role)}${this.row('Joined', this.fmtDate(p.createdAt))}
-        <button class="btn btn-primary" style="margin-top:12px" onclick="app.saveProfile()">Save changes</button>
-        <span id="profile-msg" class="form-msg"></span>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label class="form-label">Name</label><input class="input" id="profile-name" value="${this.esc(p.name||'')}" /></div>
+          <div class="form-group"><label class="form-label">Work email <span style="color:var(--muted);font-size:10px" title="Linked to your auth provider">ⓘ</span></label><input class="input" value="${this.esc(p.email)}" disabled style="opacity:0.5;cursor:not-allowed" /></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label class="form-label">On-call phone${this._planBadge('on_call','Pro')}</label><input class="input" id="profile-phone" value="${this.esc(p.phone||'')}" placeholder="+14155552671" ${this._featureAllowed('on_call')?'':'disabled style="opacity:0.4;cursor:not-allowed"'} /><p style="font-size:11px;color:var(--muted);margin-top:2px">E.164 format · Used for P1 SMS escalations only</p></div>
+          <div class="form-group"><label class="form-label">Role</label><input class="input" value="${p.role}" disabled style="opacity:0.5;cursor:not-allowed" /></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--rim);margin-top:8px">
+          <span style="font-size:12px;color:var(--ghost)" id="profile-status">Profile is up to date.</span>
+          <div style="display:flex;align-items:center;gap:8px"><span id="profile-msg" class="form-msg"></span><button class="btn btn-primary" onclick="app.saveProfile()">Save changes</button></div>
+        </div>
       </div>`;
+    // Track changes
+    const track = () => { const el = $('#profile-status'); if (el) el.textContent = ($('#profile-name')?.value !== p.name || $('#profile-phone')?.value !== (p.phone||'')) ? 'You have unsaved changes.' : 'Profile is up to date.'; };
+    $('#profile-name')?.addEventListener('input', track);
+    $('#profile-phone')?.addEventListener('input', track);
   },
   async saveProfile() {
     const name = $('#profile-name')?.value?.trim();
@@ -775,25 +806,63 @@ const app = {
     if (!window.trustloop) return;
     const ws = await window.trustloop.workspaceGeneral();
     if (!ws) return;
-    const slack = ws.slackTeamId ? `Connected (${ws.slackChannelId||'—'})` : 'Not connected';
+    const slack = ws.slackTeamId ? 'Connected' : 'Not connected';
+    const plan = (ws.planTier||'starter').charAt(0).toUpperCase() + (ws.planTier||'starter').slice(1);
+    const compLocked = ws.complianceMode;
     $('#ws-general-content').innerHTML = `<p class="page-kicker">Workspace</p>
       <div class="settings-card"><h3>General</h3>
-        <div class="form-group"><label class="form-label">Workspace name</label><input class="input" id="ws-name-input" value="${this.esc(ws.name||'')}" /></div>
-        ${this.row('Slug', ws.slug)}${this.row('Plan', (ws.planTier||'starter').toUpperCase())}
-        ${this.row('Status page', ws.statusPageEnabled ? 'Enabled' : 'Disabled')}
-        ${this.row('Slack', slack)}
-        ${this.row('Compliance mode', ws.complianceMode ? 'Enabled' : 'Disabled')}
-        ${ws.customDomain ? this.row('Custom domain', ws.customDomain + (ws.customDomainVerified ? ' ✓' : ' (unverified)')) : ''}
-        ${this.row('Created', this.fmtDate(ws.createdAt))}
-        <button class="btn btn-primary" style="margin-top:12px" onclick="app.saveWsGeneral()">Save</button>
-        <span id="ws-general-msg" class="form-msg"></span>
+        <div style="display:flex;align-items:center;gap:20px;padding:8px 0;font-size:12px">
+          <span><span style="color:var(--ghost);font-weight:500">Workspace</span> <strong style="color:var(--title);margin-left:6px">${this.esc(ws.name)}</strong></span>
+          <span style="width:1px;height:12px;background:var(--rim)"></span>
+          <span><span style="color:var(--ghost);font-weight:500">Plan</span> <strong style="color:var(--title);margin-left:6px">${plan}</strong></span>
+          <span style="width:1px;height:12px;background:var(--rim)"></span>
+          <span><span style="color:var(--ghost);font-weight:500">Slack</span> <strong style="color:var(--title);margin-left:6px">${slack}</strong></span>
+        </div>
+        <div style="height:1px;background:var(--rim);margin:4px 0"></div>
+
+        <div style="padding:10px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div><p style="font-size:13px;font-weight:600;color:var(--title)">Public status page</p><p style="font-size:11px;color:var(--ghost)">Let customers check incident status at a public URL.</p></div>
+            <label class="toggle"><input type="checkbox" id="ws-status-toggle" ${ws.statusPageEnabled?'checked':''} /><span class="toggle-track"></span></label>
+          </div>
+          <div class="form-group" style="margin-top:8px"><label class="form-label">Status page slug</label><input class="input" id="ws-slug" value="${this.esc(ws.slug||'')}" placeholder="acme-ai" /></div>
+        </div>
+        <div style="height:1px;background:var(--rim)"></div>
+
+        <div style="padding:10px 0">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div><p style="font-size:13px;font-weight:600;color:var(--title)">Slack integration</p><p style="font-size:11px;color:var(--ghost)">Route incident alerts and updates to a Slack channel.</p></div>
+            <span style="font-size:12px;color:${ws.slackTeamId?'var(--resolve)':'var(--ghost)'}">${slack}</span>
+          </div>
+          ${ws.slackTeamId ? `<div class="form-group" style="margin-top:8px"><label class="form-label">Incident channel</label><input class="input" id="ws-slack-ch" value="${this.esc(ws.slackChannelId||'')}" placeholder="C0123456789" /></div>` : ''}
+        </div>
+        <div style="height:1px;background:var(--rim)"></div>
+
+        <div style="padding:10px 0${!this._featureAllowed('compliance')?' ;opacity:0.4;pointer-events:none':''}">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div><p style="font-size:13px;font-weight:600;color:var(--title)">Compliance mode${this._planBadge('compliance','Pro')}</p><p style="font-size:11px;color:var(--ghost)">Prevent incident deletion and keep historical records immutable.</p></div>
+            <label class="toggle"><input type="checkbox" id="ws-compliance-toggle" ${ws.complianceMode?'checked':''} ${compLocked||!this._featureAllowed('compliance')?'disabled':''} /><span class="toggle-track"></span></label>
+          </div>
+          ${compLocked ? '<p style="font-size:10px;color:var(--warning);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-top:4px">🛡 Locked — cannot be disabled</p>' : ''}
+        </div>
+        <div style="height:1px;background:var(--rim)"></div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px">
+          <span style="font-size:12px;color:var(--ghost)" id="ws-general-status">Settings are up to date.</span>
+          <div style="display:flex;align-items:center;gap:8px"><span id="ws-general-msg" class="form-msg"></span><button class="btn btn-primary" onclick="app.saveWsGeneral()">Save changes</button></div>
+        </div>
       </div>`;
   },
   async saveWsGeneral() {
-    const name = $('#ws-name-input')?.value?.trim();
-    if (!name) return;
-    await window.trustloop.workspaceUpdate({ name });
-    const el = $('#ws-general-msg'); if (el) { el.textContent = '✓ Saved'; setTimeout(() => el.textContent = '', 2000); }
+    const data = {
+      name: $('#ws-name-input')?.value?.trim() || undefined,
+      slug: $('#ws-slug')?.value?.trim() || undefined,
+      statusPageEnabled: $('#ws-status-toggle')?.checked,
+      slackChannelId: $('#ws-slack-ch')?.value?.trim() || null,
+      complianceMode: $('#ws-compliance-toggle')?.checked,
+    };
+    await window.trustloop.workspaceUpdate(data);
+    const el = $('#ws-general-msg'); if (el) { el.textContent = '✓ Settings saved.'; setTimeout(() => el.textContent = '', 3000); }
   },
 
   async loadWsOverview() {
@@ -826,8 +895,26 @@ const app = {
       <span class="settings-value"><span class="badge badge-sm">${i.role}</span> · Expires ${this.fmtDate(i.expiresAt)}</span>
     </div>`).join('') : '<p class="muted">No pending invites.</p>';
     $('#ws-team-content').innerHTML = `<p class="page-kicker">Workspace</p>
-      <div class="settings-card"><h3>Team management</h3><p class="muted" style="margin-bottom:12px">Invite teammates, assign roles, and remove members.</p>${members}</div>
-      <div class="settings-card"><h3>Pending Invites</h3>${invites}</div>`;
+      <div class="settings-card"><h3>Team management</h3><p class="muted" style="margin-bottom:10px">Invite teammates, assign roles, and remove members without leaving the workspace context.</p>${members}</div>
+      <div class="settings-card"><h3>Invite a teammate</h3>
+        <div style="display:grid;grid-template-columns:1fr 140px auto;gap:8px;align-items:flex-end">
+          <div class="form-group" style="margin:0"><label class="form-label">Email</label><input class="input" id="invite-email" type="email" placeholder="teammate@company.com" /></div>
+          <div class="form-group" style="margin:0"><label class="form-label">Role</label><select class="input" id="invite-role"><option>RESPONDER</option><option>MANAGER</option><option>VIEWER</option></select></div>
+          <button class="btn btn-primary" onclick="app.sendInvite()">Send invite</button>
+        </div>
+        <span id="invite-msg" class="form-msg" style="display:block;margin-top:6px"></span>
+      </div>
+      <div class="settings-card"><h3>Pending invites</h3>${invites}</div>`;
+  },
+
+  async sendInvite() {
+    const email = $('#invite-email')?.value?.trim();
+    const role = $('#invite-role')?.value || 'RESPONDER';
+    if (!email) return;
+    await window.trustloop.inviteTeamMember({ email, role });
+    const el = $('#invite-msg'); if (el) { el.textContent = '✓ Invite sent to ' + email; setTimeout(() => el.textContent = '', 3000); }
+    $('#invite-email').value = '';
+    this.loadWsTeam();
   },
 
   async loadWsBilling() {
@@ -835,95 +922,291 @@ const app = {
     const ws = await window.trustloop.workspaceBilling();
     if (!ws) return;
     const b = ws.billing;
-    const plan = (ws.planTier||'starter').toUpperCase();
-    const status = b?.status || 'No subscription';
-    const trial = ws.trialEndsAt ? `Ends ${this.fmtDate(ws.trialEndsAt)}` : '—';
-    const usage = ws.usage || {};
-    const quota = ws.quota || {};
+    const plan = (ws.planTier||'starter');
+    const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+    const status = b?.status || 'Pending';
+    const statusLabel = status.replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());
+    const fmtMoney = (c,cur) => typeof c==='number' ? `${(c/100).toFixed(0)} ${(cur||'USD').toUpperCase()}` : 'N/A';
+    const fmtDt = v => v ? new Date(v).toLocaleString('en-US') : 'N/A';
+    const fmtD = v => v ? new Date(v).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'N/A';
+
     const usageBar = (label, used, max) => {
-      const pct = max > 0 ? Math.min(100, (used/max)*100) : 0;
-      return `<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--subtext);margin-bottom:4px"><span>${label}</span><span>${used||0} / ${max||'∞'}</span></div><div class="analytics-bar-track"><div class="analytics-bar-fill" style="width:${pct}%;background:var(--signal)"></div></div></div>`;
+      const pct = max > 0 ? Math.min(100, Math.round((used/max)*100)) : 0;
+      const color = pct >= 90 ? 'var(--danger)' : pct >= 70 ? 'var(--warning)' : 'var(--resolve)';
+      return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--body);margin-bottom:3px"><span>${label}</span><span style="color:var(--ghost)">${used||0} / ${max||'∞'}</span></div><div style="height:6px;border-radius:3px;background:var(--surface);overflow:hidden"><div style="height:100%;border-radius:3px;width:${pct}%;background:${color};transition:width 0.6s ease"></div></div></div>`;
     };
+
+    const isCanceled = !!b?.canceledAt;
+
     $('#ws-billing-content').innerHTML = `<p class="page-kicker">Workspace</p>
-      <div class="settings-card"><h3>Billing</h3>
-        ${this.row('Plan', plan)}${this.row('Status', status)}${this.row('Trial', trial)}
-        ${b ? this.row('Period', this.fmtDate(b.currentPeriodStart) + ' → ' + this.fmtDate(b.currentPeriodEnd)) : ''}
-        ${b?.lastPaymentAmount ? this.row('Last payment', `${(b.lastPaymentAmount/100).toFixed(2)} ${b.lastPaymentCurrency||'USD'}`) : ''}
-        ${b?.canceledAt ? this.row('Canceled', this.fmtDate(b.canceledAt) + (b.cancelReason ? ` (${b.cancelReason})` : '')) : ''}
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+        <div class="stat-card"><p style="font-size:12px;color:var(--ghost)">Current plan</p><p class="stat-value" style="font-size:22px;margin-top:4px">${planLabel}</p></div>
+        <div class="stat-card"><p style="font-size:12px;color:var(--ghost)">Last payment</p><p class="stat-value" style="font-size:22px;margin-top:4px">${fmtMoney(b?.lastPaymentAmount,b?.lastPaymentCurrency)}</p><p style="font-size:11px;color:var(--subtext);margin-top:2px">${fmtDt(b?.lastPaymentAt)}</p></div>
+        <div class="stat-card"><p style="font-size:12px;color:var(--ghost)">Renewal window</p><p class="stat-value" style="font-size:22px;margin-top:4px">${fmtD(b?.currentPeriodEnd)}</p><p style="font-size:11px;color:var(--subtext);margin-top:2px">Started ${fmtD(b?.currentPeriodStart)}</p></div>
+        <div class="stat-card"><p style="font-size:12px;color:var(--ghost)">Status</p><p class="stat-value" style="font-size:22px;margin-top:4px;color:${status==='ACTIVE'?'var(--resolve)':'var(--subtext)'}">${statusLabel}</p></div>
       </div>
-      <div class="settings-card"><h3>Today's usage</h3>
-        ${usageBar('Incidents created', usage.incidentsCreated, quota.incidentsPerDay)}
-        ${usageBar('Triage runs', usage.triageRuns, quota.triageRunsPerDay)}
-        ${usageBar('Customer updates', usage.customerUpdates, quota.customerUpdatesPerDay)}
-        ${usageBar('Reminder emails', usage.reminderEmailsSent, quota.reminderEmailsPerDay)}
+
+      <div class="settings-card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px">
+          <div style="flex:1;min-width:0"><h3 style="margin:0 0 4px">Plan</h3><p style="font-size:12px;color:var(--subtext);margin:0">To upgrade, downgrade, or manage your subscription, you'll be taken to the web app where secure payment is handled.</p></div>
+          <button class="btn btn-primary btn-sm" style="flex-shrink:0;white-space:nowrap" onclick="app.openBillingWeb()">Upgrade / Change plan →</button>
+        </div>
+        ${ws.trialEndsAt ? `<p style="font-size:12px;color:var(--warning);margin-top:6px">Trial ends ${fmtD(ws.trialEndsAt)}</p>` : ''}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="settings-card">
+          <h3>Lifecycle</h3>
+          <div style="font-size:12px;color:var(--subtext);margin-bottom:6px">Current period</div>
+          <div style="font-size:13px;color:var(--body);margin-bottom:8px">${fmtD(b?.currentPeriodStart)} – ${fmtD(b?.currentPeriodEnd)}</div>
+          ${isCanceled ? `<div style="font-size:12px;color:var(--subtext);margin-bottom:4px">Cancellation</div><div style="font-size:13px;color:var(--body)">${fmtD(b?.canceledAt)}</div><p style="font-size:11px;color:var(--ghost);margin-top:2px">${b?.cancelReason==='user_requested'?'Plan stays active until end of billing period.':b?.cancelReason||''}</p>` : ''}
+          ${b?.lastInvoiceUrl ? `<a style="font-size:12px;color:var(--signal);cursor:pointer;margin-top:8px;display:inline-block" onclick="window.trustloop.openExternal('${b.lastInvoiceUrl}')">View latest invoice ↗</a>` : ''}
+          ${b?.paymentFailedAt ? `<p style="font-size:12px;color:var(--danger);margin-top:6px">Payment failure detected at ${fmtDt(b.paymentFailedAt)}</p>` : ''}
+        </div>
+        <div class="settings-card">
+          <h3>Today's usage</h3>
+          ${usageBar('Incidents', ws.usage?.incidentsCreated, ws.quota?.incidentsPerDay)}
+          ${usageBar('Triage runs', ws.usage?.triageRuns, ws.quota?.triageRunsPerDay)}
+          ${usageBar('Customer updates', ws.usage?.customerUpdates, ws.quota?.customerUpdatesPerDay)}
+          ${usageBar('Reminder emails', ws.usage?.reminderEmailsSent, ws.quota?.reminderEmailsPerDay)}
+        </div>
       </div>`;
   },
+
+  openBillingWeb() {
+    if (window.trustloop) window.trustloop.openExternal(window.location.origin + '/workspace/billing');
+  },
+
 
   async loadIntAi() {
     if (!window.trustloop) return;
     const data = await window.trustloop.integrationsAi();
     if (!data) return;
-    const hc = { HEALTHY:'#22c55e', UNHEALTHY:'#ef4444', UNKNOWN:'var(--ghost)' };
-    const keys = data.keys.length ? data.keys.map(k => `<div class="settings-row">
-      <span class="settings-label"><strong>${k.provider}</strong> <span style="color:var(--ghost)">···${k.keyLast4||'????'}</span></span>
-      <span class="settings-value"><span style="color:${hc[k.healthStatus]||'var(--ghost)'}">● ${k.healthStatus||'UNKNOWN'}</span>${k.lastVerifiedAt ? ' · Verified ' + this.fmtDate(k.lastVerifiedAt) : ''}</span>
-    </div>`).join('') : '<p class="muted">No AI keys configured. Bring your own keys for OpenAI, Gemini, and Anthropic.</p>';
-    const wf = data.workflows.length ? data.workflows.map(w => `<div class="settings-row"><span class="settings-label">${w.workflowType}</span><span class="settings-value">${w.provider} / ${w.model}</span></div>`).join('') : '<p class="muted">No workflow mappings configured.</p>';
+    const providers = ['OPENAI','GEMINI','ANTHROPIC'];
+    const placeholders = { OPENAI:'sk-...', GEMINI:'AIza...', ANTHROPIC:'sk-ant-...' };
+    const keyMap = {}; (data.keys||[]).forEach(k => keyMap[k.provider] = k);
+    const cards = providers.map(p => {
+      const k = keyMap[p];
+      const healthy = k?.healthStatus === 'OK' || k?.healthStatus === 'HEALTHY';
+      return `<div class="settings-card" style="padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <strong style="font-size:13px;color:var(--title)">${p}</strong>
+          ${k ? `<span class="badge badge-sm" style="border-color:${healthy?'rgba(22,163,74,0.24)':'rgba(217,119,6,0.24)'};background:${healthy?'rgba(22,163,74,0.08)':'rgba(217,119,6,0.08)'};color:${healthy?'var(--resolve)':'var(--warning)'}">${healthy?'Healthy':k.healthStatus||'UNKNOWN'}</span>` : ''}
+        </div>
+        ${k ? `<p style="font-size:12px;color:var(--subtext)">Ends in <span style="font-family:monospace;color:var(--body)">${k.keyLast4||'????'}</span></p>${k.lastVerifiedAt ? `<p style="font-size:10px;color:var(--ghost)">Verified ${this.fmtDate(k.lastVerifiedAt)}</p>` : ''}` : '<p style="font-size:12px;color:var(--ghost)">No key configured</p>'}
+        <input class="input" id="ai-key-${p}" type="password" placeholder="${placeholders[p]||'API key'}" style="margin-top:8px" />
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="app.saveAiKey('${p}')">Save Key</button>
+          <button class="btn btn-ghost btn-sm" style="flex:1" onclick="app.testAiKey('${p}')">Test</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    const wfTypes = ['INCIDENT_TRIAGE','CUSTOMER_UPDATE'];
+    const wfDescs = { INCIDENT_TRIAGE:'Used when AI triage is triggered on an incident.', CUSTOMER_UPDATE:'Used when drafting customer-facing updates.' };
+    const wfMap = {}; (data.workflows||[]).forEach(w => wfMap[w.workflowType] = w);
+    const wfRows = wfTypes.map(wt => {
+      const w = wfMap[wt] || { provider:'OPENAI', model:'gpt-4o-mini' };
+      const opts = providers.map(p => `<option value="${p}"${w.provider===p?' selected':''}>${p}</option>`).join('');
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--rim)">
+        <div style="flex:1;min-width:0"><p style="font-size:13px;color:var(--body);font-weight:500">${wt}</p><p style="font-size:11px;color:var(--ghost)">${wfDescs[wt]||''}</p></div>
+        <select class="input" id="wf-provider-${wt}" style="width:120px">${opts}</select>
+        <input class="input" id="wf-model-${wt}" value="${this.esc(w.model)}" placeholder="Model ID" style="width:140px" />
+        <button class="btn btn-primary btn-sm" onclick="app.saveWorkflow('${wt}')">Save</button>
+      </div>`;
+    }).join('');
+
     $('#int-ai-content').innerHTML = `<p class="page-kicker">Integrations</p>
-      <div class="settings-card"><h3>AI provider keys</h3><p class="muted" style="margin-bottom:12px">Bring your own keys for OpenAI, Gemini, and Anthropic with explicit workflow mapping.</p>${keys}</div>
-      <div class="settings-card"><h3>Workflow settings</h3>${wf}</div>`;
+      <div style="margin-bottom:12px"><h2 class="section-title" style="margin-bottom:2px">AI provider keys</h2><p class="section-desc" style="margin:0 0 10px">Keys are encrypted at rest, never shown in full after save, and only used server-side for AI workflows.</p>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${cards}</div>
+      </div>
+      <span id="ai-msg" class="form-msg" style="display:block;margin-bottom:8px"></span>
+      <div><h2 class="section-title" style="margin-bottom:2px">Workflow routing</h2><div class="settings-card">${wfRows}</div></div>`;
+  },
+
+  async saveAiKey(provider) {
+    const key = $(`#ai-key-${provider}`)?.value?.trim();
+    if (!key) return;
+    await window.trustloop.saveAiKey({ provider, apiKey: key });
+    $(`#ai-key-${provider}`).value = '';
+    const el = $('#ai-msg'); if (el) { el.textContent = `✓ ${provider} key saved securely.`; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
+    this.loadIntAi();
+  },
+
+  async testAiKey(provider) {
+    const key = $(`#ai-key-${provider}`)?.value?.trim();
+    if (!key) return;
+    const r = await window.trustloop.testAiKey({ provider, apiKey: key });
+    const el = $('#ai-msg');
+    if (el) { el.textContent = r?.ok ? `✓ ${provider} key is valid.` : `✗ ${provider} key test failed.`; el.style.color = r?.ok ? 'var(--resolve)' : 'var(--danger)'; setTimeout(() => el.textContent = '', 3000); }
+  },
+
+  async saveWorkflow(wt) {
+    const provider = $(`#wf-provider-${wt}`)?.value;
+    const model = $(`#wf-model-${wt}`)?.value?.trim();
+    if (!provider || !model) return;
+    await window.trustloop.saveWorkflow({ workflowType: wt, provider, model });
+    const el = $('#ai-msg'); if (el) { el.textContent = `✓ ${wt} routing saved.`; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
   },
 
   async loadIntWebhooks() {
     if (!window.trustloop) return;
     const hooks = await window.trustloop.integrationsWebhooks();
-    if (!hooks?.length) { $('#int-webhooks-content').innerHTML = `<p class="page-kicker">Integrations</p><div class="settings-card"><h3>Webhook integrations</h3><p class="muted">Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.</p></div>`; return; }
-    const rows = hooks.map(h => `<div class="settings-row">
-      <span class="settings-label"><strong>${this.esc(h.type)}</strong></span>
-      <span class="settings-value">${h.isActive ? '<span style="color:#22c55e">● Active</span>' : '<span style="color:var(--ghost)">○ Inactive</span>'} · ${this.fmtDate(h.createdAt)}</span>
-    </div>`).join('');
+    const types = ['DATADOG','PAGERDUTY','SENTRY','GENERIC','LANGFUSE','HELICONE','ARIZE_PHOENIX','BRAINTRUST'];
+    const meta = { DATADOG:{label:'Datadog',color:'#632CA6',desc:'Forward monitors and alerts into TrustLoop incidents.'}, PAGERDUTY:{label:'PagerDuty',color:'#06AC38',desc:'Route PagerDuty on-call events to your incident queue.'}, SENTRY:{label:'Sentry',color:'#FB4226',desc:'Capture Sentry issue alerts as AI incidents.'}, GENERIC:{label:'Custom Webhook',color:'#6366f1',desc:'Accept signed payloads from any source.'}, LANGFUSE:{label:'Langfuse',color:'#8b5cf6',desc:'Ingest LLM observability events from Langfuse.'}, HELICONE:{label:'Helicone',color:'#06b6d4',desc:'Stream Helicone request logs into incidents.'}, ARIZE_PHOENIX:{label:'Arize Phoenix',color:'#f97316',desc:'Connect Arize Phoenix model monitoring.'}, BRAINTRUST:{label:'Braintrust',color:'#eab308',desc:'Pipe Braintrust eval failures into your queue.'} };
+    const hookMap = {}; (hooks||[]).forEach(h => hookMap[h.type] = h);
+    const rows = types.map(t => {
+      const h = hookMap[t]; const m = meta[t]; const active = h?.isActive;
+      return `<div class="settings-row" style="flex-direction:column;align-items:stretch;gap:0;padding:0;border-bottom:1px solid var(--rim)">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer" onclick="this.parentElement.classList.toggle('wh-open')">
+          <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${m.color}18;color:${m.color};font-size:12px;font-weight:700;flex-shrink:0">${m.label[0]}</div>
+          <div style="flex:1;min-width:0"><span style="font-size:13px;font-weight:500;color:var(--title)">${m.label}</span><p style="font-size:11px;color:var(--ghost);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.desc}</p></div>
+          ${h ? `<span style="font-size:10px;font-family:monospace;color:var(--ghost)">••••${h.keyLast4||''}</span>` : ''}
+          <span style="width:8px;height:8px;border-radius:50%;background:${active?'var(--resolve)':'var(--ghost)'};opacity:${active?1:0.3};flex-shrink:0"></span>
+          <span style="font-size:11px;color:var(--ghost)">▾</span>
+        </div>
+        <div class="wh-detail" style="display:none;padding:6px 10px 10px;border-top:1px solid var(--rim);background:var(--void)">
+          <div style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;background:var(--surface);border:1px solid var(--rim);margin-bottom:6px">
+            <span style="font-size:10px;color:var(--ghost);text-transform:uppercase;font-weight:600">URL</span>
+            <code style="font-size:11px;color:var(--signal);flex:1;overflow:hidden;text-overflow:ellipsis">/api/webhooks/${t.toLowerCase().replace('_','-')}</code>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input class="input" id="wh-secret-${t}" placeholder="${h?'Enter new signing secret…':'Paste signing secret to activate'}" style="flex:1" />
+            <button class="btn btn-primary btn-sm" onclick="app.saveWebhookSecret('${t}')">Save</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${h ? `<button class="btn btn-ghost btn-sm" onclick="app.rotateWebhookSecret('${t}')">↻ Rotate secret</button>` : ''}
+            <button class="btn btn-sm ${active?'btn-ghost':'btn-primary'}" onclick="app.toggleWebhook('${t}',${!active})" style="${active?'color:var(--danger)':''}">${active?'Disable':'Enable'}</button>
+            ${h ? `<span style="flex:1"></span><span style="font-size:10px;color:var(--ghost)">Updated ${this.fmtDate(h.updatedAt||h.createdAt)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
     $('#int-webhooks-content').innerHTML = `<p class="page-kicker">Integrations</p>
-      <div class="settings-card"><h3>Webhook integrations</h3><p class="muted" style="margin-bottom:12px">Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.</p>${rows}</div>`;
+      <div style="margin-bottom:4px"><h2 class="section-title" style="margin-bottom:2px">Webhook integrations</h2><p class="section-desc" style="margin:0 0 10px">Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.</p></div>
+      <span id="wh-msg" class="form-msg" style="display:block;margin-bottom:6px"></span>
+      <div class="settings-card" style="padding:0;overflow:hidden">${rows}</div>`;
+    // Wire accordion
+    document.querySelectorAll('.wh-open .wh-detail, .wh-detail').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('#int-webhooks-content .settings-row').forEach(row => {
+      if (row.classList.contains('wh-open')) row.querySelector('.wh-detail').style.display = 'block';
+    });
+  },
+
+  async saveWebhookSecret(type) {
+    const secret = $(`#wh-secret-${type}`)?.value?.trim();
+    if (!secret) return;
+    await window.trustloop.saveWebhookSecret({ type, secret });
+    $(`#wh-secret-${type}`).value = '';
+    const el = $('#wh-msg'); if (el) { el.textContent = `✓ ${type} secret saved.`; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
+    this.loadIntWebhooks();
+  },
+
+  async rotateWebhookSecret(type) {
+    await window.trustloop.rotateWebhookSecret(type);
+    const el = $('#wh-msg'); if (el) { el.textContent = `✓ ${type} secret rotated.`; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
+    this.loadIntWebhooks();
+  },
+
+  async toggleWebhook(type, isActive) {
+    await window.trustloop.toggleWebhook({ type, isActive });
+    const el = $('#wh-msg'); if (el) { el.textContent = `✓ ${type} ${isActive ? 'enabled' : 'disabled'}.`; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
+    this.loadIntWebhooks();
   },
 
   async loadIntOnCall() {
     if (!window.trustloop) return;
+    const badge = $('#oncall-plan-badge'); if (badge) badge.innerHTML = this._planBadge('on_call','Pro');
     const data = await window.trustloop.integrationsOnCall();
     if (!data) { $('#int-oncall-content').innerHTML = '<div class="settings-card"><p class="muted">Unable to load on-call data.</p></div>'; return; }
-    const members = data.members?.length ? data.members.map(m => `<div class="settings-row">
-      <span class="settings-label">${this.esc(m.name||m.email)} ${m.phone ? `<span style="color:var(--ghost)">${this.esc(m.phone)}</span>` : '<span style="color:var(--warning)">No phone</span>'}</span>
-      <span class="settings-value"><span class="badge badge-sm">${m.role}</span></span>
-    </div>`).join('') : '<p class="muted">No team members.</p>';
+    if (!data.onCallEnabled) {
+      $('#int-oncall-content').innerHTML = `<p class="page-kicker">Integrations</p>
+        <div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">On-call rotation</h2><p class="section-desc">Review the current escalation schedule for P1 incidents and verify who will be paged next.</p></div>
+        <div class="settings-card"><p class="muted">On-call rotation is disabled. Enable it in the Quotas settings page.</p></div>`;
+      return;
+    }
+    const stats = `<div style="display:flex;gap:20px;font-size:12px;margin-bottom:12px">
+      <div><p style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ghost);font-weight:600">Rotation interval</p><p style="color:var(--body)">${data.intervalHours||'—'}h</p></div>
+      <div><p style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ghost);font-weight:600">Anchor</p><p style="color:var(--body)">${data.anchorAt ? new Date(data.anchorAt).toLocaleString() : '—'}</p></div>
+      <div><p style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ghost);font-weight:600">Pool size</p><p style="color:var(--body)">${data.members?.length||0}</p></div>
+    </div>`;
+    const rows = (data.members||[]).map(m => `<tr>
+      <td style="font-weight:500">${this.esc(m.name||m.email)}</td>
+      <td style="color:var(--subtext)">${this.esc(m.email)}</td>
+      <td>${m.phone ? '<span style="color:var(--resolve)">📞</span>' : '<span style="color:var(--ghost)">—</span>'}</td>
+      <td>${m.isOnCall ? '<span style="color:var(--resolve);font-size:12px;font-weight:500">✓ On call</span>' : '<span style="font-size:12px;color:var(--ghost)">Off duty</span>'}</td>
+    </tr>`).join('');
+    const oncallHtml = `<div class="settings-card">${stats}
+        <div class="table-shell"><table class="data-table"><thead><tr><th>Member</th><th>Email</th><th>Phone</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table></div>
+      </div>`;
     $('#int-oncall-content').innerHTML = `<p class="page-kicker">Integrations</p>
-      <div class="settings-card"><h3>On-call rotation</h3>
-        <p class="muted" style="margin-bottom:12px">Review the current escalation schedule for P1 incidents and verify who will be paged next.</p>
-        ${this.row('On-call enabled', data.onCallEnabled ? 'Yes' : 'No')}
-      </div>
-      <div class="settings-card"><h3>Escalation roster</h3>${members}</div>`;
+      <div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">On-call rotation</h2><p class="section-desc">Review the current escalation schedule for P1 incidents and verify who will be paged next.</p></div>
+      ${this._gateWrap('on_call','Pro',oncallHtml)}`;
   },
 
   async loadSecApiKeys() {
     if (!window.trustloop) return;
+    const badge = $('#apikeys-plan-badge'); if (badge) badge.innerHTML = this._planBadge('api_keys','Pro');
     const keys = await window.trustloop.securityApiKeys();
-    if (!keys?.length) { $('#sec-apikeys-content').innerHTML = `<p class="page-kicker">Security</p><div class="settings-card"><h3>Workspace API keys</h3><p class="muted">No API keys. Issue scoped bearer keys for automation and revoke them when no longer needed.</p></div>`; return; }
-    const rows = keys.map(k => `<div class="settings-row">
-      <span class="settings-label"><strong>${this.esc(k.name||'Unnamed')}</strong> <span style="color:var(--ghost);font-family:monospace;font-size:12px">${this.esc(k.keyPrefix||'')}…</span></span>
-      <span class="settings-value">${k.isActive ? '<span style="color:#22c55e">● Active</span>' : '<span style="color:var(--ghost)">○ Inactive</span>'}${k.lastUsedAt ? ' · Used ' + this.timeAgo(k.lastUsedAt) : ' · Never used'}${k.expiresAt ? ' · Exp ' + this.fmtDate(k.expiresAt) : ''}</span>
-    </div>`).join('');
+    const keyRows = (keys||[]).map(k => {
+      const expired = k.expiresAt && new Date(k.expiresAt).getTime() <= Date.now();
+      const dead = !k.isActive || expired;
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--rim);${dead?'opacity:0.5':''}">
+        <div style="width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:${dead?'var(--surface)':'var(--signal-dim)'};color:${dead?'var(--ghost)':'var(--signal)'};font-size:11px;font-weight:700;flex-shrink:0">🔑</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px;font-weight:500;color:${k.isActive?'var(--title)':'var(--ghost)'};${k.isActive?'':'text-decoration:line-through'}">${this.esc(k.name||'Unnamed')}</span>${!k.isActive?'<span style="font-size:9px;text-transform:uppercase;font-weight:700;color:var(--danger)">Revoked</span>':''}${expired?'<span style="font-size:9px;text-transform:uppercase;font-weight:700;color:var(--warning)">Expired</span>':''}</div>
+          <div style="display:flex;gap:10px;margin-top:2px"><span style="font-size:11px;font-family:monospace;color:var(--ghost)">${this.esc(k.keyPrefix||'')}••••••</span><span style="font-size:10px;color:var(--ghost)">Created ${this.fmtDate(k.createdAt)}</span><span style="font-size:10px;color:var(--ghost)">Used ${k.lastUsedAt?this.fmtDate(k.lastUsedAt):'never'}</span></div>
+        </div>
+        ${k.isActive?`<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="app.revokeApiKey('${k.id}')">Revoke</button>`:''}
+      </div>`;
+    }).join('');
+
+    const apikeyContent = `<span id="apikey-msg" class="form-msg" style="display:block;margin-bottom:6px"></span>
+      <div class="settings-card" style="margin-bottom:10px"><h3>Create new key</h3><p style="font-size:11px;color:var(--ghost);margin-bottom:8px">Choose a name and expiry for this key.</p>
+        <div style="display:grid;grid-template-columns:1fr 160px auto;gap:8px;align-items:flex-end">
+          <div class="form-group" style="margin:0"><label class="form-label">Key name</label><input class="input" id="new-key-name" placeholder="e.g. CI/CD Pipeline" /></div>
+          <div class="form-group" style="margin:0"><label class="form-label">Expiry</label><select class="input" id="new-key-expiry"><option value="30d">30 days</option><option value="90d">90 days</option><option value="1y">1 year</option><option value="never">Never</option></select></div>
+          <button class="btn btn-primary" onclick="app.createApiKey()">🔑 Generate key</button>
+        </div>
+      </div>
+      <div class="settings-card" style="padding:0;overflow:hidden">
+        <div style="padding:8px 10px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--ghost)">Active & revoked keys (${(keys||[]).length})</div>
+        ${keyRows || '<div style="padding:12px;text-align:center"><p class="muted">No API keys yet. Create a scoped key when you need external systems to write into TrustLoop.</p></div>'}
+      </div>`;
     $('#sec-apikeys-content').innerHTML = `<p class="page-kicker">Security</p>
-      <div class="settings-card"><h3>Workspace API keys</h3><p class="muted" style="margin-bottom:12px">Issue scoped bearer keys for automation and revoke them cleanly when no longer needed.</p>${rows}</div>`;
+      <div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">Workspace API keys</h2><p class="section-desc">Issue scoped bearer keys for automation and revoke them cleanly when no longer needed.</p></div>
+      ${this._gateWrap('api_keys','Pro',apikeyContent)}`;
+  },
+
+  async createApiKey() {
+    const name = $('#new-key-name')?.value?.trim();
+    if (!name) return;
+    const expiry = $('#new-key-expiry')?.value || '90d';
+    const r = await window.trustloop.createApiKey({ name, expiryOption: expiry });
+    const el = $('#apikey-msg');
+    if (r?.apiKey) { el.innerHTML = `✓ Key created. <strong>Copy now — it won't be shown again:</strong> <code style="font-size:11px;color:var(--signal);user-select:all">${r.apiKey}</code>`; el.style.color = 'var(--warning)'; }
+    else if (el) { el.textContent = '✓ API key created.'; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 4000); }
+    $('#new-key-name').value = '';
+    this.loadSecApiKeys();
+  },
+
+  async revokeApiKey(id) {
+    await window.trustloop.revokeApiKey(id);
+    const el = $('#apikey-msg'); if (el) { el.textContent = '✓ API key revoked.'; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
+    this.loadSecApiKeys();
   },
 
   async loadSecAudit() {
     if (!window.trustloop) return;
     const data = await window.trustloop.securityAudit();
-    if (!data?.items?.length) { $('#sec-audit-content').innerHTML = `<p class="page-kicker">Security</p><div class="settings-card"><p class="muted">No audit activity yet. Privileged workspace actions will appear here as your team configures TrustLoop.</p></div>`; return; }
+    if (!data?.items?.length) { $('#sec-audit-content').innerHTML = `<p class="page-kicker">Security</p><div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">Audit log</h2><p class="section-desc">Privileged workspace actions will appear here as your team configures TrustLoop.</p></div><div class="settings-card"><p class="muted">No audit activity yet.</p></div>`; return; }
     const rows = data.items.map((e,i) => `<tr${i%2===1?' style="background:rgba(10,11,13,0.5)"':''}>
-      <td style="white-space:nowrap;color:var(--subtext);font-size:12px">${new Date(e.createdAt).toLocaleString()}</td>
+      <td style="white-space:nowrap;color:var(--subtext);font-size:11px">${new Date(e.createdAt).toLocaleString()}</td>
       <td>${this.esc(e.actorUser?.name || e.actorApiKey?.name || 'System')}</td>
       <td><span class="badge badge-sm">${this.esc(e.action)}</span></td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;color:var(--subtext)">${this.esc(e.summary||'')}</td>
-      <td style="font-family:monospace;font-size:11px;color:var(--subtext)">${e.ipAddress||'—'}</td>
+      <td style="font-family:monospace;font-size:10px;color:var(--subtext)">${e.ipAddress||'—'}</td>
     </tr>`).join('');
     $('#sec-audit-content').innerHTML = `<p class="page-kicker">Security</p>
       <div class="table-shell" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Summary</th><th>IP</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -931,16 +1214,39 @@ const app = {
 
   async loadSecSso() {
     if (!window.trustloop) return;
+    const badge = $('#sso-plan-badge'); if (badge) badge.innerHTML = this._planBadge('saml','Enterprise');
     const data = await window.trustloop.securitySso();
-    if (!data) { $('#sec-sso-content').innerHTML = `<p class="page-kicker">Security</p><div class="settings-card"><h3>Enterprise single sign-on</h3><p class="muted">Connect your identity provider to enforce SAML-based authentication for all workspace members.</p>${this.row('SAML SSO', 'Not configured')}</div>`; return; }
-    $('#sec-sso-content').innerHTML = `<p class="page-kicker">Security</p>
-      <div class="settings-card"><h3>Enterprise single sign-on</h3>
-        <p class="muted" style="margin-bottom:12px">Connect your identity provider to enforce SAML-based authentication for all workspace members.</p>
-        ${this.row('Status', data.samlEnabled ? 'Enabled' : 'Disabled')}
-        ${this.row('Metadata URL', data.samlMetadataUrl || '—')}
-        ${this.row('Organization ID', data.samlOrganizationId || '—')}
-        ${this.row('Connection ID', data.samlConnectionId || '—')}
+    const d = data || {};
+    const configured = d.samlEnabled && d.samlMetadataUrl && d.samlConnectionId;
+    const ssoCard = `<div class="settings-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="width:10px;height:10px;border-radius:50%;background:${configured?'var(--resolve)':'var(--ghost)'};opacity:${configured?1:0.4}"></span>
+          <span style="font-size:13px;font-weight:500;color:var(--title)">${configured?'SAML SSO is active':'SAML SSO is not configured'}</span>
+        </div>
+        <div class="form-group"><label class="form-label">IdP metadata URL</label><input class="input" id="sso-metadata" value="${this.esc(d.samlMetadataUrl||'')}" placeholder="https://idp.example.com/app/metadata" /><p style="font-size:10px;color:var(--ghost);margin-top:2px">The SAML 2.0 metadata endpoint from your identity provider (Okta, Azure AD, OneLogin, etc.)</p></div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:8px 0">
+          <input type="checkbox" id="sso-enabled" ${d.samlEnabled?'checked':''} style="width:16px;height:16px" />
+          <span style="font-size:13px;color:var(--body)">Enable SAML SSO for this workspace</span>
+        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding-top:10px;border-top:1px solid var(--rim);margin-top:8px">
+          <div><p style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ghost);font-weight:600">Organization ID</p><p style="font-size:12px;font-family:monospace;color:var(--subtext)">${d.samlOrganizationId||'—'}</p></div>
+          <div><p style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ghost);font-weight:600">Connection ID</p><p style="font-size:12px;font-family:monospace;color:var(--subtext)">${d.samlConnectionId||'—'}</p></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--rim);margin-top:10px">
+          <span style="font-size:12px;color:var(--ghost)" id="sso-status">Settings are up to date.</span>
+          <div style="display:flex;align-items:center;gap:8px"><span id="sso-msg" class="form-msg"></span><button class="btn btn-primary" onclick="app.saveSso()">Save SAML settings</button></div>
+        </div>
       </div>`;
+    $('#sec-sso-content').innerHTML = `<p class="page-kicker">Security</p>
+      <div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">Enterprise single sign-on</h2><p class="section-desc">Connect your identity provider to enforce SAML-based authentication for all workspace members.</p></div>
+      ${this._gateWrap('saml','Enterprise',ssoCard)}`;
+  },
+
+  async saveSso() {
+    const metadataUrl = $('#sso-metadata')?.value?.trim() || null;
+    const enabled = $('#sso-enabled')?.checked || false;
+    await window.trustloop.saveSso({ samlEnabled: enabled, samlMetadataUrl: metadataUrl });
+    const el = $('#sso-msg'); if (el) { el.textContent = '✓ SAML settings saved.'; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
   },
 
   timeAgo(dateStr) {

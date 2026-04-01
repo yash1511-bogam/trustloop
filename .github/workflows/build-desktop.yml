@@ -1,0 +1,82 @@
+name: Build Desktop (macOS)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "trustloop-desktop/**"
+      - "prisma/schema.prisma"
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "10.33.0"
+
+jobs:
+  build-desktop:
+    name: Build macOS Desktop (arm64)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v5
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      # ── Root deps (Prisma, shared libs) ──
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+        run: pnpm run prisma:generate
+
+      # ── Desktop deps ──
+      - name: Install desktop dependencies
+        working-directory: trustloop-desktop
+        run: pnpm install --frozen-lockfile
+
+      # ── Validate ──
+      - name: TypeScript compile check
+        working-directory: trustloop-desktop
+        run: pnpm compile
+
+      - name: Validate renderer JS
+        working-directory: trustloop-desktop
+        run: node --check src/renderer/app.js
+
+      # ── Build ──
+      - name: Build desktop app
+        working-directory: trustloop-desktop
+        env:
+          NODE_ENV: production
+        run: pnpm build
+
+      # ── Release ──
+      - name: Get version
+        id: version
+        working-directory: trustloop-desktop
+        run: echo "version=$(node -p 'require(\"./package.json\").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ steps.version.outputs.version }}-${{ github.run_number }}
+          name: TrustLoop Desktop v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})
+          draft: false
+          prerelease: ${{ github.ref != 'refs/heads/main' }}
+          files: |
+            trustloop-desktop/dist/*.dmg
+            trustloop-desktop/dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

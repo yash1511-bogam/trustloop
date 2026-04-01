@@ -1,13 +1,28 @@
 import { ipcMain, shell } from "electron";
+import { createCipheriv, hkdfSync, randomBytes } from "crypto";
 import { prisma } from "./db";
 import { sendOtp, verifyOtp, authenticateSession, getOAuthStartUrl, registerUser, verifyRegisterOtp, AuthUser } from "./auth";
-import { IncidentStatus, IncidentSeverity, IncidentChannel, EventType, Role, AiProvider, WorkflowType } from "@prisma/client";
+import { IncidentStatus, IncidentSeverity, IncidentChannel, EventType, Role } from "@prisma/client";
+
+function encryptSecret(plaintext: string): string {
+  const secret = process.env.KEY_ENCRYPTION_SECRET;
+  if (!secret) throw new Error("KEY_ENCRYPTION_SECRET is required");
+  const key = Buffer.from(hkdfSync("sha256", secret, "trustloop-key-encryption-v1", "aes-256-gcm-key", 32));
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const ct = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  return `${iv.toString("base64")}:${ct.toString("base64")}:${cipher.getAuthTag().toString("base64")}`;
+}
+
+function last4(s: string): string { return s.trim().length <= 4 ? s.trim() : s.trim().slice(-4); }
 
 let currentSession: { token: string; user: AuthUser } | null = null;
 export function getSession() { return currentSession; }
 export function setCurrentSession(s: { token: string; user: AuthUser }) { currentSession = s; }
 
 export function registerIpcHandlers(): void {
+
+  ipcMain.handle("open-external", async (_e, url: string) => shell.openExternal(url));
 
   // ── Auth: same flow as src/app/api/auth/login ──
 
@@ -399,11 +414,17 @@ export function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle("workspace:update", async (_e, data: { name?: string; complianceMode?: boolean; statusPageEnabled?: boolean }) => {
+  ipcMain.handle("workspace:update", async (_e, data: { name?: string; slug?: string; complianceMode?: boolean; statusPageEnabled?: boolean; slackChannelId?: string | null }) => {
     if (!currentSession) return null;
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.slug !== undefined) updateData.slug = data.slug.toLowerCase();
+    if (data.statusPageEnabled !== undefined) updateData.statusPageEnabled = data.statusPageEnabled;
+    if (data.slackChannelId !== undefined) updateData.slackChannelId = data.slackChannelId;
+    if (data.complianceMode !== undefined) updateData.complianceMode = data.complianceMode;
     return prisma.workspace.update({
       where: { id: currentSession.user.workspaceId },
-      data,
+      data: updateData,
       select: { id: true, name: true, slug: true, planTier: true, complianceMode: true, statusPageEnabled: true },
     });
   });
@@ -430,6 +451,17 @@ export function registerIpcHandlers(): void {
       currentUserId: currentSession.user.id,
       canManageRoles: currentSession.user.role === "OWNER",
     };
+  });
+
+  ipcMain.handle("team:invite", async (_e, data: { email: string; role: string }) => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const token = require("crypto").randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 86400000);
+    return prisma.workspaceInvite.create({
+      data: { workspaceId: wid, email: data.email, role: data.role as any, token, expiresAt },
+      select: { id: true, email: true },
+    });
   });
 
   // ── Billing ──
@@ -477,14 +509,77 @@ export function registerIpcHandlers(): void {
     return { keys, workflows };
   });
 
+  ipcMain.handle("ai-keys:save", async (_e, data: { provider: string; apiKey: string }) => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const keyLast4 = last4(data.apiKey);
+    const encrypted = encryptSecret(data.apiKey.trim());
+    await prisma.aiProviderKey.upsert({
+      where: { workspaceId_provider: { workspaceId: wid, provider: data.provider as any } },
+      create: { workspaceId: wid, provider: data.provider as any, encryptedKey: encrypted, keyLast4, isActive: true, healthStatus: "UNKNOWN" },
+      update: { encryptedKey: encrypted, keyLast4, isActive: true, healthStatus: "UNKNOWN" },
+    });
+    return { ok: true };
+  });
+
+  ipcMain.handle("ai-keys:test", async (_e, data: { provider: string; apiKey: string }) => {
+    // Simple validation — key exists and has reasonable length
+    return { ok: data.apiKey && data.apiKey.length > 10 };
+  });
+
+  ipcMain.handle("workflows:save", async (_e, data: { workflowType: string; provider: string; model: string }) => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    await prisma.workflowSetting.upsert({
+      where: { workspaceId_workflowType: { workspaceId: wid, workflowType: data.workflowType as any } },
+      create: { workspaceId: wid, workflowType: data.workflowType as any, provider: data.provider as any, model: data.model },
+      update: { provider: data.provider as any, model: data.model },
+    });
+    return { ok: true };
+  });
+
   // ── Webhooks ──
   ipcMain.handle("integrations:webhooks", async () => {
     if (!currentSession) return null;
     return prisma.workspaceWebhookIntegration.findMany({
       where: { workspaceId: currentSession.user.workspaceId },
-      select: { id: true, type: true, isActive: true, createdAt: true },
+      select: { id: true, type: true, isActive: true, keyLast4: true, createdAt: true, updatedAt: true },
       orderBy: { createdAt: "desc" },
     });
+  });
+
+  ipcMain.handle("webhooks:save-secret", async (_e, data: { type: string; secret: string }) => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const keyLast4 = last4(data.secret);
+    const encrypted = encryptSecret(data.secret);
+    await prisma.workspaceWebhookIntegration.upsert({
+      where: { workspaceId_type: { workspaceId: wid, type: data.type as any } },
+      create: { workspaceId: wid, type: data.type as any, encryptedSecret: encrypted, keyLast4, isActive: true },
+      update: { encryptedSecret: encrypted, keyLast4, isActive: true },
+    });
+    return { ok: true };
+  });
+
+  ipcMain.handle("webhooks:rotate-secret", async (_e, type: string) => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const newSecret = randomBytes(32).toString("hex");
+    const encrypted = encryptSecret(newSecret);
+    await prisma.workspaceWebhookIntegration.update({
+      where: { workspaceId_type: { workspaceId: wid, type: type as any } },
+      data: { encryptedSecret: encrypted, keyLast4: last4(newSecret) },
+    });
+    return { ok: true, secret: newSecret };
+  });
+
+  ipcMain.handle("webhooks:toggle", async (_e, data: { type: string; isActive: boolean }) => {
+    if (!currentSession) return null;
+    await prisma.workspaceWebhookIntegration.update({
+      where: { workspaceId_type: { workspaceId: currentSession.user.workspaceId, type: data.type as any } },
+      data: { isActive: data.isActive },
+    });
+    return { ok: true };
   });
 
   // ── On-Call ──
@@ -638,6 +733,14 @@ export function registerIpcHandlers(): void {
     }).catch(() => null);
   });
 
+  ipcMain.handle("security:sso-save", async (_e, data: { samlEnabled: boolean; samlMetadataUrl: string | null }) => {
+    if (!currentSession) return null;
+    return prisma.workspace.update({
+      where: { id: currentSession.user.workspaceId },
+      data: { samlEnabled: data.samlEnabled, samlMetadataUrl: data.samlMetadataUrl },
+    });
+  });
+
   // ── API Keys ──
   ipcMain.handle("security:apikeys", async () => {
     if (!currentSession) return null;
@@ -645,6 +748,31 @@ export function registerIpcHandlers(): void {
       where: { workspaceId: currentSession.user.workspaceId },
       orderBy: { createdAt: "desc" },
       select: { id: true, name: true, keyPrefix: true, scopes: true, isActive: true, createdAt: true, lastUsedAt: true, expiresAt: true },
+    });
+  });
+
+  ipcMain.handle("apikeys:create", async (_e, data: { name: string; expiryOption: string }) => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const keyPrefix = randomBytes(4).toString("hex");
+    const secret = randomBytes(24).toString("base64url");
+    const rawKey = `sk-tl-${keyPrefix}.${secret}`;
+    const bcrypt = require("bcryptjs") as typeof import("bcryptjs");
+    const keyHash = await bcrypt.hash(rawKey, 12);
+    const expiryMap: Record<string, number> = { "30d": 30, "90d": 90, "1y": 365 };
+    const days = expiryMap[data.expiryOption];
+    const expiresAt = days ? new Date(Date.now() + days * 86400000) : null;
+    await prisma.workspaceApiKey.create({
+      data: { workspaceId: wid, name: data.name, keyPrefix, keyHash, scopes: ["incidents:read", "incidents:write"], isActive: true, expiresAt },
+    });
+    return { apiKey: rawKey };
+  });
+
+  ipcMain.handle("apikeys:revoke", async (_e, id: string) => {
+    if (!currentSession) return null;
+    return prisma.workspaceApiKey.update({
+      where: { id, workspaceId: currentSession.user.workspaceId },
+      data: { isActive: false },
     });
   });
 
