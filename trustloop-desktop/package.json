@@ -59,7 +59,6 @@
     ],
     "dmg": {
       "background": "assets/dmg-background@2x.png",
-      "backgroundColor": "#0a0b0d",
       "icon": "assets/icon.icns",
       "iconSize": 128,
       "window": {
