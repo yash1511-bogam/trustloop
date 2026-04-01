@@ -19,7 +19,7 @@
     "build": "pnpm compile && pnpm exec electron-builder --mac --arm64 && bash scripts/compile-icons.sh",
     "pack": "pnpm compile && pnpm exec electron-builder --mac --arm64 --dir",
     "icons": "bash scripts/generate-icns.sh",
-    "prisma:generate": "pnpm exec prisma generate --schema=../prisma/schema.prisma"
+    "prisma:generate": "pnpm exec prisma generate --schema=../prisma/schema.prisma && node scripts/link-prisma-client.js"
   },
   "build": {
     "appId": "ai.trustloop.desktop",
@@ -86,10 +86,13 @@
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.1021.0",
+    "@prisma/adapter-pg": "7.5.0",
+    "@prisma/client": "7.5.0",
     "chart.js": "^4.5.1",
     "dotenv": "^16.5.0",
     "ioredis": "^5.10.1",
     "pg": "^8.20.0",
+    "prisma": "7.5.0",
     "stytch": "^13.2.3"
   },
   "devDependencies": {

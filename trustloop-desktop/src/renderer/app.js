@@ -29,14 +29,8 @@ const app = {
         if (map[page]) this.navTo(map[page]);
       });
       window.trustloop.onOAuthCallback(() => this.checkSession());
-      window.trustloop.isDev().then(dev => { if (dev) $('#btn-dev-skip').style.display = ''; });
-    }
-  },
 
-  async devSkip() {
-    if (!window.trustloop) return;
-    const user = await window.trustloop.devLogin();
-    if (user) this.enterDashboard(user);
+    }
   },
 
   async checkSession() {

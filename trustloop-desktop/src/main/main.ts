@@ -6,7 +6,7 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config({ path: path.join(repoRoot, ".env") });
 }
 
-import { app, BrowserWindow, Menu, shell, nativeTheme, nativeImage, dialog } from "electron";
+import { app, BrowserWindow, Menu, shell, nativeTheme, nativeImage, dialog, Notification } from "electron";
 import Module from "module";
 
 // ── Resolve shared deps (@prisma/client, etc.) from the parent repo's node_modules ──
@@ -282,12 +282,31 @@ nativeTheme.on("updated", () => {
   if (app.dock) app.dock.setIcon(getDockIcon());
 });
 
+// ── First-launch notification ──
+
+function showFirstLaunchNotification() {
+  const flagPath = path.join(app.getPath("userData"), ".notif-shown");
+  if (fs.existsSync(flagPath)) return;
+  fs.writeFileSync(flagPath, new Date().toISOString(), "utf-8");
+
+  if (!Notification.isSupported()) return;
+  const icon = nativeImage.createFromPath(iconPath("default", "256x256@1x"));
+  const notif = new Notification({
+    title: "TrustLoop",
+    body: "Notifications are allowed. You'll receive incident alerts here.",
+    ...(icon.isEmpty() ? {} : { icon }),
+    silent: false,
+  });
+  notif.show();
+}
+
 // ── Lifecycle ──
 app.whenReady().then(async () => {
   await loadAwsSecrets();
   registerIpcHandlers();
   buildMenu();
   createWindow();
+  showFirstLaunchNotification();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 

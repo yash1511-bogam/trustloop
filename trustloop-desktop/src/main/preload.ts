@@ -6,9 +6,7 @@ contextBridge.exposeInMainWorld("trustloop", {
   verifyOtp: (methodId: string, code: string) => ipcRenderer.invoke("auth:verify-otp", methodId, code),
   getSession: () => ipcRenderer.invoke("auth:session"),
   logout: () => ipcRenderer.invoke("auth:logout"),
-  isDev: () => ipcRenderer.invoke("auth:is-dev"),
   oauthStart: (provider: "google" | "github", intent?: "login" | "register", workspaceName?: string) => ipcRenderer.invoke("auth:oauth-start", provider, intent, workspaceName),
-  devLogin: () => ipcRenderer.invoke("auth:dev-login"),
 
   // Registration
   registerStart: (opts: { name: string; email: string; workspaceName: string }) =>

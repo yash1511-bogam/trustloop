@@ -55,38 +55,12 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle("auth:logout", async () => { currentSession = null; return true; });
 
-  ipcMain.handle("auth:is-dev", () => process.env.NODE_ENV === "development");
-
   ipcMain.handle("auth:oauth-start", async (_e, provider: "google" | "github", intent?: "login" | "register", workspaceName?: string) => {
     const url = await getOAuthStartUrl(provider, intent, workspaceName);
     shell.openExternal(url);
     return true;
   });
 
-  // Dev auto-login: same as src/lib/auth.ts getAuth() dev fallback
-  ipcMain.handle("auth:dev-login", async () => {
-    if (process.env.NODE_ENV !== "development") return null;
-    let user = await prisma.user.findFirst({
-      where: { email: "demo@trustloop.local" },
-      include: { workspace: { select: { name: true } } },
-    });
-    if (!user) {
-      const ws = await prisma.workspace.create({ data: { name: "Dev Workspace", slug: "dev-workspace", planTier: "starter" } });
-      user = await prisma.user.create({
-        data: { workspaceId: ws.id, email: "demo@trustloop.local", name: "Dev User", role: "OWNER", stytchUserId: "dev-stytch-id" },
-        include: { workspace: { select: { name: true } } },
-      }) as any;
-    }
-    currentSession = {
-      token: "dev-session",
-      user: {
-        id: user.id, name: user.name, email: user.email,
-        role: user.role, workspaceId: user.workspaceId,
-        workspaceName: user.workspace.name, stytchUserId: user.stytchUserId,
-      },
-    };
-    return currentSession.user;
-  });
 
   // ── Registration: same flow as src/app/api/auth/register ──
 
