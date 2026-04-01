@@ -1,0 +1,55 @@
+{
+  "name": "TrustLoop",
+  "productName": "TrustLoop",
+  "version": "0.10.0",
+  "description": "TrustLoop — Native macOS Desktop App (Apple Silicon)",
+  "main": "dist/main/main.js",
+  "author": "TrustLoop",
+  "license": "PROPRIETARY",
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "@prisma/engines", "prisma"]
+  },
+  "scripts": {
+    "dev": "pnpm compile && bash scripts/patch-dev-name.sh && NODE_ENV=development pnpm exec electron dist/main/main.js",
+    "compile": "pnpm exec tsc -p tsconfig.main.json",
+    "build": "pnpm compile && pnpm exec electron-builder --mac --arm64 && bash scripts/compile-icons.sh",
+    "pack": "pnpm compile && pnpm exec electron-builder --mac --arm64 --dir",
+    "icons": "bash scripts/generate-icns.sh",
+    "prisma:generate": "pnpm exec prisma generate --schema=../prisma/schema.prisma"
+  },
+  "build": {
+    "appId": "ai.trustloop.desktop",
+    "productName": "TrustLoop",
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["arm64"] },
+        { "target": "zip", "arch": ["arm64"] }
+      ],
+      "category": "public.app-category.developer-tools",
+      "icon": "assets/icon.icns",
+      "darkModeSupport": true,
+      "minimumSystemVersion": "12.0",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "CFBundleIconName": "AppIcon"
+      }
+    },
+    "protocols": [
+      { "name": "TrustLoop OAuth", "schemes": ["trustloop"] }
+    ],
+    "files": ["dist/**/*", "src/renderer/**/*", "assets/**/*"]
+  },
+  "dependencies": {
+    "ioredis": "^5.10.1",
+    "stytch": "^13.2.3",
+    "pg": "^8.20.0",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
+    "typescript": "^5.9.3",
+    "@types/node": "^22.0.0"
+  }
+}

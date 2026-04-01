@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "dist/main",
+    "rootDir": "src/main",
+    "strict": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "baseUrl": "..",
+    "paths": {
+      "@prisma/client": ["node_modules/@prisma/client"],
+      "@prisma/adapter-pg": ["node_modules/@prisma/adapter-pg"],
+      "ioredis": ["node_modules/ioredis"],
+      "stytch": ["node_modules/stytch"],
+      "pg": ["node_modules/pg"]
+    }
+  },
+  "include": ["src/main/**/*.ts"]
+}

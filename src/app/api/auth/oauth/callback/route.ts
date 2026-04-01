@@ -18,6 +18,8 @@ import { ensureWorkspaceMembership } from "@/lib/workspace-membership";
 
 const OAUTH_CONTEXT_COOKIE_NAME = "trustloop_oauth_context";
 const OAUTH_NONCE_COOKIE_NAME = "trustloop_oauth_nonce";
+const DESKTOP_OAUTH_COOKIE = "trustloop_desktop_oauth";
+const DESKTOP_OAUTH_NONCE_COOKIE = "trustloop_desktop_oauth_nonce";
 
 const callbackSchema = z.object({
   token: z.string().min(8),
@@ -33,6 +35,7 @@ const oauthContextSchema = z.object({
   workspaceName: z.string().min(2).max(80).optional(),
   inviteToken: z.string().uuid().optional(),
   inviteCode: z.string().min(1).max(40).optional(),
+  desktop: z.boolean().optional(),
   nonce: z.string().min(16),
 });
 
@@ -53,24 +56,10 @@ function buildRedirect(
 }
 
 function clearOAuthContextCookie(response: NextResponse): void {
-  response.cookies.set({
-    name: OAUTH_CONTEXT_COOKIE_NAME,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    expires: new Date(0),
-    path: "/",
-  });
-  response.cookies.set({
-    name: OAUTH_NONCE_COOKIE_NAME,
-    value: "",
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    expires: new Date(0),
-    path: "/",
-  });
+  const secure = process.env.NODE_ENV === "production";
+  for (const name of [OAUTH_CONTEXT_COOKIE_NAME, OAUTH_NONCE_COOKIE_NAME, DESKTOP_OAUTH_COOKIE, DESKTOP_OAUTH_NONCE_COOKIE]) {
+    response.cookies.set({ name, value: "", httpOnly: true, sameSite: "lax", secure, expires: new Date(0), path: "/" });
+  }
 }
 
 function buildRedirectWithClear(
@@ -83,8 +72,28 @@ function buildRedirectWithClear(
   return response;
 }
 
+async function buildDesktopRedirect(
+  request: NextRequest,
+  authResult: { sessionToken: string; expiresAt: Date; stytchUserId: string },
+): Promise<NextResponse> {
+  // Store session in Redis with a one-time exchange key
+  const exchangeKey = crypto.randomUUID();
+  await redisSetJson(`desktop:oauth-exchange:${exchangeKey}`, {
+    sessionToken: authResult.sessionToken,
+    expiresAt: authResult.expiresAt.toISOString(),
+    stytchUserId: authResult.stytchUserId,
+  }, 5 * 60);
+  const url = appUrl("/desktop-oauth-callback", request);
+  url.searchParams.set("key", exchangeKey);
+  const response = NextResponse.redirect(url);
+  clearOAuthContextCookie(response);
+  return response;
+}
+
 function readOAuthContextCookie(request: NextRequest): z.infer<typeof oauthContextSchema> | null {
-  const raw = request.cookies.get(OAUTH_CONTEXT_COOKIE_NAME)?.value;
+  // Check standard web cookie first, then desktop cookie
+  const raw = request.cookies.get(OAUTH_CONTEXT_COOKIE_NAME)?.value
+    ?? request.cookies.get(DESKTOP_OAUTH_COOKIE)?.value;
   if (!raw) {
     return null;
   }
@@ -115,7 +124,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     return buildRedirectWithClear(request, "/login", { error: "oauth_state_missing" });
   }
 
-  const nonceCookie = request.cookies.get(OAUTH_NONCE_COOKIE_NAME)?.value;
+  const nonceCookie = request.cookies.get(OAUTH_NONCE_COOKIE_NAME)?.value
+    ?? request.cookies.get(DESKTOP_OAUTH_NONCE_COOKIE)?.value;
   if (!nonceCookie) {
     return buildRedirectWithClear(request, "/login", { error: "oauth_state_mismatch" });
   }
@@ -127,6 +137,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const intent = oauthContext?.intent ?? parsed.data.intent ?? "login";
+  const isDesktop = oauthContext?.desktop === true;
   const inviteToken = oauthContext?.inviteToken ?? parsed.data.inviteToken;
   const workspaceName = oauthContext?.workspaceName ?? parsed.data.workspaceName;
 
@@ -177,6 +188,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       recordAuditLog({ workspaceId: existing.workspace.id, actorUserId: existing.id, action: "auth.oauth_login", targetType: "user", targetId: existing.id, summary: `OAuth sign-in for ${email}` }).catch(() => {});
 
       const slug = existing.workspace.slug ?? (await ensureWorkspaceSlug(prisma, existing.workspace.id, existing.workspace.name));
+      if (isDesktop) return buildDesktopRedirect(request, authResult);
       const dashboardUrl = slug
         ? workspaceUrl("/dashboard", slug, existing.role)
         : appUrl("/dashboard", request).toString();
@@ -194,8 +206,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     }
 
     // Validate invite code for new registrations (not workspace invites)
+    // Desktop app users are exempt from invite code requirement
     const inviteCodeValue = oauthContext?.inviteCode;
-    if (!inviteToken) {
+    if (!inviteToken && !isDesktop) {
       if (!inviteCodeValue) {
         return buildRedirectWithClear(request, "/register", {
           email,
@@ -271,6 +284,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         sendGettingStartedGuideEmail({ workspaceId: created.workspace.id, toEmail: created.user.email, workspaceName: created.workspace.name, userName: created.user.name }).catch(() => {});
 
         const dashUrl = created.workspace.slug ? workspaceUrl("/dashboard", created.workspace.slug, created.user.role) : appUrl("/dashboard", request).toString();
+        if (isDesktop) return buildDesktopRedirect(request, authResult);
         const response = NextResponse.redirect(dashUrl);
         setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
         clearOAuthContextCookie(response);
@@ -377,6 +391,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const newDashUrl = newSlug
       ? workspaceUrl("/dashboard", newSlug, created.user.role)
       : appUrl("/dashboard", request).toString();
+    if (isDesktop) return buildDesktopRedirect(request, authResult);
     const response = NextResponse.redirect(newDashUrl);
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
     clearOAuthContextCookie(response);
