@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TrustLoop</title>
   <link rel="stylesheet" href="styles.css">
+  <script src="../../node_modules/chart.js/dist/chart.umd.js"></script>
 </head>
 <body>
 <div id="app">
@@ -240,22 +241,60 @@
           </button>
         </div>
         <div id="view-dashboard" class="view active">
-          <div class="page-head"><h1 class="page-title">Dashboard</h1></div>
+          <div class="page-head">
+            <h1 class="page-title">Dashboard</h1>
+            <div class="page-actions">
+              <button class="btn btn-ghost" onclick="app.navTo('analytics')">Analytics →</button>
+              <button class="btn btn-primary" onclick="app.showCreateIncidentDash()">+ New incident</button>
+            </div>
+          </div>
           <div class="stat-grid" id="stat-grid"></div>
           <div class="chart-row">
-            <div class="chart-card chart-wide"><div class="chart-head"><div><h2 class="chart-title">Incident velocity</h2><p class="chart-desc">Severity breakdown</p></div></div><div class="chart-body" id="velocity-chart"></div></div>
-            <div class="chart-card"><div class="chart-head"><div><h2 class="chart-title">Coverage</h2><p class="chart-desc">Triage & updates</p></div></div><div class="chart-body chart-center" id="coverage-chart"></div></div>
+            <div class="chart-card chart-wide"><div class="chart-head"><div><h2 class="chart-title">Incident velocity</h2><p class="chart-desc">Severity breakdown of your queue</p></div><div class="chart-badge">⚡ Live</div></div><div class="chart-body" id="velocity-chart"></div></div>
+            <div class="chart-card"><div class="chart-head"><div><h2 class="chart-title">Coverage</h2><p class="chart-desc">Triage & customer updates</p></div></div><div class="chart-body chart-center" id="coverage-chart"></div></div>
           </div>
-          <div class="recent-section"><h2 class="section-title">Recent incidents</h2><div class="incident-list" id="recent-incidents"></div></div>
+          <div id="dash-create-drawer" class="hidden"></div>
         </div>
         <div id="view-incidents" class="view">
-          <div class="page-head"><h1 class="page-title">Incidents</h1><div class="page-actions"><button class="btn btn-primary" onclick="app.showCreateIncident()">+ New incident</button></div></div>
+          <div class="page-head">
+            <h1 class="page-title">Incidents</h1>
+            <div class="page-actions"><button class="btn btn-primary" onclick="app.showCreateIncident()">+ New incident</button></div>
+          </div>
           <div class="stat-grid stat-grid-4" id="incident-stat-grid"></div>
-          <div class="incident-list" id="incidents-list"></div>
+          <div id="incident-filters" class="filter-bar">
+            <div class="queue-head"><div><h2 class="section-title">Incident queue</h2><p class="section-desc">Primary responder view with live filters and severity-first sorting.</p></div><div class="page-actions"><button class="btn btn-ghost btn-sm" onclick="app.syncModels()">↻ Sync models</button><button class="btn btn-ghost btn-sm" onclick="app.exportCsv()">Export CSV</button></div></div>
+            <div class="filter-row">
+              <label class="field"><span class="field-label">Status</span><select class="input" id="filter-status"><option value="">All</option><option>NEW</option><option>INVESTIGATING</option><option>MONITORING</option><option>MITIGATED</option><option>RESOLVED</option></select></label>
+              <label class="field"><span class="field-label">Severity</span><select class="input" id="filter-severity"><option value="">All</option><option>P1</option><option>P2</option><option>P3</option><option>P4</option></select></label>
+              <label class="field"><span class="field-label">Category</span><select class="input" id="filter-category"><option value="">All</option><option>HALLUCINATION</option><option>BIAS</option><option>TOXICITY</option><option>PII_LEAK</option><option>REFUSAL</option><option>DRIFT</option><option>LATENCY</option><option>OTHER</option></select></label>
+              <label class="field"><span class="field-label">Owner</span><select class="input" id="filter-owner"><option value="">All</option></select></label>
+              <label class="field"><span class="field-label">Search</span><input class="input" id="filter-search" placeholder="Search incidents, tickets, or customers" onkeydown="if(event.key==='Enter')app.applyIncidentFilters()" /></label>
+              <div class="filter-actions">
+                <button class="btn btn-primary btn-sm" onclick="app.applyIncidentFilters()">Apply</button>
+                <button class="btn btn-ghost btn-sm" onclick="app.resetIncidentFilters()">Clear</button>
+              </div>
+            </div>
+          </div>
+          <div id="incidents-queue"></div>
+          <div class="pagination" id="incidents-pagination"></div>
         </div>
         <div id="view-analytics" class="view">
-          <div class="page-head"><h1 class="page-title">Analytics</h1></div>
-          <div class="analytics-content" id="analytics-content"><p class="muted">Loading…</p></div>
+          <div class="page-head">
+            <h1 class="page-title">Analytics</h1>
+            <div class="page-actions">
+              <button class="btn btn-ghost btn-sm" onclick="app.exportCsv()">Export CSV</button>
+              <button class="btn btn-primary btn-sm" onclick="app.refreshAnalytics()">↻ Refresh data</button>
+            </div>
+          </div>
+          <div id="analytics-operating" class="section-block"><h2 class="section-title">Current operating state</h2><p class="section-desc">The metrics leadership needs first when a response is active.</p><div class="stat-grid stat-grid-5" id="analytics-op-stats"></div></div>
+          <div id="analytics-coverage" class="section-block"><h2 class="section-title">Coverage and timing</h2><p class="section-desc">Response quality indicators across resolution, triage, and customer communications.</p><div class="stat-grid stat-grid-3" id="analytics-cov-stats"></div></div>
+          <div id="analytics-trend" class="section-block"><h2 class="section-title">14-day analytics trend</h2><p class="section-desc">Incident volume and severity patterns for weekly review and board-level reporting.</p>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>Incidents created vs resolved</h3><div id="legend-created-resolved" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-created-resolved"></canvas></div></div>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>Open incidents (end of day)</h3><div id="legend-open" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-open"></canvas></div></div>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>P1 incidents by day</h3><div id="legend-p1" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-p1"></canvas></div></div>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>AI triage runs &amp; customer updates</h3><div id="legend-triage" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-triage"></canvas></div></div>
+            <div id="analytics-content"></div>
+          </div>
         </div>
         <div id="view-profile" class="view">
           <div class="page-head"><h1 class="page-title">Profile</h1></div>

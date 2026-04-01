@@ -300,20 +300,56 @@ const app = {
     if (!data) return;
     const { counts, snapshot, recentIncidents } = data;
     const stats = [
-      { label:'Open incidents', value:counts.open, icon:'⚠', color:'#d4622b', bg:'rgba(212,98,43,0.10)', sub:`${counts.p1} P1 critical`, trend:counts.created7d>counts.resolved?'warn':'good', trendText:counts.created7d>0?`+${counts.created7d} this week`:'No new this week' },
-      { label:'Resolved (7d)', value:counts.resolved, icon:'✓', color:'#e8944a', bg:'rgba(232,148,74,0.10)', sub:`${counts.total} total all-time`, trend:'good', trendText:counts.resolved>0?`${counts.resolved} closed`:'None yet' },
-      { label:'Avg resolution', value:`${counts.avgResolutionHours.toFixed(1)}h`, icon:'⏱', color:'#c2571f', bg:'rgba(194,87,31,0.10)', sub:'Last 30 days', trend:counts.avgResolutionHours<24?'good':'warn', trendText:counts.avgResolutionHours<24?'Under target':'Above target' },
+      { label:'Open incidents', value:counts.open, icon:'⚠', color:'#d4622b', bg:'rgba(212,98,43,0.10)', sub:`${counts.p1} P1 critical`, trend:counts.created7d>counts.resolved?'up':'down', trendText:counts.created7d>0?`+${counts.created7d} this week`:'No new this week' },
+      { label:'Resolved (7d)', value:counts.resolved, icon:'✓', color:'#e8944a', bg:'rgba(232,148,74,0.10)', sub:`${counts.total} total all-time`, trend:'up', trendText:counts.resolved>0?`${counts.resolved} closed`:'None yet' },
+      { label:'Avg resolution', value:`${counts.avgResolutionHours.toFixed(1)}h`, icon:'⏱', color:'#c2571f', bg:'rgba(194,87,31,0.10)', sub:'Last 30 days', trend:counts.avgResolutionHours<24?'down':'up', trendText:counts.avgResolutionHours<24?'Under target':'Above target' },
     ];
-    $('#stat-grid').innerHTML = stats.map(s => `<div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:${s.bg};color:${s.color}">${s.icon}</div><span class="stat-trend stat-trend-${s.trend}">${s.trend==='warn'?'↑':'↓'} ${s.trendText}</span></div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div><div class="stat-sub">${s.sub}</div></div>`).join('');
+    $('#stat-grid').innerHTML = stats.map(s => `<div class="stat-card"><div class="stat-top"><div class="stat-icon" style="background:${s.bg};color:${s.color}">${s.icon}</div><span class="stat-trend stat-trend-${s.trend==='down'?'good':'warn'}">${s.trend==='up'?'↑':'↓'} ${s.trendText}</span></div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div><div class="stat-sub">${s.sub}</div></div>`).join('');
     this.renderVelocityChart(counts);
     const triage = snapshot?.triageCoveragePct ?? 0;
     const update = snapshot?.customerUpdateCoveragePct ?? 0;
     this.renderCoverageDonut(triage, update);
-    if (recentIncidents?.length) {
-      $('#recent-incidents').innerHTML = recentIncidents.map(inc => `<div class="incident-row"><div class="incident-title">${this.esc(inc.title)}</div><span class="badge badge-${(inc.severity||'P3').toLowerCase()}">${inc.severity||'P3'}</span><span class="badge badge-${(inc.status||'OPEN').toLowerCase()}">${inc.status||'OPEN'}</span><span class="incident-time">${this.timeAgo(inc.createdAt)}</span></div>`).join('');
-    } else {
-      $('#recent-incidents').innerHTML = '<p class="muted">No incidents yet.</p>';
+    this.renderOnboarding(data.onboarding);
+  },
+
+  renderOnboarding(ob) {
+    let el = $('#onboarding-checklist');
+    if (!ob || ob.dismissed) { if (el) el.remove(); return; }
+    const steps = [
+      { id:'hasIncident', label:'Create your first incident', desc:'Log an incident manually or route one in from a webhook.', page:'incidents', icon:'🚨' },
+      { id:'hasTriaged', label:'Run AI triage', desc:'Let the system propose severity, owner, and safe next steps.', page:'incidents', icon:'🤖' },
+      { id:'hasAiKey', label:'Add an AI provider key', desc:'Connect OpenAI, Gemini, or Anthropic before the next incident lands.', page:'int-ai', icon:'🤖' },
+      { id:'hasSlack', label:'Connect Slack', desc:'Keep responders aligned with alerting and approved status updates.', page:'int-webhooks', icon:'💬' },
+      { id:'hasWebhook', label:'Set up a webhook integration', desc:'Accept incidents from Datadog, Sentry, PagerDuty, or custom sources.', page:'int-webhooks', icon:'🔌' },
+    ];
+    const done = steps.filter(s => ob[s.id]).length;
+    if (done === steps.length) { if (el) el.remove(); return; }
+    const pct = (done / steps.length) * 100;
+    const items = steps.map(s => {
+      const isDone = ob[s.id];
+      return `<li class="onboard-step${isDone?' onboard-done':''}" onclick="app.navTo('${s.page}')">
+        <span class="onboard-icon">${isDone ? '✓' : s.icon}</span>
+        <div><p class="onboard-label${isDone?' onboard-struck':''}">${s.label}</p><p class="onboard-desc">${s.desc}</p></div>
+      </li>`;
+    }).join('');
+    const html = `<div class="onboard-head">
+      <div><h2 class="section-title">Operational readiness checklist</h2><p class="section-desc">Complete the essentials before your first customer-facing AI incident hits the queue.</p>
+        <div class="onboard-bar"><div class="onboard-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="onboard-actions"><span class="badge badge-info">${done}/${steps.length} complete</span><button class="btn btn-ghost btn-sm" onclick="app.dismissOnboarding()">✕ Dismiss</button></div>
+    </div><ul class="onboard-grid">${items}</ul>`;
+    if (!el) {
+      el = document.createElement('div'); el.id = 'onboarding-checklist'; el.className = 'onboard-shell';
+      const view = $('#view-dashboard');
+      view.insertBefore(el, view.children[1]);
     }
+    el.innerHTML = html;
+  },
+
+  async dismissOnboarding() {
+    if (window.trustloop) await window.trustloop.dismissOnboarding();
+    const el = $('#onboarding-checklist');
+    if (el) el.remove();
   },
 
   renderVelocityChart(counts) {
@@ -336,29 +372,72 @@ const app = {
     $('#coverage-chart').innerHTML = svg;
   },
 
-  async loadIncidents() {
+  _incidentPage: 1,
+
+  async loadIncidents(page) {
     if (!window.trustloop) return;
-    const [counts, list] = await Promise.all([window.trustloop.incidentsCounts(), window.trustloop.listIncidents()]);
+    this._incidentPage = page || 1;
+    const filters = {
+      status: $('#filter-status')?.value || undefined,
+      severity: $('#filter-severity')?.value || undefined,
+      category: $('#filter-category')?.value || undefined,
+      owner: $('#filter-owner')?.value || undefined,
+      q: $('#filter-search')?.value?.trim() || undefined,
+      page: this._incidentPage,
+    };
+    const [counts, list] = await Promise.all([window.trustloop.incidentsCounts(), window.trustloop.listIncidents(filters)]);
+    // Populate owner dropdown from members
+    if (list?.members) {
+      const sel = $('#filter-owner');
+      const cur = sel?.value || '';
+      if (sel) sel.innerHTML = '<option value="">All</option>' + list.members.map(m => `<option value="${m.id}"${m.id===cur?' selected':''}>${this.esc(m.name)}</option>`).join('');
+    }
     if (counts) {
       const stats = [
-        { label:'Total incidents', value:counts.total, color:'#d4622b', bg:'rgba(212,98,43,0.10)' },
-        { label:'Open', value:counts.open, color:'#e8944a', bg:'rgba(232,148,74,0.10)' },
-        { label:'P1 critical', value:counts.p1, color:'#c2571f', bg:'rgba(194,87,31,0.10)' },
-        { label:'Resolved (7d)', value:counts.resolved7d, color:'#f0b27a', bg:'rgba(240,178,122,0.12)' },
+        { label:'Total incidents', value:counts.total, icon:'☰', color:'#d4622b', bg:'rgba(212,98,43,0.10)' },
+        { label:'Open', value:counts.open, icon:'⚠', color:'#e8944a', bg:'rgba(232,148,74,0.10)' },
+        { label:'P1 critical', value:counts.p1, icon:'⚡', color:'#c2571f', bg:'rgba(194,87,31,0.10)' },
+        { label:'Resolved (7d)', value:counts.resolved7d, icon:'✓', color:'#f0b27a', bg:'rgba(240,178,122,0.12)' },
       ];
-      $('#incident-stat-grid').innerHTML = stats.map(s=>`<div class="stat-card"><div class="stat-icon" style="background:${s.bg};color:${s.color}">●</div><div class="stat-value" style="font-size:28px">${s.value}</div><div class="stat-label">${s.label}</div></div>`).join('');
+      $('#incident-stat-grid').innerHTML = stats.map(s=>`<div class="stat-card"><div class="stat-icon" style="background:${s.bg};color:${s.color}">${s.icon}</div><div class="stat-value" style="font-size:28px">${s.value}</div><div class="stat-label">${s.label}</div></div>`).join('');
     }
-    if (list?.items?.length) {
-      $('#incidents-list').innerHTML = list.items.map(inc=>`<div class="incident-row" onclick="app.openIncident('${inc.id}')" style="cursor:pointer">
-        <div class="incident-title">${this.esc(inc.title)}</div>
-        <span class="badge badge-${(inc.severity||'P3').toLowerCase()}">${inc.severity||'P3'}</span>
-        <span class="badge badge-${(inc.status||'OPEN').toLowerCase()}">${inc.status||'OPEN'}</span>
-        <span class="incident-meta">${inc.owner?.name||'Unassigned'}</span>
-        <span class="incident-time">${this.timeAgo(inc.createdAt)}</span>
-      </div>`).join('');
-    } else {
-      $('#incidents-list').innerHTML = '<p class="muted">No incidents found.</p>';
+    this.renderIncidentQueue(list);
+    // Pagination
+    const pg = $('#incidents-pagination');
+    if (pg && list) {
+      pg.innerHTML = `<button class="btn btn-ghost btn-sm" ${this._incidentPage<=1?'disabled':''}onclick="app.loadIncidents(${this._incidentPage-1})">← Previous</button><span class="muted" style="font-size:12px">Page ${list.page} of ${list.pages||1}</span><button class="btn btn-ghost btn-sm" ${this._incidentPage>=list.pages?'disabled':''}onclick="app.loadIncidents(${this._incidentPage+1})">Next →</button>`;
     }
+  },
+
+  renderIncidentQueue(list) {
+    const q = $('#incidents-queue');
+    if (!q) return;
+    if (!list?.items?.length) {
+      const hasFilters = ['filter-status','filter-severity','filter-category','filter-owner','filter-search'].some(id => document.getElementById(id)?.value);
+      q.innerHTML = `<div class="settings-card" style="text-align:center;padding:32px"><p style="font-size:16px;font-weight:600;color:var(--title)">All clear</p><p class="muted">No open incidents.</p>${hasFilters?'<button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="app.resetIncidentFilters()">Clear filters</button>':''}</div>`;
+      return;
+    }
+    const sevClass = s => s==='P1'?'badge-p1':s==='P2'?'badge-p2':'badge-p3';
+    const statusClass = s => s==='RESOLVED'?'badge-success':s==='MITIGATED'?'badge-warning':s==='NEW'?'badge-info':'badge-danger';
+    const rows = list.items.map(inc => `<tr onclick="app.openIncident('${inc.id}')" style="cursor:pointer">
+      <td><span class="badge badge-sm ${sevClass(inc.severity)}">${inc.severity}</span></td>
+      <td><span class="badge badge-sm ${statusClass(inc.status)}">${inc.status}</span></td>
+      <td class="inc-title-cell">${this.esc(inc.title)}</td>
+      <td style="color:var(--ghost)">${inc.category||'Uncategorized'}</td>
+      <td>${inc.owner?.name||'Unassigned'}</td>
+      <td style="color:var(--subtext)">${new Date(inc.updatedAt||inc.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</td>
+      <td style="color:var(--subtext)">→</td>
+    </tr>`).join('');
+    q.innerHTML = `<div class="table-shell"><table class="data-table"><thead><tr><th>Severity</th><th>Status</th><th>Title</th><th>AI category</th><th>Owner</th><th>Updated</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  },
+
+  applyIncidentFilters() {
+    this.loadIncidents(1);
+  },
+
+  resetIncidentFilters() {
+    ['filter-status','filter-severity','filter-category','filter-owner','filter-search'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    this.loadIncidents(1);
   },
 
   async openIncident(id) {
@@ -369,48 +448,119 @@ const app = {
     const inc = data.incident;
     const owners = data.owners || [];
     const isP1 = inc.severity === 'P1';
+
+    // Breadcrumb
+    const ref = inc.sourceTicketRef || inc.id.slice(0,8);
+    const breadcrumb = `<nav class="breadcrumb"><a onclick="app.navTo('dashboard')">Dashboard</a> › <a onclick="app.navTo('incidents')">Incidents</a> › <span>${this.esc(ref)}</span></nav>`;
+
+    // Severity badge class
+    const sevCls = inc.severity==='P1'?'badge-p1':inc.severity==='P2'?'badge-p2':'badge-p3';
+
+    // Metadata cards
     const meta = [
       { label:'Owner', value: inc.owner?.name || 'Unassigned' },
       { label:'Customer', value: inc.customerName || inc.customerEmail || 'Unknown' },
       { label:'Ticket ref', value: inc.sourceTicketRef || '—' },
       { label:'Model version', value: inc.modelVersion || '—' },
     ];
-    const timeline = inc.events?.length ? inc.events.map(e => `<div class="timeline-event">
-      <div class="timeline-dot" style="background:${e.eventType==='NOTE'?'var(--info)':e.eventType.includes('STATUS')?'var(--signal)':'var(--ghost)'}"></div>
+
+    // Timeline with connector line
+    const evtColor = t => t==='NOTE'?'var(--info)':t.includes('STATUS')?'var(--signal)':'var(--ghost)';
+    const timeline = inc.events?.length ? inc.events.map(e => `<article class="timeline-event">
+      <div class="timeline-dot" style="background:${evtColor(e.eventType)}"></div>
       <div class="timeline-body"><div class="timeline-head"><span>${this.esc(e.eventType)}${e.actor?.name ? ' · '+this.esc(e.actor.name) : ''}</span><span>${new Date(e.createdAt).toLocaleString()}</span></div><p>${this.esc(e.body)}</p></div>
-    </div>`).join('') : '<p class="muted">No timeline events yet.</p>';
-    const ownerOpts = owners.map(o => `<option value="${o.id}"${o.id===inc.ownerUserId?' selected':''}>${this.esc(o.name)} (${o.role})</option>`).join('');
-    const postMortem = inc.postMortem ? `<div class="settings-card"><h3>Post-Mortem</h3><span class="badge badge-sm">${inc.postMortem.status}</span>${inc.postMortem.author ? ` <span style="color:var(--ghost);font-size:12px">by ${this.esc(inc.postMortem.author.name)}</span>` : ''}<h4 style="margin:8px 0 4px;font-size:14px">${this.esc(inc.postMortem.title)}</h4><p style="color:var(--subtext);font-size:13px;white-space:pre-wrap">${this.esc(inc.postMortem.body)}</p></div>` : '<div class="settings-card"><h3>Post-Mortem</h3><p class="muted">No post-mortem yet.</p></div>';
+    </article>`).join('') : '<p class="muted">No timeline events yet.</p>';
+
+    // Owner select options
+    const ownerOpts = `<option value="">Unassigned</option>` + owners.map(o => `<option value="${o.id}"${o.id===inc.ownerUserId?' selected':''}>${this.esc(o.name)} (${o.role})</option>`).join('');
+
+    // Category options
+    const cats = ['','HALLUCINATION','BIAS','TOXICITY','PII_LEAK','REFUSAL','DRIFT','LATENCY','OTHER'];
+    const catOpts = cats.map(c => `<option value="${c}"${c===(inc.category||'')?' selected':''}>${c||'Uncategorized'}</option>`).join('');
+
+    // Status options (all from web app)
+    const statuses = ['NEW','INVESTIGATING','MONITORING','MITIGATED','RESOLVED'];
+    const statusOpts = statuses.map(s => `<option${s===inc.status?' selected':''}>${s}</option>`).join('');
+
+    // Severity options
+    const sevOpts = ['P1','P2','P3','P4'].map(s => `<option${s===inc.severity?' selected':''}>${s}</option>`).join('');
+
+    // Post-mortem
+    const pm = inc.postMortem;
+    const postMortem = pm
+      ? `<div><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="badge badge-sm${pm.status==='PUBLISHED'?' badge-p3':''}">${pm.status}</span>${pm.author?`<span style="color:var(--ghost);font-size:12px">by ${this.esc(pm.author.name)}</span>`:''}</div><h4 style="font-size:14px;font-weight:600;color:var(--body);margin-bottom:4px">${this.esc(pm.title)}</h4><div style="color:var(--subtext);font-size:13px;white-space:pre-wrap;max-height:320px;overflow-y:auto">${this.esc(pm.body)}</div></div>`
+      : `<div style="text-align:center;padding:16px"><p class="muted">No post-mortem yet.</p><p style="font-size:12px;color:var(--subtext);margin-top:8px">Use "Generate Post-Mortem" action above to create one with AI.</p></div>`;
 
     $$('.view').forEach(v => v.classList.remove('active'));
     let detail = $('#view-incident-detail');
     if (!detail) { detail = document.createElement('div'); detail.id = 'view-incident-detail'; detail.className = 'view'; $('.main-content').appendChild(detail); }
     detail.classList.add('active');
     detail.innerHTML = `
-      <div class="page-head"><button class="btn btn-ghost btn-sm" onclick="app.navTo('incidents')">← Back</button></div>
-      <div class="dash-hero${isP1?' dash-hero-p1':''}">
-        <span class="badge badge-${inc.severity.toLowerCase()}">${inc.severity}</span>
-        <span class="badge">${inc.status}</span>
-        ${inc.category ? `<span class="badge">${this.esc(inc.category)}</span>` : ''}
-        <h1 class="page-title" style="font-size:24px;margin-top:8px">${this.esc(inc.title)}</h1>
-        <p style="color:var(--subtext);margin-top:4px">${this.esc(inc.description||'')}</p>
-      </div>
-      <div class="stat-grid stat-grid-4">${meta.map(m => `<div class="stat-card"><div class="stat-label">${m.label}</div><div class="stat-value" style="font-size:14px;font-weight:600">${this.esc(m.value)}</div></div>`).join('')}</div>
-      <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;margin-top:16px">
-        <div class="settings-card"><h3>Timeline</h3><p class="muted" style="margin-bottom:8px">${inc.events?.length||0} events</p>${timeline}
-          <div style="margin-top:12px;display:flex;gap:8px"><input class="input" id="note-input" placeholder="Add a note…" style="flex:1" /><button class="btn btn-primary" onclick="app.addNote()">Add</button></div>
+      ${breadcrumb}
+      <section class="dash-hero${isP1?' dash-hero-p1':''}">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px">
+          <span class="badge ${sevCls}">${isP1?'⚠ ':''}${inc.severity}</span>
+          <span class="badge">${inc.status==='NEW'?'⏱ ':''}${inc.status}</span>
+          ${inc.category ? `<span class="badge">${this.esc(inc.category)}</span>` : ''}
         </div>
-        <div style="display:flex;flex-direction:column;gap:12px">
-          <div class="settings-card"><h3>Actions</h3>
-            <div class="form-group"><label class="form-label">Status</label><select class="input" id="inc-status">${['NEW','INVESTIGATING','MONITORING','RESOLVED'].map(s=>`<option${s===inc.status?' selected':''}>${s}</option>`).join('')}</select></div>
-            <div class="form-group"><label class="form-label">Severity</label><select class="input" id="inc-severity">${['P1','P2','P3','P4'].map(s=>`<option${s===inc.severity?' selected':''}>${s}</option>`).join('')}</select></div>
-            <div class="form-group"><label class="form-label">Owner</label><select class="input" id="inc-owner">${ownerOpts}</select></div>
-            <button class="btn btn-primary" style="margin-top:8px" onclick="app.updateCurrentIncident()">Update</button>
+        <h1 class="page-title" style="font-size:28px">${this.esc(inc.title)}</h1>
+        <p style="color:var(--subtext);margin-top:4px">${this.esc(inc.description||'')}</p>
+      </section>
+
+      <div class="stat-grid stat-grid-4">${meta.map(m => `<div class="stat-card"><div class="stat-label">${m.label}</div><div class="stat-value" style="font-size:16px;font-weight:600">${this.esc(m.value)}</div></div>`).join('')}</div>
+
+      <div class="detail-grid">
+        <div class="settings-card">
+          <h3>Timeline</h3><p class="muted" style="margin-bottom:8px">${inc.events?.length||0} event${(inc.events?.length||0)!==1?'s':''}</p>
+          <div class="timeline-track">${inc.events?.length>1?'<div class="timeline-line"></div>':''}${timeline}</div>
+          <div class="note-box">
+            <p class="kicker">Internal notes</p>
+            <textarea class="input" id="note-input" rows="3" placeholder="Add internal note"></textarea>
+            <button class="btn btn-ghost btn-sm" onclick="app.addNote()">Add note</button>
+          </div>
+        </div>
+
+        <div class="detail-sidebar">
+          <div class="settings-card">
+            <h3>Actions</h3><p class="muted" style="margin-bottom:8px">Update status, assign, or run AI</p>
+            <div class="action-grid">
+              <label class="field"><span class="field-label">Status</span><select class="input" id="inc-status">${statusOpts}</select></label>
+              <label class="field"><span class="field-label">Severity</span><select class="input" id="inc-severity">${sevOpts}</select></label>
+              <label class="field"><span class="field-label">Category</span><select class="input" id="inc-category">${catOpts}</select></label>
+              <label class="field"><span class="field-label">Owner</span><select class="input" id="inc-owner">${ownerOpts}</select></label>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+              <button class="btn btn-primary" onclick="app.updateCurrentIncident()">Save fields</button>
+              <button class="btn btn-ghost" onclick="app.navTo('int-ai')" style="color:var(--warning)">Add AI key to enable triage & drafts</button>
+            </div>
             <span id="inc-msg" class="form-msg"></span>
           </div>
-          ${postMortem}
+
+          <div class="settings-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <p class="kicker">Customer update</p>
+            </div>
+            <textarea class="input" id="draft-update" rows="5" placeholder="Write or generate a customer-facing update before publishing."></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px">
+              <span style="font-size:12px;color:var(--ghost)" id="draft-chars">0 characters</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-primary" onclick="app.publishDraft()">Publish to status page</button>
+            </div>
+            <span id="draft-msg" class="form-msg"></span>
+          </div>
+
+          <div class="settings-card">
+            <h3>Post-Mortem</h3>
+            ${postMortem}
+          </div>
         </div>
       </div>`;
+    // Wire up character counter
+    setTimeout(() => {
+      const ta = document.getElementById('draft-update');
+      if (ta) ta.addEventListener('input', () => { const el = document.getElementById('draft-chars'); if (el) el.textContent = ta.value.length + ' characters'; });
+    }, 0);
   },
 
   async updateCurrentIncident() {
@@ -418,9 +568,21 @@ const app = {
     const data = {};
     const status = $('#inc-status')?.value; if (status) data.status = status;
     const severity = $('#inc-severity')?.value; if (severity) data.severity = severity;
-    const owner = $('#inc-owner')?.value; if (owner) data.ownerUserId = owner;
+    const owner = $('#inc-owner')?.value; data.ownerUserId = owner || null;
+    const category = $('#inc-category')?.value; data.category = category || null;
     await window.trustloop.updateIncident(this._currentIncidentId, data);
-    const el = $('#inc-msg'); if (el) { el.textContent = '✓ Updated'; setTimeout(() => el.textContent = '', 2000); }
+    const el = $('#inc-msg'); if (el) { el.textContent = '✓ Incident metadata updated.'; setTimeout(() => el.textContent = '', 3000); }
+  },
+
+  async publishDraft() {
+    if (!this._currentIncidentId) return;
+    const ta = $('#draft-update');
+    const body = ta?.value?.trim();
+    if (!body) { const el = $('#draft-msg'); if (el) { el.textContent = 'Write a draft before publishing.'; el.style.color = 'var(--danger)'; } return; }
+    await window.trustloop.publishStatusUpdate(this._currentIncidentId, body);
+    const el = $('#draft-msg'); if (el) { el.textContent = '✓ Update published to status page.'; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
+    if (ta) ta.value = '';
+    const chars = $('#draft-chars'); if (chars) chars.textContent = '0 characters';
   },
 
   async addNote() {
@@ -434,48 +596,150 @@ const app = {
   showCreateIncident() {
     const form = $('#create-incident-form');
     if (form) { form.classList.toggle('hidden'); return; }
+    this._insertCreateForm('incidents-queue');
+  },
+
+  showCreateIncidentDash() {
+    const form = $('#dash-create-drawer');
+    if (!form) return;
+    if (form.children.length === 0) this._insertCreateForm('dash-create-drawer');
+    form.classList.toggle('hidden');
+  },
+
+  _insertCreateForm(parentId) {
+    const parent = document.getElementById(parentId);
+    if (!parent) return;
     const el = document.createElement('div');
-    el.id = 'create-incident-form';
     el.className = 'settings-card';
     el.style.marginBottom = '16px';
     el.innerHTML = `<h3>Log a new AI failure</h3><p class="muted" style="margin-bottom:12px">Capture customer impact, route ownership, and open the incident record immediately.</p>
-      <div class="form-group"><label class="form-label">Title</label><input class="input" id="new-inc-title" required /></div>
-      <div class="form-group"><label class="form-label">Description</label><textarea class="input" id="new-inc-desc" rows="3"></textarea></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="form-group"><label class="form-label">Severity</label><select class="input" id="new-inc-sev"><option>P1</option><option>P2</option><option selected>P3</option><option>P4</option></select></div>
-        <div class="form-group"><label class="form-label">Customer name</label><input class="input" id="new-inc-cust" /></div>
+      <div style="display:grid;grid-template-columns:1fr 180px;gap:12px">
+        <label class="field"><span class="field-label">Incident Title</span><input class="input" id="new-inc-title" placeholder="e.g. API latency spike on inference endpoint" required /></label>
+        <label class="field"><span class="field-label">Channel</span><select class="input" id="new-inc-channel"><option>EMAIL</option><option>CHAT</option><option>SLACK</option><option selected>API</option><option>OTHER</option></select></label>
       </div>
-      <div class="form-group"><label class="form-label">Customer email</label><input class="input" id="new-inc-email" type="email" /></div>
-      <button class="btn btn-primary" onclick="app.createIncident()">Create incident</button>
-      <button class="btn btn-ghost" onclick="$('#create-incident-form').classList.add('hidden')">Cancel</button>`;
-    $('#incidents-list').parentNode.insertBefore(el, $('#incident-stat-grid').nextSibling);
+      <label class="field" style="margin-top:12px"><span class="field-label">Description</span><textarea class="input" id="new-inc-desc" rows="4" placeholder="What failed, who was impacted, and what customer-visible risk exists?" required></textarea><span class="field-help">Be specific about customer impact. This record anchors the timeline and follow-up.</span></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <label class="field"><span class="field-label">Customer Name</span><input class="input" id="new-inc-cust" placeholder="e.g. Acme Corp" /></label>
+        <label class="field"><span class="field-label">Customer Email</span><input class="input" id="new-inc-email" type="email" placeholder="support@acme.com" /></label>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-top:12px">
+        <label class="field"><span class="field-label">Severity</span><select class="input" id="new-inc-sev"><option>P1</option><option>P2</option><option selected>P3</option><option>P4</option></select></label>
+        <label class="field"><span class="field-label">AI Category</span><select class="input" id="new-inc-cat"><option value="">Uncategorized</option><option>HALLUCINATION</option><option>BIAS</option><option>TOXICITY</option><option>PII_LEAK</option><option>REFUSAL</option><option>DRIFT</option><option>LATENCY</option><option>OTHER</option></select></label>
+        <label class="field"><span class="field-label">Model / Version</span><input class="input" id="new-inc-model" placeholder="e.g. gpt-4o" /></label>
+        <label class="field"><span class="field-label">Ticket Reference</span><input class="input" id="new-inc-ticket" placeholder="e.g. ZD-10293" /></label>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px">
+        <span class="field-help">No customer communication is sent automatically from this form.</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="this.closest('.settings-card').remove()">Close</button>
+          <button class="btn btn-primary" onclick="app.createIncident()">Create incident</button>
+        </div>
+      </div>`;
+    parent.prepend(el);
   },
 
   async createIncident() {
     const title = $('#new-inc-title')?.value?.trim();
     if (!title) return;
-    await window.trustloop.createIncident({
+    const result = await window.trustloop.createIncident({
       title,
       description: $('#new-inc-desc')?.value?.trim() || '',
       severity: $('#new-inc-sev')?.value || 'P3',
+      channel: $('#new-inc-channel')?.value || 'API',
+      category: $('#new-inc-cat')?.value || null,
       customerName: $('#new-inc-cust')?.value?.trim() || null,
       customerEmail: $('#new-inc-email')?.value?.trim() || null,
+      modelVersion: $('#new-inc-model')?.value?.trim() || null,
+      sourceTicketRef: $('#new-inc-ticket')?.value?.trim() || null,
     });
-    $('#create-incident-form')?.classList.add('hidden');
-    this.loadIncidents();
+    // Navigate to the new incident detail (same as web app router.push)
+    if (result?.id) this.openIncident(result.id);
+    else this.loadIncidents();
   },
+
+  _charts: {},
 
   async loadAnalytics() {
     if (!window.trustloop) return;
     const data = await window.trustloop.analyticsSummary();
     if (!data) { $('#analytics-content').innerHTML = '<p class="muted">No analytics data.</p>'; return; }
-    const { byStatus, bySeverity } = data;
-    const maxS = Math.max(...byStatus.map(s=>s._count),1);
-    const maxV = Math.max(...bySeverity.map(s=>s._count),1);
-    const sC = {OPEN:'#f97316',INVESTIGATING:'#d97706',RESOLVED:'#22c55e',MONITORING:'#6366f1'};
-    const vC = {P1:'#ef4444',P2:'#f97316',P3:'#3b82f6',P4:'#6b7280'};
-    const bar = (items,max,colors,key) => items.map(s=>`<div class="analytics-bar-row"><div class="analytics-bar-label">${s[key]}</div><div class="analytics-bar-track"><div class="analytics-bar-fill" style="width:${(s._count/max)*100}%;background:${colors[s[key]]||'var(--signal)'}"></div></div><div class="analytics-bar-value">${s._count}</div></div>`).join('');
-    $('#analytics-content').innerHTML = `<div class="analytics-grid"><div class="analytics-card"><h3>By Status</h3>${bar(byStatus,maxS,sC,'status')||'<p class="muted">No data</p>'}</div><div class="analytics-card"><h3>By Severity</h3>${bar(bySeverity,maxV,vC,'severity')||'<p class="muted">No data</p>'}</div></div>`;
+    const { series, snapshot, failedReminders7d } = data;
+    const s = snapshot || {};
+    const opStats = [
+      { label:'Open incidents', value:s.openIncidents??0, sub:'Currently active across the workspace' },
+      { label:'P1 open', value:s.p1OpenIncidents??0, sub:'Highest-severity incidents in flight' },
+      { label:'Created (7d)', value:s.incidentsCreatedLast7d??0, sub:'New incidents over the last week' },
+      { label:'Resolved (7d)', value:s.incidentsResolvedLast7d??0, sub:'Closed incidents over the last week' },
+      { label:'Failed reminders', value:failedReminders7d??0, sub:'Reminder jobs that failed in seven days' },
+    ];
+    $('#analytics-op-stats').innerHTML = opStats.map(st => `<div class="stat-card"><div class="stat-value" style="font-size:28px">${st.value}</div><div class="stat-label">${st.label}</div><div class="stat-sub">${st.sub}</div></div>`).join('');
+    const covStats = [
+      { label:'Avg resolution', value:`${s.avgResolutionHoursLast30d??0}h`, sub:'Hours across the last 30 days' },
+      { label:'Triage coverage', value:`${s.triageCoveragePct??0}%`, sub:(s.triageCoveragePct??0)===0?'Run AI triage on your first incident to improve this metric.':'Incidents with AI-assisted triage' },
+      { label:'Customer updates', value:`${s.customerUpdateCoveragePct??0}%`, sub:(s.customerUpdateCoveragePct??0)===0?'Publish a customer update on an incident to start tracking.':'Incidents with outbound customer comms' },
+    ];
+    $('#analytics-cov-stats').innerHTML = covStats.map(st => `<div class="stat-card"><div class="stat-value" style="font-size:28px">${st.value}</div><div class="stat-label">${st.label}</div><div class="stat-sub">${st.sub}</div></div>`).join('');
+    if (!series?.length) { $('#analytics-content').innerHTML = '<p class="muted">No trend data yet. Incidents will populate these charts over time.</p>'; return; }
+    $('#analytics-content').innerHTML = '';
+    const labels = series.map(r => new Date(r.day).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+    const base = () => ({
+      responsive: true, maintainAspectRatio: false, animation: { duration: 600 },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor: 'rgba(10,11,13,0.95)', titleColor: '#f3f4f6', bodyColor: '#e5e7eb', borderColor: 'rgba(99,102,241,0.2)', borderWidth: 1, cornerRadius: 12, padding: 12, titleFont: { weight: '600', size: 13 }, bodyFont: { size: 13 }, boxPadding: 4, boxWidth: 8, boxHeight: 8, usePointStyle: false,
+          callbacks: { labelColor: function(ctx) { var c = ctx.dataset.borderColor || ctx.dataset.backgroundColor; return { borderColor: c, backgroundColor: c, borderRadius: 2 }; } }
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#4b5563', font: { size: 11 } }, border: { display: false } },
+        y: { grid: { color: 'rgba(55,65,81,0.18)', drawBorder: false }, ticks: { color: '#4b5563', font: { size: 11 }, precision: 0 }, border: { display: false } },
+      },
+    });
+    const dot = (c) => ({ backgroundColor: c, pointBackgroundColor: '#0a0b0d', pointBorderColor: c, pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6, pointHoverBackgroundColor: c });
+    this._mk('chart-created-resolved', 'line', labels, [
+      { label: 'Created', data: series.map(r=>r.incidentsCreated), borderColor: '#f97316', borderWidth: 2.5, tension: 0.3, ...dot('#f97316') },
+      { label: 'Resolved', data: series.map(r=>r.incidentsResolved), borderColor: '#22c55e', borderWidth: 2.5, tension: 0.3, ...dot('#22c55e') },
+    ], base());
+    this._mk('chart-open', 'line', labels, [
+      { label: 'Open', data: series.map(r=>r.openAtEndOfDay), borderColor: '#6366f1', backgroundColor: '#6366f1', borderWidth: 2.5, tension: 0.3, fill: { target: 'origin', above: 'rgba(99,102,241,0.12)' }, pointBackgroundColor: '#0a0b0d', pointBorderColor: '#6366f1', pointBorderWidth: 2, pointRadius: 3, pointHoverRadius: 6, pointHoverBackgroundColor: '#6366f1' },
+    ], base());
+    const bOpts = base(); bOpts.scales.y.beginAtZero = true;
+    this._mk('chart-p1', 'bar', labels, [
+      { label: 'P1 created', data: series.map(r=>r.p1Created), backgroundColor: 'rgba(239,68,68,0.7)', hoverBackgroundColor: 'rgba(239,68,68,0.9)', borderRadius: 8, borderSkipped: false, barPercentage: 0.7 },
+    ], bOpts);
+    this._mk('chart-triage', 'line', labels, [
+      { label: 'Triage runs', data: series.map(r=>r.triageRuns), borderColor: '#8b5cf6', borderWidth: 2.5, tension: 0.3, ...dot('#8b5cf6') },
+      { label: 'Customer updates', data: series.map(r=>r.customerUpdatesSent), borderColor: '#06b6d4', borderWidth: 2.5, tension: 0.3, ...dot('#06b6d4') },
+      { label: 'Reminder emails', data: series.map(r=>r.reminderEmailsSent), borderColor: '#f59e0b', borderWidth: 2.5, tension: 0.3, ...dot('#f59e0b') },
+    ], base());
+  },
+
+  _mk(id, type, labels, datasets, opts) {
+    if (this._charts[id]) this._charts[id].destroy();
+    const el = document.getElementById(id);
+    if (!el) return;
+    this._charts[id] = new Chart(el, { type, data: { labels, datasets }, options: opts });
+    const leg = document.getElementById('legend-' + id.replace('chart-',''));
+    if (leg) leg.innerHTML = datasets.map(ds => {
+      const c = ds.borderColor || ds.backgroundColor;
+      return `<span class="legend-item"><span class="legend-dot" style="background:${c}"></span>${ds.label}</span>`;
+    }).join('');
+  },
+
+  async refreshAnalytics() {
+    if (window.trustloop) await window.trustloop.refreshReadModels();
+    this.loadAnalytics();
+  },
+
+  async syncModels() {
+    if (window.trustloop) await window.trustloop.refreshReadModels();
+    this.loadIncidents(1);
+  },
+
+  async exportCsv() {
+    if (!window.trustloop) return;
+    await window.trustloop.exportIncidentsCsv();
   },
 
   esc(str) { const d=document.createElement('div'); d.textContent=str||''; return d.innerHTML; },
@@ -615,8 +879,8 @@ const app = {
     const hooks = await window.trustloop.integrationsWebhooks();
     if (!hooks?.length) { $('#int-webhooks-content').innerHTML = `<p class="page-kicker">Integrations</p><div class="settings-card"><h3>Webhook integrations</h3><p class="muted">Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.</p></div>`; return; }
     const rows = hooks.map(h => `<div class="settings-row">
-      <span class="settings-label"><strong>${this.esc(h.provider)}</strong></span>
-      <span class="settings-value">${h.active ? '<span style="color:#22c55e">● Active</span>' : '<span style="color:var(--ghost)">○ Inactive</span>'} · ${this.fmtDate(h.createdAt)}</span>
+      <span class="settings-label"><strong>${this.esc(h.type)}</strong></span>
+      <span class="settings-value">${h.isActive ? '<span style="color:#22c55e">● Active</span>' : '<span style="color:var(--ghost)">○ Inactive</span>'} · ${this.fmtDate(h.createdAt)}</span>
     </div>`).join('');
     $('#int-webhooks-content').innerHTML = `<p class="page-kicker">Integrations</p>
       <div class="settings-card"><h3>Webhook integrations</h3><p class="muted" style="margin-bottom:12px">Configure signed inbound secrets for Datadog, PagerDuty, Sentry, and AI observability sources.</p>${rows}</div>`;

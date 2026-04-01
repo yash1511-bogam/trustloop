@@ -194,27 +194,40 @@ export function registerIpcHandlers(): void {
     return { total, open, p1, resolved7d };
   });
 
-  ipcMain.handle("incidents:list", async (_e, opts?: { status?: string; severity?: string; page?: number }) => {
+  ipcMain.handle("incidents:list", async (_e, opts?: { status?: string; severity?: string; category?: string; owner?: string; q?: string; page?: number }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const page = opts?.page ?? 1;
-    const take = 50;
+    const take = 20;
     const where: any = { workspaceId: wid };
     if (opts?.status) where.status = opts.status;
     if (opts?.severity) where.severity = opts.severity;
+    if (opts?.category) where.category = opts.category;
+    if (opts?.owner) where.ownerUserId = opts.owner;
+    if (opts?.q) where.OR = [
+      { title: { contains: opts.q, mode: "insensitive" } },
+      { customerName: { contains: opts.q, mode: "insensitive" } },
+      { sourceTicketRef: { contains: opts.q, mode: "insensitive" } },
+    ];
 
-    const [items, count] = await Promise.all([
+    const [items, count, members] = await Promise.all([
       prisma.incident.findMany({
-        where, orderBy: { createdAt: "desc" }, take, skip: (page - 1) * take,
+        where, orderBy: [{ severity: "asc" }, { createdAt: "desc" }], take, skip: (page - 1) * take,
         select: {
-          id: true, title: true, status: true, severity: true, channel: true,
-          createdAt: true, resolvedAt: true, customerName: true, customerEmail: true,
+          id: true, title: true, status: true, severity: true, category: true, channel: true,
+          createdAt: true, updatedAt: true, resolvedAt: true, customerName: true, customerEmail: true,
           owner: { select: { id: true, name: true } },
+          _count: { select: { events: true } },
         },
       }),
       prisma.incident.count({ where }),
+      prisma.user.findMany({
+        where: { workspaceId: wid },
+        select: { id: true, name: true, role: true },
+        orderBy: [{ role: "asc" }, { name: "asc" }],
+      }),
     ]);
-    return { items, total: count, page, pages: Math.ceil(count / take) };
+    return { items, total: count, page, pages: Math.ceil(count / take), members };
   });
 
   ipcMain.handle("incidents:get", async (_e, id: string) => {
@@ -256,20 +269,103 @@ export function registerIpcHandlers(): void {
   ipcMain.handle("analytics:summary", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
 
-    const [byStatus, bySeverity, series] = await Promise.all([
-      prisma.incident.groupBy({ by: ["status"], where: { workspaceId: wid }, _count: true }),
-      prisma.incident.groupBy({ by: ["severity"], where: { workspaceId: wid }, _count: true }),
+    // 14-day window: today + 13 days back (same as web app's addDays(startOfUtcDay(), -13))
+    const now = new Date();
+    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const fourteenDaysAgo = new Date(startOfToday.getTime() - 13 * 86400000);
+
+    const [seriesRows, snapshot, failedReminders7d] = await Promise.all([
       prisma.incidentAnalyticsDaily.findMany({
-        where: { workspaceId: wid, day: { gte: thirtyDaysAgo } },
+        where: { workspaceId: wid, day: { gte: fourteenDaysAgo } },
         orderBy: { day: "asc" },
       }),
+      prisma.workspaceExecutiveSnapshot.findUnique({ where: { workspaceId: wid } }),
+      prisma.reminderJobLog.count({
+        where: { workspaceId: wid, status: "FAILED", createdAt: { gte: sevenDaysAgo } },
+      }).catch(() => 0),
     ]);
-    return { byStatus, bySeverity, series };
+
+    // Build full 14-day series with zero-filled gaps (same shape as web app)
+    const seriesMap = new Map<string, typeof seriesRows[0]>();
+    for (const row of seriesRows) {
+      seriesMap.set(row.day.toISOString().slice(0, 10), row);
+    }
+    const series: Array<{day:string;incidentsCreated:number;incidentsResolved:number;openAtEndOfDay:number;p1Created:number;triageRuns:number;customerUpdatesSent:number;reminderEmailsSent:number}> = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(fourteenDaysAgo.getTime() + i * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      const row = seriesMap.get(key);
+      series.push({
+        day: key,
+        incidentsCreated: row?.incidentsCreated ?? 0,
+        incidentsResolved: row?.incidentsResolved ?? 0,
+        openAtEndOfDay: row?.openAtEndOfDay ?? 0,
+        p1Created: row?.p1Created ?? 0,
+        triageRuns: row?.triageRuns ?? 0,
+        customerUpdatesSent: row?.customerUpdatesSent ?? 0,
+        reminderEmailsSent: row?.reminderEmailsSent ?? 0,
+      });
+    }
+
+    return { series, snapshot, failedReminders7d };
   });
 
   // ── Profile ──
+  ipcMain.handle("workspace:refresh-read-models", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const tomorrowStart = new Date(todayStart.getTime() + 86400000);
+    const d7 = new Date(todayStart.getTime() - 7 * 86400000);
+    const d30 = new Date(todayStart.getTime() - 30 * 86400000);
+
+    const [created, resolved, openCount, p1Created, triageRuns, custUpdates, remindersSent, resolvedToday, openAll, p1Open, created7d, resolved7d, resolved30d, incidents30d] = await Promise.all([
+      prisma.incident.count({ where: { workspaceId: wid, createdAt: { gte: todayStart, lt: tomorrowStart } } }),
+      prisma.incident.count({ where: { workspaceId: wid, resolvedAt: { gte: todayStart, lt: tomorrowStart } } }),
+      prisma.incident.count({ where: { workspaceId: wid, status: { not: IncidentStatus.RESOLVED } } }),
+      prisma.incident.count({ where: { workspaceId: wid, severity: "P1", createdAt: { gte: todayStart, lt: tomorrowStart } } }),
+      prisma.incidentEvent.count({ where: { incident: { workspaceId: wid }, eventType: EventType.TRIAGE_RUN, createdAt: { gte: todayStart, lt: tomorrowStart } } }),
+      prisma.incidentEvent.count({ where: { incident: { workspaceId: wid }, eventType: EventType.CUSTOMER_UPDATE, createdAt: { gte: todayStart, lt: tomorrowStart } } }),
+      prisma.emailNotificationLog.count({ where: { workspaceId: wid, type: "REMINDER", status: "SENT", createdAt: { gte: todayStart, lt: tomorrowStart } } }).catch(() => 0),
+      prisma.incident.findMany({ where: { workspaceId: wid, resolvedAt: { gte: todayStart, lt: tomorrowStart } }, select: { createdAt: true, resolvedAt: true } }),
+      prisma.incident.count({ where: { workspaceId: wid, status: { not: IncidentStatus.RESOLVED } } }),
+      prisma.incident.count({ where: { workspaceId: wid, status: { not: IncidentStatus.RESOLVED }, severity: "P1" } }),
+      prisma.incident.count({ where: { workspaceId: wid, createdAt: { gte: d7 } } }),
+      prisma.incident.count({ where: { workspaceId: wid, resolvedAt: { gte: d7 } } }),
+      prisma.incident.findMany({ where: { workspaceId: wid, resolvedAt: { gte: d30 } }, select: { createdAt: true, resolvedAt: true } }),
+      prisma.incident.findMany({ where: { workspaceId: wid, createdAt: { gte: d30 } }, select: { triageRunCount: true, customerUpdateCount: true } }),
+    ]);
+
+    const mttr = resolvedToday.length > 0 ? Math.round(resolvedToday.reduce((s, i) => s + ((i.resolvedAt?.getTime() ?? 0) - i.createdAt.getTime()) / 60000, 0) / resolvedToday.length) : null;
+    await prisma.incidentAnalyticsDaily.upsert({
+      where: { workspaceId_day: { workspaceId: wid, day: todayStart } },
+      create: { workspaceId: wid, day: todayStart, incidentsCreated: created, incidentsResolved: resolved, openAtEndOfDay: openCount, p1Created, triageRuns, customerUpdatesSent: custUpdates, reminderEmailsSent: remindersSent, mttrMinutesAvg: mttr },
+      update: { incidentsCreated: created, incidentsResolved: resolved, openAtEndOfDay: openCount, p1Created, triageRuns, customerUpdatesSent: custUpdates, reminderEmailsSent: remindersSent, mttrMinutesAvg: mttr },
+    });
+
+    const avgH = resolved30d.length > 0 ? Number((resolved30d.reduce((s, i) => s + ((i.resolvedAt?.getTime() ?? 0) - i.createdAt.getTime()) / 3600000, 0) / resolved30d.length).toFixed(2)) : 0;
+    const triagePct = incidents30d.length > 0 ? Math.round((incidents30d.filter(i => i.triageRunCount > 0).length / incidents30d.length) * 100) : 0;
+    const updatePct = incidents30d.length > 0 ? Math.round((incidents30d.filter(i => i.customerUpdateCount > 0).length / incidents30d.length) * 100) : 0;
+    await prisma.workspaceExecutiveSnapshot.upsert({
+      where: { workspaceId: wid },
+      create: { workspaceId: wid, openIncidents: openAll, p1OpenIncidents: p1Open, incidentsCreatedLast7d: created7d, incidentsResolvedLast7d: resolved7d, avgResolutionHoursLast30d: avgH, triageCoveragePct: triagePct, customerUpdateCoveragePct: updatePct },
+      update: { openIncidents: openAll, p1OpenIncidents: p1Open, incidentsCreatedLast7d: created7d, incidentsResolvedLast7d: resolved7d, avgResolutionHoursLast30d: avgH, triageCoveragePct: triagePct, customerUpdateCoveragePct: updatePct },
+    });
+    return { success: true };
+  });
+
+  ipcMain.handle("onboarding:dismiss", async () => {
+    if (!currentSession) return null;
+    await prisma.workspace.update({
+      where: { id: currentSession.user.workspaceId },
+      data: { onboardingDismissedAt: new Date() },
+    });
+    return { ok: true };
+  });
+
   ipcMain.handle("profile:get", async () => {
     if (!currentSession) return null;
     return prisma.user.findUnique({
@@ -420,7 +516,27 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Incident create ──
-  ipcMain.handle("incidents:create", async (_e, data: { title: string; description?: string; severity: string; customerName?: string; customerEmail?: string }) => {
+  ipcMain.handle("incidents:export-csv", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const incidents = await prisma.incident.findMany({
+      where: { workspaceId: wid },
+      include: { owner: { select: { name: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    const esc = (v: unknown) => { const t = String(v ?? ""); const e = t.replace(/"/g, '""'); return /[",\n]/.test(e) ? `"${e}"` : e; };
+    const header = ["incident_id","title","severity","status","category","owner_name","owner_email","created_at","resolved_at"].map(esc).join(",");
+    const rows = incidents.map(i => [i.id,i.title,i.severity,i.status,i.category??"",i.owner?.name??"",i.owner?.email??"",i.createdAt.toISOString(),i.resolvedAt?.toISOString()??""].map(esc).join(","));
+    const csv = [header, ...rows].join("\n");
+    const { dialog } = await import("electron");
+    const { canceled, filePath } = await dialog.showSaveDialog({ defaultPath: `trustloop-incidents-${new Date().toISOString().slice(0,10)}.csv`, filters: [{ name: "CSV", extensions: ["csv"] }] });
+    if (canceled || !filePath) return null;
+    const fs = await import("fs");
+    fs.writeFileSync(filePath, csv, "utf-8");
+    return { ok: true, path: filePath };
+  });
+
+  ipcMain.handle("incidents:create", async (_e, data: { title: string; description?: string; severity: string; customerName?: string; customerEmail?: string; channel?: string; category?: string; modelVersion?: string; sourceTicketRef?: string }) => {
     if (!currentSession) return null;
     return prisma.incident.create({
       data: {
@@ -432,7 +548,10 @@ export function registerIpcHandlers(): void {
         ownerUserId: currentSession.user.id,
         customerName: data.customerName || null,
         customerEmail: data.customerEmail || null,
-        channel: "API" as IncidentChannel,
+        channel: (data.channel || "API") as IncidentChannel,
+        category: data.category ? data.category as any : null,
+        modelVersion: data.modelVersion || null,
+        sourceTicketRef: data.sourceTicketRef || null,
       },
       select: { id: true, title: true, status: true, severity: true, createdAt: true },
     });
@@ -459,17 +578,28 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Incident update (status, severity, owner, category) ──
-  ipcMain.handle("incidents:update", async (_e, id: string, data: { status?: string; severity?: string; ownerUserId?: string; category?: string }) => {
+  ipcMain.handle("incidents:update", async (_e, id: string, data: { status?: string; severity?: string; ownerUserId?: string | null; category?: string | null }) => {
     if (!currentSession) return null;
     const updateData: any = {};
     if (data.status) { updateData.status = data.status; if (data.status === "RESOLVED") updateData.resolvedAt = new Date(); }
     if (data.severity) updateData.severity = data.severity;
-    if (data.ownerUserId) updateData.ownerUserId = data.ownerUserId;
-    if (data.category !== undefined) updateData.category = data.category;
+    if (data.ownerUserId !== undefined) updateData.ownerUserId = data.ownerUserId || null;
+    if (data.category !== undefined) updateData.category = data.category || null;
     return prisma.incident.update({
       where: { id, workspaceId: currentSession.user.workspaceId },
       data: updateData,
       select: { id: true, status: true, severity: true, ownerUserId: true, category: true },
+    });
+  });
+
+  // ── Status updates (customer-facing) ──
+  ipcMain.handle("incidents:publish-update", async (_e, incidentId: string, body: string) => {
+    if (!currentSession) return null;
+    const incident = await prisma.incident.findFirst({ where: { id: incidentId, workspaceId: currentSession.user.workspaceId } });
+    if (!incident) return null;
+    return prisma.statusUpdate.create({
+      data: { incident: { connect: { id: incidentId } }, workspace: { connect: { id: currentSession.user.workspaceId } }, body, isVisible: true, publishedAt: new Date() },
+      select: { id: true },
     });
   });
 

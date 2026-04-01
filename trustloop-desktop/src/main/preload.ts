@@ -25,8 +25,10 @@ contextBridge.exposeInMainWorld("trustloop", {
   getIncident: (id: string) => ipcRenderer.invoke("incidents:get", id),
   updateIncidentStatus: (id: string, status: string) => ipcRenderer.invoke("incidents:update-status", id, status),
   createIncident: (data: any) => ipcRenderer.invoke("incidents:create", data),
+  exportIncidentsCsv: () => ipcRenderer.invoke("incidents:export-csv"),
   incidentDetail: (id: string) => ipcRenderer.invoke("incidents:detail", id),
   updateIncident: (id: string, data: any) => ipcRenderer.invoke("incidents:update", id, data),
+  publishStatusUpdate: (id: string, body: string) => ipcRenderer.invoke("incidents:publish-update", id, body),
   addIncidentEvent: (id: string, body: string, eventType?: string) => ipcRenderer.invoke("incidents:add-event", id, body, eventType),
 
   // Workspace
@@ -39,6 +41,8 @@ contextBridge.exposeInMainWorld("trustloop", {
 
   // Profile
   getProfile: () => ipcRenderer.invoke("profile:get"),
+  dismissOnboarding: () => ipcRenderer.invoke("onboarding:dismiss"),
+  refreshReadModels: () => ipcRenderer.invoke("workspace:refresh-read-models"),
   updateProfile: (data: { name?: string; phone?: string | null }) => ipcRenderer.invoke("profile:update", data),
 
   // Workspace settings

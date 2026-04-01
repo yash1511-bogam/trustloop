@@ -7,7 +7,11 @@
   "author": "TrustLoop",
   "license": "PROPRIETARY",
   "pnpm": {
-    "onlyBuiltDependencies": ["electron", "@prisma/engines", "prisma"]
+    "onlyBuiltDependencies": [
+      "electron",
+      "@prisma/engines",
+      "prisma"
+    ]
   },
   "scripts": {
     "dev": "pnpm compile && bash scripts/patch-dev-name.sh && NODE_ENV=development pnpm exec electron dist/main/main.js",
@@ -22,8 +26,18 @@
     "productName": "TrustLoop",
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["arm64"] },
-        { "target": "zip", "arch": ["arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.developer-tools",
       "icon": "assets/icon.icns",
@@ -36,20 +50,30 @@
       }
     },
     "protocols": [
-      { "name": "TrustLoop OAuth", "schemes": ["trustloop"] }
+      {
+        "name": "TrustLoop OAuth",
+        "schemes": [
+          "trustloop"
+        ]
+      }
     ],
-    "files": ["dist/**/*", "src/renderer/**/*", "assets/**/*"]
+    "files": [
+      "dist/**/*",
+      "src/renderer/**/*",
+      "assets/**/*"
+    ]
   },
   "dependencies": {
+    "chart.js": "^4.5.1",
+    "dotenv": "^16.5.0",
     "ioredis": "^5.10.1",
-    "stytch": "^13.2.3",
     "pg": "^8.20.0",
-    "dotenv": "^16.5.0"
+    "stytch": "^13.2.3"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "electron": "^35.0.0",
     "electron-builder": "^26.0.0",
-    "typescript": "^5.9.3",
-    "@types/node": "^22.0.0"
+    "typescript": "^5.9.3"
   }
 }
