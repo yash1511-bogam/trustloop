@@ -186,7 +186,22 @@ function buildMenu() {
     {
       label: app.name,
       submenu: [
-        { role: "about" }, { type: "separator" },
+        {
+          label: "About TrustLoop",
+          click: () => {
+            const icon = nativeImage.createFromPath(iconPath("default", "256x256@1x"));
+            dialog.showMessageBox({
+              type: "none",
+              icon: icon.isEmpty() ? undefined : icon,
+              title: "About TrustLoop",
+              message: "TrustLoop",
+              detail: "Version 0.10.0\n© 2025 TrustLoop",
+              buttons: ["OK"],
+            });
+          },
+        },
+        { label: "Check for Updates…", click: () => shell.openExternal("https://trustloop.ai/changelog") },
+        { type: "separator" },
         { label: "Preferences…", accelerator: "Cmd+,", click: nav("settings") },
         { type: "separator" }, { role: "services" }, { type: "separator" },
         { role: "hide" }, { role: "hideOthers" }, { role: "unhide" },

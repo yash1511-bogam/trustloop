@@ -75,7 +75,14 @@ export async function authenticateSession(sessionToken: string): Promise<AuthUse
 
   let stytchUserId: string;
   const isStub = process.env.TRUSTLOOP_STUB_AUTH === "1";
-  if (isStub && sessionToken.startsWith("stub-session:")) {
+  if (sessionToken === "dev-session" && process.env.NODE_ENV === "development") {
+    const user = await prisma.user.findFirst({
+      where: { email: "demo@trustloop.local" },
+      include: { workspace: { select: { name: true } } },
+    });
+    if (!user) return null;
+    return { id: user.id, name: user.name, email: user.email, role: user.role, workspaceId: user.workspaceId, workspaceName: user.workspace.name, stytchUserId: user.stytchUserId };
+  } else if (isStub && sessionToken.startsWith("stub-session:")) {
     const parts = sessionToken.replace("stub-session:", "").split(":");
     stytchUserId = parts[0];
     const exp = Number(parts[1]);

@@ -1,7 +1,7 @@
 import { ipcMain, shell } from "electron";
 import { prisma } from "./db";
 import { sendOtp, verifyOtp, authenticateSession, getOAuthStartUrl, registerUser, verifyRegisterOtp, AuthUser } from "./auth";
-import { IncidentStatus, IncidentSeverity, Role, AiProvider, WorkflowType } from "@prisma/client";
+import { IncidentStatus, IncidentSeverity, IncidentChannel, EventType, Role, AiProvider, WorkflowType } from "@prisma/client";
 
 let currentSession: { token: string; user: AuthUser } | null = null;
 export function getSession() { return currentSession; }
@@ -51,11 +51,17 @@ export function registerIpcHandlers(): void {
   // Dev auto-login: same as src/lib/auth.ts getAuth() dev fallback
   ipcMain.handle("auth:dev-login", async () => {
     if (process.env.NODE_ENV !== "development") return null;
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: { email: "demo@trustloop.local" },
       include: { workspace: { select: { name: true } } },
     });
-    if (!user) return null;
+    if (!user) {
+      const ws = await prisma.workspace.create({ data: { name: "Dev Workspace", slug: "dev-workspace", planTier: "starter" } });
+      user = await prisma.user.create({
+        data: { workspaceId: ws.id, email: "demo@trustloop.local", name: "Dev User", role: "OWNER", stytchUserId: "dev-stytch-id" },
+        include: { workspace: { select: { name: true } } },
+      }) as any;
+    }
     currentSession = {
       token: "dev-session",
       user: {
@@ -261,5 +267,276 @@ export function registerIpcHandlers(): void {
       }),
     ]);
     return { byStatus, bySeverity, series };
+  });
+
+  // ── Profile ──
+  ipcMain.handle("profile:get", async () => {
+    if (!currentSession) return null;
+    return prisma.user.findUnique({
+      where: { id: currentSession.user.id },
+      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
+    });
+  });
+
+  ipcMain.handle("profile:update", async (_e, data: { name?: string; phone?: string }) => {
+    if (!currentSession) return null;
+    const user = await prisma.user.update({
+      where: { id: currentSession.user.id },
+      data,
+      select: { id: true, name: true, email: true, phone: true, role: true },
+    });
+    if (data.name) currentSession.user.name = user.name;
+    return user;
+  });
+
+  // ── Workspace general ──
+  ipcMain.handle("workspace:general", async () => {
+    if (!currentSession) return null;
+    return prisma.workspace.findUnique({
+      where: { id: currentSession.user.workspaceId },
+      select: {
+        id: true, name: true, slug: true, planTier: true, statusPageEnabled: true,
+        slackChannelId: true, slackTeamId: true, complianceMode: true, createdAt: true,
+        trialEndsAt: true, customDomain: true, customDomainVerified: true,
+        billing: { select: { status: true } },
+      },
+    });
+  });
+
+  ipcMain.handle("workspace:update", async (_e, data: { name?: string; complianceMode?: boolean; statusPageEnabled?: boolean }) => {
+    if (!currentSession) return null;
+    return prisma.workspace.update({
+      where: { id: currentSession.user.workspaceId },
+      data,
+      select: { id: true, name: true, slug: true, planTier: true, complianceMode: true, statusPageEnabled: true },
+    });
+  });
+
+  // ── Team ──
+  ipcMain.handle("workspace:team", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const [members, invites] = await Promise.all([
+      prisma.workspaceMembership.findMany({
+        where: { workspaceId: wid },
+        include: { user: { select: { id: true, name: true, email: true, phone: true, createdAt: true } } },
+        orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+      }),
+      prisma.workspaceInvite.findMany({
+        where: { workspaceId: wid, usedAt: null, expiresAt: { gt: new Date() } },
+        select: { id: true, email: true, role: true, token: true, createdAt: true, expiresAt: true },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+    return {
+      members: members.map(m => ({ id: m.user.id, name: m.user.name, email: m.user.email, phone: m.user.phone, role: m.role, createdAt: m.user.createdAt })),
+      invites,
+      currentUserId: currentSession.user.id,
+      canManageRoles: currentSession.user.role === "OWNER",
+    };
+  });
+
+  // ── Billing ──
+  ipcMain.handle("workspace:billing", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const today = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+    const ws = await prisma.workspace.findUnique({
+      where: { id: wid },
+      select: {
+        planTier: true, trialEndsAt: true,
+        billing: {
+          select: {
+            status: true, discountCode: true, dodoSubscriptionId: true, dodoProductId: true,
+            lastPaymentAt: true, lastPaymentAmount: true, lastPaymentCurrency: true, lastInvoiceUrl: true,
+            paymentFailedAt: true, currentPeriodStart: true, currentPeriodEnd: true,
+            canceledAt: true, cancelReason: true, failureReminderCount: true,
+          },
+        },
+      },
+    });
+    const usage = await prisma.workspaceDailyUsage.findUnique({
+      where: { workspaceId_usageDate: { workspaceId: wid, usageDate: today } },
+    }).catch(() => null);
+    const quota = await prisma.workspaceQuota.findUnique({ where: { workspaceId: wid } }).catch(() => null);
+    return { ...ws, usage, quota };
+  });
+
+  // ── AI Provider Keys ──
+  ipcMain.handle("integrations:ai", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const [keys, workflows] = await Promise.all([
+      prisma.aiProviderKey.findMany({
+        where: { workspaceId: wid },
+        select: { provider: true, keyLast4: true, isActive: true, healthStatus: true, lastVerifiedAt: true, lastVerificationError: true, updatedAt: true },
+        orderBy: { provider: "asc" },
+      }),
+      prisma.workflowSetting.findMany({
+        where: { workspaceId: wid },
+        select: { workflowType: true, provider: true, model: true },
+        orderBy: { workflowType: "asc" },
+      }),
+    ]);
+    return { keys, workflows };
+  });
+
+  // ── Webhooks ──
+  ipcMain.handle("integrations:webhooks", async () => {
+    if (!currentSession) return null;
+    return prisma.workspaceWebhookIntegration.findMany({
+      where: { workspaceId: currentSession.user.workspaceId },
+      select: { id: true, type: true, isActive: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+  });
+
+  // ── On-Call ──
+  ipcMain.handle("integrations:oncall", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const quota = await prisma.workspaceQuota.findUnique({ where: { workspaceId: wid } }).catch(() => null);
+    const members = await prisma.user.findMany({
+      where: { workspaceId: wid },
+      select: { id: true, name: true, email: true, phone: true, role: true },
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+    });
+    return { onCallEnabled: quota?.onCallRotationEnabled ?? false, members };
+  });
+
+  // ── Workspace overview (same as web app) ──
+  ipcMain.handle("workspace:overview", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const [keyCount, workflowCount, memberCount, inviteCount, workspace, webhookCount] = await Promise.all([
+      prisma.aiProviderKey.count({ where: { workspaceId: wid } }),
+      prisma.workflowSetting.count({ where: { workspaceId: wid } }),
+      prisma.user.count({ where: { workspaceId: wid } }),
+      prisma.workspaceInvite.count({ where: { workspaceId: wid, usedAt: null, expiresAt: { gt: new Date() } } }),
+      prisma.workspace.findUniqueOrThrow({ where: { id: wid }, select: { planTier: true, trialEndsAt: true, billing: { select: { status: true } } } }),
+      prisma.workspaceWebhookIntegration.count({ where: { workspaceId: wid, isActive: true } }).catch(() => 0),
+    ]);
+    return { keyCount, workflowCount, memberCount, inviteCount, planTier: workspace.planTier, billingStatus: workspace.billing?.status ?? null, webhookCount };
+  });
+
+  // ── Incident create ──
+  ipcMain.handle("incidents:create", async (_e, data: { title: string; description?: string; severity: string; customerName?: string; customerEmail?: string }) => {
+    if (!currentSession) return null;
+    return prisma.incident.create({
+      data: {
+        workspaceId: currentSession.user.workspaceId,
+        title: data.title,
+        description: data.description || "",
+        severity: data.severity as IncidentSeverity,
+        status: IncidentStatus.NEW,
+        ownerUserId: currentSession.user.id,
+        customerName: data.customerName || null,
+        customerEmail: data.customerEmail || null,
+        channel: "API" as IncidentChannel,
+      },
+      select: { id: true, title: true, status: true, severity: true, createdAt: true },
+    });
+  });
+
+  // ── Incident detail (same as web app [id]/page.tsx) ──
+  ipcMain.handle("incidents:detail", async (_e, id: string) => {
+    if (!currentSession) return null;
+    const incident = await prisma.incident.findFirst({
+      where: { id, workspaceId: currentSession.user.workspaceId },
+      include: {
+        owner: { select: { id: true, name: true, email: true } },
+        events: { include: { actor: { select: { name: true, email: true } } }, orderBy: { createdAt: "desc" } },
+        postMortem: { include: { author: { select: { id: true, name: true } } } },
+      },
+    });
+    if (!incident) return null;
+    const owners = await prisma.user.findMany({
+      where: { workspaceId: currentSession.user.workspaceId },
+      select: { id: true, name: true, role: true },
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+    });
+    return { incident, owners };
+  });
+
+  // ── Incident update (status, severity, owner, category) ──
+  ipcMain.handle("incidents:update", async (_e, id: string, data: { status?: string; severity?: string; ownerUserId?: string; category?: string }) => {
+    if (!currentSession) return null;
+    const updateData: any = {};
+    if (data.status) { updateData.status = data.status; if (data.status === "RESOLVED") updateData.resolvedAt = new Date(); }
+    if (data.severity) updateData.severity = data.severity;
+    if (data.ownerUserId) updateData.ownerUserId = data.ownerUserId;
+    if (data.category !== undefined) updateData.category = data.category;
+    return prisma.incident.update({
+      where: { id, workspaceId: currentSession.user.workspaceId },
+      data: updateData,
+      select: { id: true, status: true, severity: true, ownerUserId: true, category: true },
+    });
+  });
+
+  // ── Incident add event/note ──
+  ipcMain.handle("incidents:add-event", async (_e, incidentId: string, body: string, eventType?: string) => {
+    if (!currentSession) return null;
+    return prisma.incidentEvent.create({
+      data: {
+        incidentId,
+        actorUserId: currentSession.user.id,
+        eventType: (eventType || "NOTE") as EventType,
+        body,
+      },
+      select: { id: true, eventType: true, body: true, createdAt: true },
+    });
+  });
+
+  // ── Quotas ──
+  ipcMain.handle("workspace:quotas", async () => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const quota = await prisma.workspaceQuota.findUnique({ where: { workspaceId: wid } });
+    const today = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+    const usage = await prisma.workspaceDailyUsage.findUnique({
+      where: { workspaceId_usageDate: { workspaceId: wid, usageDate: today } },
+    }).catch(() => null);
+    return { quota, usage };
+  });
+
+  // ── SSO ──
+  ipcMain.handle("security:sso", async () => {
+    if (!currentSession) return null;
+    return prisma.workspace.findUnique({
+      where: { id: currentSession.user.workspaceId },
+      select: { samlEnabled: true, samlMetadataUrl: true, samlOrganizationId: true, samlConnectionId: true },
+    }).catch(() => null);
+  });
+
+  // ── API Keys ──
+  ipcMain.handle("security:apikeys", async () => {
+    if (!currentSession) return null;
+    return prisma.workspaceApiKey.findMany({
+      where: { workspaceId: currentSession.user.workspaceId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, keyPrefix: true, scopes: true, isActive: true, createdAt: true, lastUsedAt: true, expiresAt: true },
+    });
+  });
+
+  // ── Audit Log ──
+  ipcMain.handle("security:audit", async (_e, opts?: { page?: number }) => {
+    if (!currentSession) return null;
+    const wid = currentSession.user.workspaceId;
+    const page = opts?.page ?? 1;
+    const take = 100;
+    const [items, count] = await Promise.all([
+      prisma.auditLog.findMany({
+        where: { workspaceId: wid },
+        orderBy: { createdAt: "desc" },
+        take, skip: (page - 1) * take,
+        select: {
+          id: true, action: true, summary: true, createdAt: true, ipAddress: true,
+          actorUser: { select: { name: true } },
+          actorApiKey: { select: { name: true } },
+        },
+      }),
+      prisma.auditLog.count({ where: { workspaceId: wid } }),
+    ]);
+    return { items, total: count, page, pages: Math.ceil(count / take) };
   });
 }
