@@ -1,5 +1,6 @@
 // Exact same Prisma setup as the web app (src/lib/prisma.ts).
 // Both desktop and web connect to the same Postgres, same schema, same tables.
+// IMPORTANT: Initialization is lazy so AWS Secrets Manager can populate env vars first.
 
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
@@ -37,22 +38,34 @@ function normalizePgSslMode(cs: string): void {
   if (deprecatedSslModes.has(current)) process.env.PGSSLMODE = "verify-full";
 }
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+let _prisma: PrismaClient | undefined;
 
-const rawUrl = requiredValue("DATABASE_URL");
-const normalizedUrl = normalizeDatabaseUrl(rawUrl);
-process.env.DATABASE_URL = normalizedUrl;
-normalizePgSslMode(normalizedUrl);
+export function getPrisma(): PrismaClient {
+  if (_prisma) return _prisma;
 
-const poolSize = parseInt(process.env.DATABASE_POOL_SIZE ?? "", 10) || undefined;
-const adapter = new PrismaPg({ connectionString: normalizedUrl, ...(poolSize ? { max: poolSize } : {}) });
+  const rawUrl = requiredValue("DATABASE_URL");
+  const normalizedUrl = normalizeDatabaseUrl(rawUrl);
+  process.env.DATABASE_URL = normalizedUrl;
+  normalizePgSslMode(normalizedUrl);
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({ log: ["error"], adapter });
+  const poolSize = parseInt(process.env.DATABASE_POOL_SIZE ?? "", 10) || undefined;
+  const adapter = new PrismaPg({ connectionString: normalizedUrl, ...(poolSize ? { max: poolSize } : {}) });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+  _prisma = new PrismaClient({ log: ["error"], adapter });
+
+  if (process.env.NODE_ENV !== "production") {
+    (globalThis as any).prisma = _prisma;
+  }
+  return _prisma;
+}
+
+// Keep backward-compatible named export as a getter
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop, receiver) {
+    return Reflect.get(getPrisma(), prop, receiver);
+  },
+});
 
 export async function disconnect(): Promise<void> {
-  await prisma.$disconnect();
+  if (_prisma) await _prisma.$disconnect();
 }

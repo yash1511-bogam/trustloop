@@ -11,12 +11,33 @@ importers:
       '@aws-sdk/client-secrets-manager':
         specifier: ^3.1021.0
         version: 3.1021.0
+      '@aws/lambda-invoke-store':
+        specifier: ^0.2.4
+        version: 0.2.4
       '@prisma/adapter-pg':
         specifier: 7.5.0
         version: 7.5.0
       '@prisma/client':
         specifier: 7.5.0
         version: 7.5.0(prisma@7.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3))(typescript@5.9.3)
+      '@smithy/querystring-builder':
+        specifier: ^4.2.12
+        version: 4.2.12
+      '@smithy/querystring-parser':
+        specifier: ^4.2.12
+        version: 4.2.12
+      '@smithy/service-error-classification':
+        specifier: ^4.2.12
+        version: 4.2.12
+      '@smithy/util-buffer-from':
+        specifier: ^4.2.2
+        version: 4.2.2
+      '@smithy/util-config-provider':
+        specifier: ^4.2.2
+        version: 4.2.2
+      '@smithy/uuid':
+        specifier: ^1.1.2
+        version: 1.1.2
       chart.js:
         specifier: ^4.5.1
         version: 4.5.1
@@ -29,9 +50,18 @@ importers:
       pg:
         specifier: ^8.20.0
         version: 8.20.0
-      prisma:
-        specifier: 7.5.0
-        version: 7.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
+      pg-connection-string:
+        specifier: ^2.12.0
+        version: 2.12.0
+      pg-pool:
+        specifier: ^3.10.0
+        version: 3.13.0(pg@8.20.0)
+      pg-protocol:
+        specifier: ^1.10.0
+        version: 1.13.0
+      pgpass:
+        specifier: ^1.0.5
+        version: 1.0.5
       stytch:
         specifier: ^13.2.3
         version: 13.2.3
@@ -54,6 +84,9 @@ importers:
       globals:
         specifier: ^17.4.0
         version: 17.4.0
+      prisma:
+        specifier: 7.5.0
+        version: 7.5.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

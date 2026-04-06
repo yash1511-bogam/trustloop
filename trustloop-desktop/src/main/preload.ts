@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from "electron";
+import * as path from "path";
+
+const assetsPath = process.resourcesPath
+  ? "file://" + path.join(process.resourcesPath, "assets")
+  : "../../assets";
 
 contextBridge.exposeInMainWorld("trustloop", {
+  assetsPath,
   // Auth
   sendOtp: (email: string) => ipcRenderer.invoke("auth:send-otp", email),
   verifyOtp: (methodId: string, code: string) => ipcRenderer.invoke("auth:verify-otp", methodId, code),

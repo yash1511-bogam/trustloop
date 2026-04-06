@@ -137,10 +137,10 @@ export async function verifyRegisterOtp(methodId: string, code: string): Promise
 }
 
 export async function getOAuthStartUrl(provider: "google" | "github", intent?: "login" | "register", workspaceName?: string): Promise<string> {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  // Create a nonce and store in Redis so the web route can verify it
-  const nonce = randomBytes(24).toString("hex");
-  await redisSet(`desktop:oauth-nonce:${nonce}`, "1", 600);
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://trustloop.yashbogam.me";
+  // Request nonce from the web app so it's stored in production Redis
+  const res = await fetch(`${appUrl}/api/auth/oauth/desktop/nonce`, { method: "POST" });
+  const { nonce } = await res.json() as { nonce: string };
   const params = new URLSearchParams({ nonce });
   if (intent) params.set("intent", intent);
   if (workspaceName) params.set("workspaceName", workspaceName);

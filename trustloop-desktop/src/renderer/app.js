@@ -46,15 +46,16 @@ const app = {
   // ═══ Logo ═══
   renderLogo(id, baseSize, animated) {
     if (animated === undefined) animated = true;
+    const base = (window.trustloop?.assetsPath || '../../assets') + '/Logo/';
     const letters = [
-      { src: '../../assets/Logo/T.svg', w: 60, h: 83 },
-      { src: '../../assets/Logo/r.svg', w: 60, h: 60 },
-      { src: '../../assets/Logo/u.svg', w: 60, h: 60 },
-      { src: '../../assets/Logo/s.svg', w: 60, h: 60 },
-      { src: '../../assets/Logo/2nd-t.svg', w: 72, h: 83 },
-      { src: '../../assets/Logo/L.svg', w: 60, h: 83, ml: 0.3 },
-      { src: '../../assets/Logo/%E2%88%9E.svg', w: 106, h: 62, animated: true },
-      { src: '../../assets/Logo/p.svg', w: 60, h: 82 },
+      { src: base + 'T.svg', w: 60, h: 83 },
+      { src: base + 'r.svg', w: 60, h: 60 },
+      { src: base + 'u.svg', w: 60, h: 60 },
+      { src: base + 's.svg', w: 60, h: 60 },
+      { src: base + '2nd-t.svg', w: 72, h: 83 },
+      { src: base + 'L.svg', w: 60, h: 83, ml: 0.3 },
+      { src: base + '%E2%88%9E.svg', w: 106, h: 62, animated: true },
+      { src: base + 'p.svg', w: 60, h: 82 },
     ];
     const el = document.getElementById(id);
     if (!el) return;
