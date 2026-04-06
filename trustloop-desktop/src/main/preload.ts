@@ -82,4 +82,12 @@ contextBridge.exposeInMainWorld("trustloop", {
   onOAuthCallback: (cb: (token: string, provider: string) => void) => {
     ipcRenderer.on("oauth-callback", (_e: any, token: string, provider: string) => cb(token, provider));
   },
+
+  // Updates
+  onUpdateState: (cb: (data: { state: string; version: string }) => void) => {
+    ipcRenderer.on("update-state", (_e: any, data: any) => cb(data));
+  },
+  updateDownload: () => ipcRenderer.send("update:download"),
+  updateInstall: () => ipcRenderer.send("update:install"),
+  updateDismiss: () => ipcRenderer.send("update:dismiss"),
 });

@@ -29,6 +29,7 @@ const app = {
         if (map[page]) this.navTo(map[page]);
       });
       window.trustloop.onOAuthCallback(() => this.checkSession());
+      window.trustloop.onUpdateState((data) => this.onUpdateState(data));
 
     }
   },
@@ -1242,6 +1243,45 @@ const app = {
     const enabled = $('#sso-enabled')?.checked || false;
     await window.trustloop.saveSso({ samlEnabled: enabled, samlMetadataUrl: metadataUrl });
     const el = $('#sso-msg'); if (el) { el.textContent = '✓ SAML settings saved.'; el.style.color = 'var(--resolve)'; setTimeout(() => el.textContent = '', 3000); }
+  },
+
+  // ═══ Update Banner ═══
+  _updateState: 'idle',
+
+  onUpdateState(data) {
+    this._updateState = data.state;
+    const banner = $('#update-banner');
+    const text = $('#update-banner-text');
+    const btn = $('#update-banner-action');
+    if (!banner) return;
+    if (data.state === 'available') {
+      text.textContent = `TrustLoop ${data.version} is available`;
+      btn.textContent = 'Update Now';
+      banner.classList.remove('hidden');
+    } else if (data.state === 'downloading') {
+      text.textContent = `Downloading TrustLoop ${data.version}…`;
+      btn.textContent = 'Downloading…';
+      btn.disabled = true;
+      banner.classList.remove('hidden');
+    } else if (data.state === 'ready') {
+      text.textContent = `TrustLoop ${data.version} is ready to install`;
+      btn.textContent = 'Restart to Update';
+      btn.disabled = false;
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+  },
+
+  handleUpdateAction() {
+    if (!window.trustloop) return;
+    if (this._updateState === 'available') window.trustloop.updateDownload();
+    else if (this._updateState === 'ready') window.trustloop.updateInstall();
+  },
+
+  dismissUpdate() {
+    $('#update-banner')?.classList.add('hidden');
+    if (window.trustloop) window.trustloop.updateDismiss();
   },
 
   timeAgo(dateStr) {

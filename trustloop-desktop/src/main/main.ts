@@ -6,7 +6,7 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config({ path: path.join(repoRoot, ".env") });
 }
 
-import { app, BrowserWindow, Menu, shell, nativeTheme, nativeImage, dialog, Notification } from "electron";
+import { app, BrowserWindow, Menu, shell, nativeTheme, nativeImage, dialog, Notification, ipcMain } from "electron";
 import Module from "module";
 
 // ── Resolve shared deps from the parent repo (dev) or asar (packaged) ──
@@ -78,22 +78,25 @@ function iconPath(style: string, size: string): string {
   return path.join(ASSETS, "icons", m.dir, `${m.prefix}-${size}.png`);
 }
 
-function getIcon(size = "128x128@2x") {
-  const isDark = nativeTheme.shouldUseDarkColors;
-  // Light mode → default icon, Dark mode → dark icon
-  const style = isDark ? "dark" : "default";
+function getIconForStyle(style: string, size: string) {
   try {
-    const p = iconPath(style, size);
-    const img = nativeImage.createFromPath(p);
+    const img = nativeImage.createFromPath(iconPath(style, size));
     if (!img.isEmpty()) return img;
   } catch {}
   return nativeImage.createFromPath(iconPath("default", size));
 }
 
-// Smaller icon for window titlebar
-function getWindowIcon() { return getIcon("32x32@2x"); }
-// Larger icon for Dock
-function getDockIcon() { return getIcon("512x512@1x"); }
+// Dock icon: Liquid Glass clear style (macOS Tahoe)
+function getDockIcon() {
+  const style = nativeTheme.shouldUseDarkColors ? "clear-dark" : "clear-light";
+  return getIconForStyle(style, "256x256@1x");
+}
+
+// Tray / menu bar icon: tinted style
+function getWindowIcon() {
+  const style = nativeTheme.shouldUseDarkColors ? "tinted-dark" : "tinted-light";
+  return getIconForStyle(style, "32x32@2x");
+}
 
 // ── Protocol ──
 if (process.defaultApp && process.argv.length >= 2) {
@@ -144,6 +147,7 @@ function handleProtocolUrl(url: string) {
 
 // ── Window bounds persistence ──
 import * as fs from "fs";
+import { execFile } from "child_process";
 const boundsFile = path.join(app.getPath("userData"), "window-bounds.json");
 
 function loadBounds(): { x?: number; y?: number; width: number; height: number } {
@@ -189,9 +193,100 @@ function createWindow() {
   mainWindow.on("closed", () => { mainWindow = null; });
 }
 
+// ── Update state ──
+let updateState: "idle" | "available" | "downloading" | "ready" = "idle";
+let updateVersion = "";
+let updateDmgPath = "";
+
+function sendUpdateState() {
+  mainWindow?.webContents.send("update-state", { state: updateState, version: updateVersion });
+}
+
+function checkForUpdatesQuiet() {
+  const currentVersion = app.getVersion();
+  execFile("gh", ["release", "view", "--repo", "yash1511-bogam/trustloop", "--json", "tagName,assets"], (err, stdout) => {
+    if (err) return;
+    try {
+      const release = JSON.parse(stdout);
+      const latest = (release.tagName || "").replace(/^v/, "");
+      if (latest && latest !== currentVersion) {
+        updateVersion = latest;
+        updateState = "available";
+        sendUpdateState();
+        rebuildMenu();
+      }
+    } catch {}
+  });
+}
+
+function downloadUpdate() {
+  if (updateState !== "available") return;
+  updateState = "downloading";
+  sendUpdateState();
+  const tmpDir = path.join(app.getPath("temp"), "trustloop-update");
+  fs.mkdirSync(tmpDir, { recursive: true });
+  const tag = `v${updateVersion}`;
+  const pattern = "*arm64*.dmg";
+  execFile("gh", ["release", "download", tag, "--repo", "yash1511-bogam/trustloop", "--pattern", pattern, "--dir", tmpDir, "--clobber"], (err) => {
+    if (err) {
+      updateState = "available";
+      sendUpdateState();
+      return;
+    }
+    try {
+      const files = fs.readdirSync(tmpDir).filter((f: string) => f.endsWith(".dmg"));
+      if (files.length > 0) {
+        updateDmgPath = path.join(tmpDir, files[0]);
+        updateState = "ready";
+        sendUpdateState();
+        rebuildMenu();
+      } else {
+        updateState = "available";
+        sendUpdateState();
+      }
+    } catch {
+      updateState = "available";
+      sendUpdateState();
+    }
+  });
+}
+
+function installUpdate() {
+  if (updateState !== "ready" || !updateDmgPath) return;
+  shell.openPath(updateDmgPath);
+  setTimeout(() => app.quit(), 1500);
+}
+
+function checkForUpdates() {
+  const currentVersion = app.getVersion();
+  execFile("gh", ["release", "view", "--repo", "yash1511-bogam/trustloop", "--json", "tagName,assets"], (err, stdout) => {
+    if (err) {
+      dialog.showMessageBox({ type: "info", title: "Check for Updates", message: "Unable to check for updates", detail: "Make sure the GitHub CLI (gh) is installed and authenticated.\nhttps://cli.github.com", buttons: ["OK"] });
+      return;
+    }
+    try {
+      const release = JSON.parse(stdout);
+      const latest = (release.tagName || "").replace(/^v/, "");
+      if (latest && latest !== currentVersion) {
+        updateVersion = latest;
+        updateState = "available";
+        sendUpdateState();
+        rebuildMenu();
+      } else {
+        dialog.showMessageBox({ type: "info", title: "No Updates", message: "You're up to date!", detail: `TrustLoop ${currentVersion} is the latest version.`, buttons: ["OK"] });
+      }
+    } catch {
+      dialog.showMessageBox({ type: "error", title: "Update Error", message: "Failed to parse release info.", buttons: ["OK"] });
+    }
+  });
+}
+
 // ── Menu ──
-function buildMenu() {
+function rebuildMenu() {
   const nav = (page: string) => () => mainWindow?.webContents.send("navigate", page);
+  const updateMenuItem: Electron.MenuItemConstructorOptions = updateState === "ready"
+    ? { label: "Install Update…", click: () => installUpdate() }
+    : { label: "Check for Updates…", click: () => checkForUpdates() };
   const template: Electron.MenuItemConstructorOptions[] = [
     {
       label: app.name,
@@ -210,7 +305,7 @@ function buildMenu() {
             });
           },
         },
-        { label: "Check for Updates…", click: () => shell.openExternal("https://trustloop.ai/changelog") },
+        updateMenuItem,
         { type: "separator" },
         { label: "Preferences…", accelerator: "Cmd+,", click: nav("settings") },
         { type: "separator" }, { role: "services" }, { type: "separator" },
@@ -275,6 +370,8 @@ function buildMenu() {
     {
       label: "Help",
       submenu: [
+        { label: "Search", accelerator: "CmdOrCtrl+Shift+/", click: nav("search-settings") },
+        { type: "separator" },
         { label: "Documentation", click: () => shell.openExternal("https://trustloop.ai/docs") },
         { label: "Changelog", click: nav("changelog") },
         { type: "separator" },
@@ -380,9 +477,14 @@ app.whenReady().then(async () => {
   await loadAwsSecrets();
   await promptMoveToApplications();
   registerIpcHandlers();
-  buildMenu();
+  ipcMain.on("update:download", () => downloadUpdate());
+  ipcMain.on("update:install", () => installUpdate());
+  ipcMain.on("update:dismiss", () => { updateState = "idle"; sendUpdateState(); });
+  rebuildMenu();
   createWindow();
   showFirstLaunchNotification();
+  // Check for updates silently on startup
+  setTimeout(() => checkForUpdatesQuiet(), 5000);
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 

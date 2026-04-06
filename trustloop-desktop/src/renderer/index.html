@@ -10,6 +10,17 @@
 <body>
 <div id="app">
 
+  <!-- ═══ Update Banner ═══ -->
+  <div id="update-banner" class="update-banner hidden">
+    <div class="update-banner-content">
+      <span id="update-banner-text"></span>
+      <div class="update-banner-actions">
+        <button id="update-banner-action" class="btn-update-action" onclick="app.handleUpdateAction()"></button>
+        <button class="btn-update-close" onclick="app.dismissUpdate()">✕</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ Landing ═══ -->
   <div id="screen-landing" class="screen active">
     <div class="landing-drag"></div>
