@@ -130,7 +130,7 @@ jobs:
         run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.5.2
+        uses: softprops/action-gh-release@v2.6.1
         with:
           tag_name: desktop-v${{ steps.version.outputs.version }}-${{ github.run_number }}
           name: TrustLoop Desktop v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})
@@ -141,6 +141,7 @@ jobs:
             trustloop-desktop/dist/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
   # ── Stage 3: Deploy Staging ─────────────────────────────────────────────────
   deploy-staging:
