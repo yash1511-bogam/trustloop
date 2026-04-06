@@ -86,12 +86,6 @@ function getIconForStyle(style: string, size: string) {
   return nativeImage.createFromPath(iconPath("default", size));
 }
 
-// Dock icon: Liquid Glass clear style (macOS Tahoe)
-function getDockIcon() {
-  const style = nativeTheme.shouldUseDarkColors ? "clear-dark" : "clear-light";
-  return getIconForStyle(style, "256x256@1x");
-}
-
 // Tray / menu bar icon: tinted style
 function getWindowIcon() {
   const style = nativeTheme.shouldUseDarkColors ? "tinted-dark" : "tinted-light";
@@ -99,33 +93,50 @@ function getWindowIcon() {
 }
 
 // ── Protocol ──
+// In dev, register with the full path to our compiled main.js so macOS
+// re-launches *this* app (not a bare Electron window) on protocol open.
 if (process.defaultApp && process.argv.length >= 2) {
   app.setAsDefaultProtocolClient(OAUTH_PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
 } else {
   app.setAsDefaultProtocolClient(OAUTH_PROTOCOL);
 }
 
-const gotLock = app.requestSingleInstanceLock();
+// Hold any protocol URL that arrives before the window is ready
+let pendingProtocolUrl: string | null = null;
+
+// On macOS, check if launched with a protocol URL in argv
+const launchUrl = process.argv.find(a => a.startsWith(`${OAUTH_PROTOCOL}://`));
+if (launchUrl) pendingProtocolUrl = launchUrl;
+
+const gotLock = app.requestSingleInstanceLock({ protocolUrl: launchUrl || null });
 if (!gotLock) { app.quit(); }
 else {
-  app.on("second-instance", (_e, argv) => {
+  app.on("second-instance", (_e, argv, _workDir, additionalData: any) => {
     if (mainWindow?.isMinimized()) mainWindow.restore();
     mainWindow?.focus();
-    const url = argv.find(a => a.startsWith(`${OAUTH_PROTOCOL}://`));
+    // Protocol URL may come via additionalData (our lock data) or argv
+    const url = additionalData?.protocolUrl || argv.find(a => a.startsWith(`${OAUTH_PROTOCOL}://`));
     if (url) handleProtocolUrl(url);
   });
 }
 
-app.on("open-url", (e, url) => { e.preventDefault(); handleProtocolUrl(url); });
+// macOS fires open-url for custom protocol links — may arrive before app is ready
+app.on("open-url", (e, url) => {
+  e.preventDefault();
+  if (mainWindow) {
+    handleProtocolUrl(url);
+  } else {
+    pendingProtocolUrl = url;
+  }
+});
 
 function handleProtocolUrl(url: string) {
-  if (!mainWindow) return;
+  if (!mainWindow) { pendingProtocolUrl = url; return; }
   try {
     const parsed = new URL(url);
     if (parsed.hostname === "oauth") {
       const key = parsed.searchParams.get("key");
       if (key) {
-        // Exchange the one-time key for a session via the web app API
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://trustloop.yashbogam.me";
         fetch(`${appUrl}/api/auth/oauth/desktop/exchange`, {
           method: "POST",
@@ -136,7 +147,11 @@ function handleProtocolUrl(url: string) {
           .then((data: any) => {
             if (data.sessionToken && data.user) {
               setCurrentSession({ token: data.sessionToken, user: data.user });
-              mainWindow?.webContents.send("oauth-callback");
+              if (mainWindow) {
+                mainWindow.show();
+                mainWindow.focus();
+              }
+              mainWindow?.webContents.send("oauth-callback", data.user);
             }
           })
           .catch(() => {});
@@ -145,9 +160,17 @@ function handleProtocolUrl(url: string) {
   } catch {}
 }
 
+export function processPendingProtocolUrl() {
+  if (pendingProtocolUrl) {
+    const url = pendingProtocolUrl;
+    pendingProtocolUrl = null;
+    handleProtocolUrl(url);
+  }
+}
+
 // ── Window bounds persistence ──
 import * as fs from "fs";
-import { execFile } from "child_process";
+
 const boundsFile = path.join(app.getPath("userData"), "window-bounds.json");
 
 function loadBounds(): { x?: number; y?: number; width: number; height: number } {
@@ -185,9 +208,10 @@ function createWindow() {
       sandbox: false,
     },
   });
-  if (app.dock) app.dock.setIcon(getDockIcon());
+  // Let macOS use the bundle .icns for the dock icon (proper padding/sizing)
   mainWindow.once("ready-to-show", () => mainWindow!.show());
   mainWindow.loadFile(path.join(RENDERER, "index.html"));
+  mainWindow.webContents.once("did-finish-load", () => processPendingProtocolUrl());
   mainWindow.on("resize", saveBounds);
   mainWindow.on("move", saveBounds);
   mainWindow.on("closed", () => { mainWindow = null; });
@@ -199,24 +223,27 @@ let updateVersion = "";
 let updateDmgPath = "";
 
 function sendUpdateState() {
+  // Only notify renderer when there's something to show
+  if (updateState === "idle") return;
   mainWindow?.webContents.send("update-state", { state: updateState, version: updateVersion });
 }
 
 function checkForUpdatesQuiet() {
   const currentVersion = app.getVersion();
-  execFile("gh", ["release", "view", "--repo", "yash1511-bogam/trustloop", "--json", "tagName,assets"], (err, stdout) => {
-    if (err) return;
-    try {
-      const release = JSON.parse(stdout);
-      const latest = (release.tagName || "").replace(/^v/, "");
-      if (latest && latest !== currentVersion) {
-        updateVersion = latest;
-        updateState = "available";
-        sendUpdateState();
-        rebuildMenu();
-      }
-    } catch {}
-  });
+  fetch("https://api.github.com/repos/yash1511-bogam/trustloop/releases/latest", {
+    headers: { Accept: "application/vnd.github+json" },
+  })
+    .then(r => r.ok ? r.json() : null)
+    .then((release: any) => {
+      if (!release || !release.tag_name) return;
+      const latest = (release.tag_name || "").replace(/^v/, "").trim();
+      if (!latest || latest === currentVersion) return;
+      updateVersion = latest;
+      updateState = "available";
+      sendUpdateState();
+      rebuildMenu();
+    })
+    .catch(() => {});
 }
 
 function downloadUpdate() {
@@ -226,29 +253,24 @@ function downloadUpdate() {
   const tmpDir = path.join(app.getPath("temp"), "trustloop-update");
   fs.mkdirSync(tmpDir, { recursive: true });
   const tag = `v${updateVersion}`;
-  const pattern = "*arm64*.dmg";
-  execFile("gh", ["release", "download", tag, "--repo", "yash1511-bogam/trustloop", "--pattern", pattern, "--dir", tmpDir, "--clobber"], (err) => {
-    if (err) {
-      updateState = "available";
-      sendUpdateState();
-      return;
-    }
-    try {
-      const files = fs.readdirSync(tmpDir).filter((f: string) => f.endsWith(".dmg"));
-      if (files.length > 0) {
-        updateDmgPath = path.join(tmpDir, files[0]);
+  fetch(`https://api.github.com/repos/yash1511-bogam/trustloop/releases/tags/${tag}`, {
+    headers: { Accept: "application/vnd.github+json" },
+  })
+    .then(r => r.ok ? r.json() : null)
+    .then((release: any) => {
+      if (!release) { updateState = "available"; sendUpdateState(); return; }
+      const asset = (release.assets || []).find((a: any) => a.name.includes("arm64") && a.name.endsWith(".dmg"));
+      if (!asset) { updateState = "available"; sendUpdateState(); return; }
+      return fetch(asset.browser_download_url).then(r => r.arrayBuffer()).then(buf => {
+        const dest = path.join(tmpDir, asset.name);
+        fs.writeFileSync(dest, Buffer.from(buf));
+        updateDmgPath = dest;
         updateState = "ready";
         sendUpdateState();
         rebuildMenu();
-      } else {
-        updateState = "available";
-        sendUpdateState();
-      }
-    } catch {
-      updateState = "available";
-      sendUpdateState();
-    }
-  });
+      });
+    })
+    .catch(() => { updateState = "available"; sendUpdateState(); });
 }
 
 function installUpdate() {
@@ -259,14 +281,16 @@ function installUpdate() {
 
 function checkForUpdates() {
   const currentVersion = app.getVersion();
-  execFile("gh", ["release", "view", "--repo", "yash1511-bogam/trustloop", "--json", "tagName,assets"], (err, stdout) => {
-    if (err) {
-      dialog.showMessageBox({ type: "info", title: "Check for Updates", message: "Unable to check for updates", detail: "Make sure the GitHub CLI (gh) is installed and authenticated.\nhttps://cli.github.com", buttons: ["OK"] });
-      return;
-    }
-    try {
-      const release = JSON.parse(stdout);
-      const latest = (release.tagName || "").replace(/^v/, "");
+  fetch("https://api.github.com/repos/yash1511-bogam/trustloop/releases/latest", {
+    headers: { Accept: "application/vnd.github+json" },
+  })
+    .then(r => r.ok ? r.json() : null)
+    .then((release: any) => {
+      if (!release) {
+        dialog.showMessageBox({ type: "info", title: "Check for Updates", message: "Unable to check for updates.", detail: "Could not reach GitHub. Check your internet connection.", buttons: ["OK"] });
+        return;
+      }
+      const latest = (release.tag_name || "").replace(/^v/, "");
       if (latest && latest !== currentVersion) {
         updateVersion = latest;
         updateState = "available";
@@ -275,10 +299,10 @@ function checkForUpdates() {
       } else {
         dialog.showMessageBox({ type: "info", title: "No Updates", message: "You're up to date!", detail: `TrustLoop ${currentVersion} is the latest version.`, buttons: ["OK"] });
       }
-    } catch {
-      dialog.showMessageBox({ type: "error", title: "Update Error", message: "Failed to parse release info.", buttons: ["OK"] });
-    }
-  });
+    })
+    .catch(() => {
+      dialog.showMessageBox({ type: "info", title: "Check for Updates", message: "Unable to check for updates.", detail: "Could not reach GitHub. Check your internet connection.", buttons: ["OK"] });
+    });
 }
 
 // ── Menu ──
@@ -382,9 +406,7 @@ function rebuildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-nativeTheme.on("updated", () => {
-  if (app.dock) app.dock.setIcon(getDockIcon());
-});
+// Dock icon is handled by the bundle .icns — no runtime switching needed.
 
 // ── First-launch notification ──
 
@@ -438,7 +460,7 @@ function promptMoveToApplications(): Promise<void> {
       alwaysOnTop: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false },
     });
-    if (app.dock) app.dock.setIcon(icon.isEmpty() ? getDockIcon() : icon);
+    if (app.dock) app.dock.setBadge("");
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
       *{margin:0;padding:0;box-sizing:border-box;-webkit-app-region:drag}
       body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;padding:24px;color:#e5e5e5;background:transparent}
@@ -479,12 +501,15 @@ app.whenReady().then(async () => {
   registerIpcHandlers();
   ipcMain.on("update:download", () => downloadUpdate());
   ipcMain.on("update:install", () => installUpdate());
-  ipcMain.on("update:dismiss", () => { updateState = "idle"; sendUpdateState(); });
+  ipcMain.on("update:dismiss", () => {
+    updateState = "idle";
+    mainWindow?.webContents.send("update-state", { state: "idle", version: "" });
+  });
   rebuildMenu();
   createWindow();
   showFirstLaunchNotification();
   // Check for updates silently on startup
-  setTimeout(() => checkForUpdatesQuiet(), 5000);
+  setTimeout(() => checkForUpdatesQuiet(), 2000);
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 

@@ -79,8 +79,8 @@ contextBridge.exposeInMainWorld("trustloop", {
     ipcRenderer.on("navigate", (_e: any, page: string) => cb(page));
   },
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
-  onOAuthCallback: (cb: (token: string, provider: string) => void) => {
-    ipcRenderer.on("oauth-callback", (_e: any, token: string, provider: string) => cb(token, provider));
+  onOAuthCallback: (cb: (user?: any) => void) => {
+    ipcRenderer.on("oauth-callback", (_e: any, user?: any) => cb(user));
   },
 
   // Updates

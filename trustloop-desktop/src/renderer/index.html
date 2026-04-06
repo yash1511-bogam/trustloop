@@ -10,14 +10,12 @@
 <body>
 <div id="app">
 
-  <!-- ═══ Update Banner ═══ -->
-  <div id="update-banner" class="update-banner hidden">
-    <div class="update-banner-content">
-      <span id="update-banner-text"></span>
-      <div class="update-banner-actions">
-        <button id="update-banner-action" class="btn-update-action" onclick="app.handleUpdateAction()"></button>
-        <button class="btn-update-close" onclick="app.dismissUpdate()">✕</button>
-      </div>
+  <!-- ═══ Update Toast ═══ -->
+  <div id="update-toast" class="update-toast hidden">
+    <button class="update-toast-close" onclick="app.dismissUpdate()">✕</button>
+    <p id="update-toast-text" class="update-toast-text"></p>
+    <div class="update-toast-actions">
+      <button id="update-toast-action" class="btn-toast-action" onclick="app.handleUpdateAction()"></button>
     </div>
   </div>
 

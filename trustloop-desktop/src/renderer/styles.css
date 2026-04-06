@@ -691,47 +691,38 @@ form { display: flex; flex-direction: column; gap: 12px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
 
 /* ═══ Update Banner ═══ */
-.update-banner {
+.update-toast {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  bottom: 20px;
+  right: 20px;
   z-index: 9999;
-  background: linear-gradient(135deg, #c2662d, #d4622b);
-  color: #fff;
+  background: rgba(15, 16, 20, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(194, 102, 45, 0.3);
+  border-radius: 12px;
+  color: #e5e5e5;
   font-size: 13px;
-  font-weight: 500;
-  padding: 8px 16px;
-  -webkit-app-region: drag;
+  padding: 14px 16px;
+  min-width: 260px;
+  max-width: 320px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  animation: toast-in 0.3s ease;
 }
-.update-banner.hidden { display: none; }
-.update-banner-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  -webkit-app-region: no-drag;
+@keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.update-toast.hidden { display: none; }
+.update-toast-close {
+  position: absolute; top: 8px; right: 8px;
+  background: none; border: none; color: rgba(255,255,255,0.4);
+  font-size: 13px; cursor: pointer; padding: 2px 5px; border-radius: 4px; line-height: 1;
 }
-.btn-update-action {
-  background: rgba(255,255,255,0.2);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.3);
-  padding: 3px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
+.update-toast-close:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.update-toast-text { margin: 0 0 10px; font-weight: 500; padding-right: 16px; line-height: 1.4; }
+.update-toast-actions { display: flex; gap: 8px; }
+.btn-toast-action {
+  background: linear-gradient(135deg, #c2662d, #d4622b);
+  color: #fff; border: none; padding: 6px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
 }
-.btn-update-action:hover { background: rgba(255,255,255,0.35); }
-.btn-update-close {
-  background: none;
-  border: none;
-  color: rgba(255,255,255,0.7);
-  font-size: 14px;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-.btn-update-close:hover { color: #fff; background: rgba(255,255,255,0.15); }
-.update-banner-actions { display: flex; align-items: center; gap: 8px; }
+.btn-toast-action:hover { opacity: 0.85; }
+.btn-toast-action:disabled { opacity: 0.5; cursor: default; }

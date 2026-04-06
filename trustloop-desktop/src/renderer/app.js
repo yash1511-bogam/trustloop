@@ -5,7 +5,7 @@ const app = {
   _loginMethodId: null,
   _registerMethodId: null,
 
-  init() {
+  async init() {
     // Tab only cycles through visible text inputs
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Tab') return;
@@ -16,21 +16,43 @@ const app = {
       const next = e.shiftKey ? (i <= 0 ? inputs.length - 1 : i - 1) : (i < 0 || i >= inputs.length - 1 ? 0 : i + 1);
       inputs[next].focus();
     });
+
+    // Check session first — skip logo if already signed in
+    if (window.trustloop) {
+      const user = await window.trustloop.getSession();
+      if (user) {
+        this.enterDashboard(user);
+        const savedView = sessionStorage.getItem('tl:view');
+        if (savedView) this.navTo(savedView);
+        window.trustloop.onNavigate((page) => {
+          const map = { dashboard:'dashboard', incidents:'incidents', analytics:'analytics', settings:'ws-general', 'new-incident':'incidents', triage:'incidents', 'draft-update':'incidents', team:'ws-team', billing:'ws-billing', 'api-keys':'sec-apikeys', audit:'sec-audit', sso:'ws-general', changelog:'dashboard' };
+          if (map[page]) this.navTo(map[page]);
+        });
+        window.trustloop.onOAuthCallback((user) => {
+          if (user) this.enterDashboard(user);
+          else this.checkSession();
+        });
+        window.trustloop.onUpdateState((data) => this.onUpdateState(data));
+        return;
+      }
+    }
+
     this.renderLogo('landing-logo', 80);
     setTimeout(() => $('#btn-continue').classList.add('visible'), 3200);
     window.addEventListener('resize', () => {
       $('#landing-logo').innerHTML = '';
       this.renderLogo('landing-logo', 80);
     });
-    this.checkSession();
     if (window.trustloop) {
       window.trustloop.onNavigate((page) => {
         const map = { dashboard:'dashboard', incidents:'incidents', analytics:'analytics', settings:'ws-general', 'new-incident':'incidents', triage:'incidents', 'draft-update':'incidents', team:'ws-team', billing:'ws-billing', 'api-keys':'sec-apikeys', audit:'sec-audit', sso:'ws-general', changelog:'dashboard' };
         if (map[page]) this.navTo(map[page]);
       });
-      window.trustloop.onOAuthCallback(() => this.checkSession());
+      window.trustloop.onOAuthCallback((user) => {
+        if (user) this.enterDashboard(user);
+        else this.checkSession();
+      });
       window.trustloop.onUpdateState((data) => this.onUpdateState(data));
-
     }
   },
 
@@ -1250,26 +1272,27 @@ const app = {
 
   onUpdateState(data) {
     this._updateState = data.state;
-    const banner = $('#update-banner');
-    const text = $('#update-banner-text');
-    const btn = $('#update-banner-action');
-    if (!banner) return;
+    const toast = $('#update-toast');
+    const text = $('#update-toast-text');
+    const btn = $('#update-toast-action');
+    if (!toast) return;
     if (data.state === 'available') {
-      text.textContent = `TrustLoop ${data.version} is available`;
-      btn.textContent = 'Update Now';
-      banner.classList.remove('hidden');
+      text.textContent = `TrustLoop ${data.version} is available.`;
+      btn.textContent = 'Update';
+      btn.disabled = false;
+      toast.classList.remove('hidden');
     } else if (data.state === 'downloading') {
-      text.textContent = `Downloading TrustLoop ${data.version}…`;
+      text.textContent = `Downloading ${data.version}…`;
       btn.textContent = 'Downloading…';
       btn.disabled = true;
-      banner.classList.remove('hidden');
+      toast.classList.remove('hidden');
     } else if (data.state === 'ready') {
-      text.textContent = `TrustLoop ${data.version} is ready to install`;
-      btn.textContent = 'Restart to Update';
+      text.textContent = `TrustLoop ${data.version} ready to install.`;
+      btn.textContent = 'Install & Restart';
       btn.disabled = false;
-      banner.classList.remove('hidden');
+      toast.classList.remove('hidden');
     } else {
-      banner.classList.add('hidden');
+      toast.classList.add('hidden');
     }
   },
 
@@ -1280,7 +1303,7 @@ const app = {
   },
 
   dismissUpdate() {
-    $('#update-banner')?.classList.add('hidden');
+    $('#update-toast')?.classList.add('hidden');
     if (window.trustloop) window.trustloop.updateDismiss();
   },
 
