@@ -9,8 +9,9 @@ if (process.env.NODE_ENV !== "production") {
 import { app, BrowserWindow, Menu, shell, nativeTheme, nativeImage, dialog, Notification } from "electron";
 import Module from "module";
 
-// ── Resolve shared deps (@prisma/client, etc.) from the parent repo's node_modules ──
+// ── Resolve shared deps from the parent repo (dev) or asar (packaged) ──
 const parentNodeModules = path.join(repoRoot, "node_modules");
+const asarNodeModules = path.join(__dirname, "..", "..", "node_modules");
 // @ts-ignore — addPath is internal but stable
 if (typeof (Module as any)._nodeModulePaths === "function") {
   const origResolve = (Module as any)._resolveFilename;
@@ -19,9 +20,13 @@ if (typeof (Module as any)._nodeModulePaths === "function") {
       return origResolve.call(this, request, parent, isMain, options);
     } catch (e: any) {
       if (e.code === "MODULE_NOT_FOUND") {
-        // Retry from parent repo's node_modules
-        const fakeMod = { id: parentNodeModules, filename: parentNodeModules, paths: (Module as any)._nodeModulePaths(parentNodeModules) };
-        return origResolve.call(this, request, fakeMod, isMain, options);
+        // Try asar node_modules first (for extraResources code needing asar deps)
+        for (const dir of [asarNodeModules, parentNodeModules]) {
+          try {
+            const fakeMod = { id: dir, filename: dir, paths: (Module as any)._nodeModulePaths(dir) };
+            return origResolve.call(this, request, fakeMod, isMain, options);
+          } catch {}
+        }
       }
       throw e;
     }
@@ -42,7 +47,9 @@ if (process.arch !== "arm64") {
 app.setName("TrustLoop");
 
 const desktopRoot = path.resolve(__dirname, "..", "..");
-const ASSETS = path.join(desktopRoot, "assets");
+const ASSETS = app.isPackaged
+  ? path.join(process.resourcesPath, "assets")
+  : path.join(desktopRoot, "assets");
 const RENDERER = path.join(desktopRoot, "src", "renderer");
 const OAUTH_PROTOCOL = "trustloop";
 
@@ -116,7 +123,7 @@ function handleProtocolUrl(url: string) {
       const key = parsed.searchParams.get("key");
       if (key) {
         // Exchange the one-time key for a session via the web app API
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://trustloop.yashbogam.me";
         fetch(`${appUrl}/api/auth/oauth/desktop/exchange`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -287,22 +294,91 @@ nativeTheme.on("updated", () => {
 function showFirstLaunchNotification() {
   const flagPath = path.join(app.getPath("userData"), ".notif-shown");
   if (fs.existsSync(flagPath)) return;
-  fs.writeFileSync(flagPath, new Date().toISOString(), "utf-8");
-
   if (!Notification.isSupported()) return;
-  const icon = nativeImage.createFromPath(iconPath("default", "256x256@1x"));
-  const notif = new Notification({
-    title: "TrustLoop",
-    body: "Notifications are allowed. You'll receive incident alerts here.",
-    ...(icon.isEmpty() ? {} : { icon }),
-    silent: false,
+
+  // Delay so macOS registers the app for notifications before we fire one
+  setTimeout(() => {
+    const icon = nativeImage.createFromPath(iconPath("default", "256x256@1x"));
+    const notif = new Notification({
+      title: "TrustLoop",
+      body: "Notifications are allowed. You'll receive incident alerts here.",
+      ...(icon.isEmpty() ? {} : { icon }),
+      silent: false,
+    });
+    notif.on("show", () => {
+      fs.writeFileSync(flagPath, new Date().toISOString(), "utf-8");
+    });
+    notif.show();
+    // Write flag after a short delay as fallback (macOS doesn't always emit "show")
+    setTimeout(() => {
+      if (!fs.existsSync(flagPath)) {
+        fs.writeFileSync(flagPath, new Date().toISOString(), "utf-8");
+      }
+    }, 3000);
+  }, 5000);
+}
+
+// ── Move to /Applications prompt ──
+function promptMoveToApplications(): Promise<void> {
+  return new Promise((resolve) => {
+    if (process.env.NODE_ENV !== "production" || !app.isPackaged || app.isInApplicationsFolder()) {
+      return resolve();
+    }
+    const icon = nativeImage.createFromPath(iconPath("default", "128x128@2x"));
+    const win = new BrowserWindow({
+      width: 370,
+      height: 180,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      titleBarStyle: "hidden",
+      vibrancy: "under-window",
+      visualEffectState: "active",
+      backgroundColor: "#00000000",
+      roundedCorners: true,
+      show: false,
+      alwaysOnTop: true,
+      webPreferences: { contextIsolation: true, nodeIntegration: false },
+    });
+    if (app.dock) app.dock.setIcon(icon.isEmpty() ? getDockIcon() : icon);
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+      *{margin:0;padding:0;box-sizing:border-box;-webkit-app-region:drag}
+      body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;padding:24px;color:#e5e5e5;background:transparent}
+      .wrap{text-align:center;max-width:320px}
+      h2{font-size:15px;font-weight:600;margin-bottom:6px}
+      p{font-size:12px;color:#999;margin-bottom:20px;line-height:1.4}
+      .btns{display:flex;gap:10px;justify-content:center;-webkit-app-region:no-drag}
+      button{font-size:13px;padding:7px 20px;border-radius:8px;border:none;cursor:pointer;font-weight:500;transition:opacity .15s}
+      button:hover{opacity:.85}
+      .move{background:#c2662d;color:#fff}
+      .skip{background:rgba(255,255,255,.08);color:#bbb}
+    </style></head><body><div class="wrap">
+      <h2>Move to Applications?</h2>
+      <p>Move TrustLoop to your Applications folder for the best experience.</p>
+      <div class="btns">
+        <button class="skip" onclick="window.close()">Not Now</button>
+        <button class="move" id="mv">Move</button>
+      </div>
+    </div><script>
+      document.getElementById('mv').onclick=()=>{fetch('trustloop://move').catch(()=>{});window.close()};
+    </script></body></html>`;
+    win.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    win.once("ready-to-show", () => win.show());
+    win.webContents.on("will-navigate", (e, url) => {
+      e.preventDefault();
+      if (url.includes("trustloop://move")) {
+        try { app.moveToApplicationsFolder(); } catch {}
+      }
+    });
+    win.on("closed", () => resolve());
   });
-  notif.show();
 }
 
 // ── Lifecycle ──
 app.whenReady().then(async () => {
   await loadAwsSecrets();
+  await promptMoveToApplications();
   registerIpcHandlers();
   buildMenu();
   createWindow();
