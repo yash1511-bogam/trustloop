@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { StatusSubscribeForm } from "@/components/status-subscribe-form";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 import { UptimeBars, type DayStatus, type UptimeDay } from "@/components/uptime-bars";
+import { StatusAutoRefresh } from "@/components/status-auto-refresh";
 
 function statusLabel(status: IncidentStatus): { text: string; color: string } {
   if (status === IncidentStatus.RESOLVED) return { text: "Resolved", color: "var(--color-resolve)" };
@@ -26,11 +27,9 @@ function generateUptimeDays(
   const now = new Date();
   const result: UptimeDay[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
     const dayEnd = new Date(dayStart.getTime() + 86400000);
+    const dateStr = dayStart.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
     if (since && dayEnd <= since) {
       result.push({ date: dateStr, status: "no-data", label: "No data" });
@@ -117,6 +116,7 @@ export default async function PublicStatusPage({
   const allOperational = openIncidents.length === 0;
 
   return (
+    <StatusAutoRefresh>
     <main className="min-h-dvh" data-status-page style={{ background: "var(--color-void)" }}>
       <div className="mx-auto max-w-[800px] px-6 py-12">
 
@@ -323,5 +323,6 @@ export default async function PublicStatusPage({
         </footer>
       </div>
     </main>
+    </StatusAutoRefresh>
   );
 }

@@ -31,6 +31,7 @@ import { integrationLogos } from "@/components/integration-logos";
 import { HoverLink } from "@/components/hover-link";
 import { HeroIllustration } from "@/components/hero-illustration";
 import { TrustLoopLogo } from "@/components/trustloop-logo";
+import { MarketingFooter } from "@/components/marketing-footer";
 
 const LandingBelowFold = dynamic(() => import("./landing-below-fold").then((m) => ({ default: m.LandingBelowFold })), {
   loading: () => <div className="min-h-screen" />,
@@ -366,6 +367,7 @@ export function MarketingLanding() {
         </div>
 
         <LandingBelowFold />
+        <MarketingFooter />
       </main>
 
       <framerMotion.a

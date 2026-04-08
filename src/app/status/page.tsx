@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { StatusSubscribeForm } from "@/components/status-subscribe-form";
 import { isTurnstileEnabled, turnstileSiteKey } from "@/lib/turnstile";
 import { UptimeBars, type UptimeDay } from "@/components/uptime-bars";
+import { StatusAutoRefresh } from "@/components/status-auto-refresh";
 
 export const metadata: Metadata = {
   title: "System Status — TrustLoop",
@@ -22,16 +23,15 @@ const components = [
   "Billing (Dodo Payments)",
 ];
 
-function generateUptimeDays(days = 90, activeDays = 10): UptimeDay[] {
+function generateUptimeDays(days = 90): UptimeDay[] {
   const now = new Date();
   const result: UptimeDay[] = [];
   for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i));
     result.push({
-      date: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-      status: i < activeDays ? "operational" : "no-data",
-      label: i < activeDays ? "No issues" : "No data",
+      date: d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }),
+      status: "operational",
+      label: "No issues",
     });
   }
   return result;
@@ -46,6 +46,7 @@ export default function StatusPage() {
   const updates: Array<{ id: string; body: string; publishedAt: string; incident: { title: string; severity: string } }> = [];
 
   return (
+    <StatusAutoRefresh>
     <main className="min-h-dvh" data-status-page style={{ background: "var(--color-void)" }}>
       <div className="mx-auto max-w-[800px] px-6 py-12">
 
@@ -248,5 +249,6 @@ export default function StatusPage() {
         </footer>
       </div>
     </main>
+    </StatusAutoRefresh>
   );
 }

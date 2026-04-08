@@ -266,9 +266,10 @@ const app = {
     if (el('#user-avatar')) el('#user-avatar').textContent = (user.name || user.email || 'U')[0].toUpperCase();
     if (el('#sidebar-ws-name')) el('#sidebar-ws-name').textContent = user.workspaceName || 'Workspace';
     this.showScreen('screen-dashboard');
-    // Fetch plan tier for feature gating
-    const ws = await window.trustloop.workspaceGeneral?.();
-    this._planTier = (ws?.planTier || 'starter').toLowerCase();
+    try {
+      const ws = await window.trustloop.workspaceGeneral?.();
+      this._planTier = (ws?.planTier || 'starter').toLowerCase();
+    } catch { this._planTier = 'starter'; }
     const planEl = el('#sidebar-plan');
     if (planEl) planEl.textContent = this._planTier.toUpperCase();
     this.loadDashboard();
@@ -304,6 +305,11 @@ const app = {
     this.showScreen('screen-auth');
   },
 
+  _showViewError(containerId, msg) {
+    const el = document.querySelector(containerId);
+    if (el) el.innerHTML = `<div class="settings-card" style="text-align:center;padding:32px"><p style="font-size:15px;font-weight:600;color:var(--danger)">Unable to load</p><p class="muted" style="margin-top:4px">${msg || 'Something went wrong. Try again or check your connection.'}</p><button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="app.navTo(sessionStorage.getItem('tl:view')||'dashboard')">↻ Retry</button></div>`;
+  },
+
   navTo(page) {
     sessionStorage.setItem('tl:view', page);
     $$('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
@@ -334,8 +340,9 @@ const app = {
 
   async loadDashboard() {
     if (!window.trustloop) return;
+    try {
     const data = await window.trustloop.dashboardData();
-    if (!data) return;
+    if (!data) { this._showViewError('#stat-grid', 'No dashboard data available.'); return; }
     const { counts, snapshot } = data;
     const stats = [
       { label:'Open incidents', value:counts.open, icon:'⚠', color:'#d4622b', bg:'rgba(212,98,43,0.10)', sub:`${counts.p1} P1 critical`, trend:counts.created7d>counts.resolved?'up':'down', trendText:counts.created7d>0?`+${counts.created7d} this week`:'No new this week' },
@@ -348,6 +355,7 @@ const app = {
     const update = snapshot?.customerUpdateCoveragePct ?? 0;
     this.renderCoverageDonut(triage, update);
     this.renderOnboarding(data.onboarding);
+    } catch (e) { console.error('loadDashboard:', e); this._showViewError('#stat-grid'); }
   },
 
   renderOnboarding(ob) {
@@ -414,6 +422,7 @@ const app = {
 
   async loadIncidents(page) {
     if (!window.trustloop) return;
+    try {
     this._incidentPage = page || 1;
     const filters = {
       status: $('#filter-status')?.value || undefined,
@@ -445,6 +454,7 @@ const app = {
     if (pg && list) {
       pg.innerHTML = `<button class="btn btn-ghost btn-sm" ${this._incidentPage<=1?'disabled':''}onclick="app.loadIncidents(${this._incidentPage-1})">← Previous</button><span class="muted" style="font-size:12px">Page ${list.page} of ${list.pages||1}</span><button class="btn btn-ghost btn-sm" ${this._incidentPage>=list.pages?'disabled':''}onclick="app.loadIncidents(${this._incidentPage+1})">Next →</button>`;
     }
+    } catch (e) { console.error('loadIncidents:', e); this._showViewError('#incidents-queue'); }
   },
 
   renderIncidentQueue(list) {
@@ -480,6 +490,7 @@ const app = {
 
   async openIncident(id) {
     if (!window.trustloop) return;
+    try {
     const data = await window.trustloop.incidentDetail(id);
     if (!data) return;
     this._currentIncidentId = id;
@@ -599,6 +610,7 @@ const app = {
       const ta = document.getElementById('draft-update');
       if (ta) ta.addEventListener('input', () => { const el = document.getElementById('draft-chars'); if (el) el.textContent = ta.value.length + ' characters'; });
     }, 0);
+    } catch (e) { console.error('openIncident:', e); this._showViewError('#incidents-queue'); }
   },
 
   async updateCurrentIncident() {
@@ -699,6 +711,7 @@ const app = {
 
   async loadAnalytics() {
     if (!window.trustloop) return;
+    try {
     const data = await window.trustloop.analyticsSummary();
     if (!data) { $('#analytics-content').innerHTML = '<p class="muted">No analytics data.</p>'; return; }
     const { series, snapshot, failedReminders7d } = data;
@@ -751,6 +764,7 @@ const app = {
       { label: 'Customer updates', data: series.map(r=>r.customerUpdatesSent), borderColor: '#06b6d4', borderWidth: 2.5, tension: 0.3, ...dot('#06b6d4') },
       { label: 'Reminder emails', data: series.map(r=>r.reminderEmailsSent), borderColor: '#f59e0b', borderWidth: 2.5, tension: 0.3, ...dot('#f59e0b') },
     ], base());
+    } catch (e) { console.error('loadAnalytics:', e); this._showViewError('#analytics-content'); }
   },
 
   _mk(id, type, labels, datasets, opts) {
@@ -788,8 +802,9 @@ const app = {
 
   async loadProfile() {
     if (!window.trustloop) return;
+    try {
     const p = await window.trustloop.getProfile();
-    if (!p) return;
+    if (!p) { this._showViewError('#profile-content'); return; }
     $('#profile-content').innerHTML = `
       <p class="page-kicker">Account</p>
       <div class="settings-card"><h3>Responder profile</h3>
@@ -811,6 +826,7 @@ const app = {
     const track = () => { const el = $('#profile-status'); if (el) el.textContent = ($('#profile-name')?.value !== p.name || $('#profile-phone')?.value !== (p.phone||'')) ? 'You have unsaved changes.' : 'Profile is up to date.'; };
     $('#profile-name')?.addEventListener('input', track);
     $('#profile-phone')?.addEventListener('input', track);
+    } catch (e) { console.error('loadProfile:', e); this._showViewError('#profile-content'); }
   },
   async saveProfile() {
     const name = $('#profile-name')?.value?.trim();
@@ -822,6 +838,7 @@ const app = {
 
   async loadWsGeneral() {
     if (!window.trustloop) return;
+    try {
     const ws = await window.trustloop.workspaceGeneral();
     if (!ws) return;
     const slack = ws.slackTeamId ? 'Connected' : 'Not connected';
@@ -870,7 +887,9 @@ const app = {
           <div style="display:flex;align-items:center;gap:8px"><span id="ws-general-msg" class="form-msg"></span><button class="btn btn-primary" onclick="app.saveWsGeneral()">Save changes</button></div>
         </div>
       </div>`;
+    } catch (e) { console.error('loadWsGeneral:', e); this._showViewError('#ws-general-content'); }
   },
+
   async saveWsGeneral() {
     const data = {
       name: $('#ws-name-input')?.value?.trim() || undefined,
@@ -885,6 +904,7 @@ const app = {
 
   async loadWsOverview() {
     if (!window.trustloop) return;
+    try {
     const d = await window.trustloop.workspaceOverview();
     if (!d) return;
     const stats = [
@@ -898,10 +918,12 @@ const app = {
     $('#ws-overview-content').innerHTML = `<p class="page-kicker">Settings</p>
       <div class="settings-card"><h3>Workspace snapshot</h3><p class="muted" style="margin-bottom:12px">Current counts for keys, routing, access, and live integrations.</p>
       <div class="stat-grid stat-grid-3">${stats.map(s => `<div class="stat-card"><div class="stat-value" style="font-size:28px">${s.value}</div><div class="stat-label">${s.label}</div><div class="stat-sub">${s.sub}</div></div>`).join('')}</div></div>`;
+    } catch (e) { console.error('loadWsOverview:', e); this._showViewError('#ws-overview-content'); }
   },
 
   async loadWsTeam() {
     if (!window.trustloop) return;
+    try {
     const data = await window.trustloop.workspaceTeam();
     if (!data) return;
     const members = data.members.map(m => `<div class="settings-row">
@@ -923,6 +945,7 @@ const app = {
         <span id="invite-msg" class="form-msg" style="display:block;margin-top:6px"></span>
       </div>
       <div class="settings-card"><h3>Pending invites</h3>${invites}</div>`;
+    } catch (e) { console.error('loadWsTeam:', e); this._showViewError('#ws-team-content'); }
   },
 
   async sendInvite() {
@@ -937,6 +960,7 @@ const app = {
 
   async loadWsBilling() {
     if (!window.trustloop) return;
+    try {
     const ws = await window.trustloop.workspaceBilling();
     if (!ws) return;
     const b = ws.billing;
@@ -990,6 +1014,7 @@ const app = {
           ${usageBar('Reminder emails', ws.usage?.reminderEmailsSent, ws.quota?.reminderEmailsPerDay)}
         </div>
       </div>`;
+    } catch (e) { console.error('loadWsBilling:', e); this._showViewError('#ws-billing-content'); }
   },
 
   openBillingWeb() {
@@ -999,6 +1024,7 @@ const app = {
 
   async loadIntAi() {
     if (!window.trustloop) return;
+    try {
     const data = await window.trustloop.integrationsAi();
     if (!data) return;
     const providers = ['OPENAI','GEMINI','ANTHROPIC'];
@@ -1041,6 +1067,7 @@ const app = {
       </div>
       <span id="ai-msg" class="form-msg" style="display:block;margin-bottom:8px"></span>
       <div><h2 class="section-title" style="margin-bottom:2px">Workflow routing</h2><div class="settings-card">${wfRows}</div></div>`;
+    } catch (e) { console.error('loadIntAi:', e); this._showViewError('#int-ai-content'); }
   },
 
   async saveAiKey(provider) {
@@ -1070,6 +1097,7 @@ const app = {
 
   async loadIntWebhooks() {
     if (!window.trustloop) return;
+    try {
     const hooks = await window.trustloop.integrationsWebhooks();
     const types = ['DATADOG','PAGERDUTY','SENTRY','GENERIC','LANGFUSE','HELICONE','ARIZE_PHOENIX','BRAINTRUST'];
     const meta = { DATADOG:{label:'Datadog',color:'#632CA6',desc:'Forward monitors and alerts into TrustLoop incidents.'}, PAGERDUTY:{label:'PagerDuty',color:'#06AC38',desc:'Route PagerDuty on-call events to your incident queue.'}, SENTRY:{label:'Sentry',color:'#FB4226',desc:'Capture Sentry issue alerts as AI incidents.'}, GENERIC:{label:'Custom Webhook',color:'#6366f1',desc:'Accept signed payloads from any source.'}, LANGFUSE:{label:'Langfuse',color:'#8b5cf6',desc:'Ingest LLM observability events from Langfuse.'}, HELICONE:{label:'Helicone',color:'#06b6d4',desc:'Stream Helicone request logs into incidents.'}, ARIZE_PHOENIX:{label:'Arize Phoenix',color:'#f97316',desc:'Connect Arize Phoenix model monitoring.'}, BRAINTRUST:{label:'Braintrust',color:'#eab308',desc:'Pipe Braintrust eval failures into your queue.'} };
@@ -1110,6 +1138,7 @@ const app = {
     document.querySelectorAll('#int-webhooks-content .settings-row').forEach(row => {
       if (row.classList.contains('wh-open')) row.querySelector('.wh-detail').style.display = 'block';
     });
+    } catch (e) { console.error('loadIntWebhooks:', e); this._showViewError('#int-webhooks-content'); }
   },
 
   async saveWebhookSecret(type) {
@@ -1135,6 +1164,7 @@ const app = {
 
   async loadIntOnCall() {
     if (!window.trustloop) return;
+    try {
     const badge = $('#oncall-plan-badge'); if (badge) badge.innerHTML = this._planBadge('on_call','Pro');
     const data = await window.trustloop.integrationsOnCall();
     if (!data) { $('#int-oncall-content').innerHTML = '<div class="settings-card"><p class="muted">Unable to load on-call data.</p></div>'; return; }
@@ -1161,10 +1191,12 @@ const app = {
     $('#int-oncall-content').innerHTML = `<p class="page-kicker">Integrations</p>
       <div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">On-call rotation</h2><p class="section-desc">Review the current escalation schedule for P1 incidents and verify who will be paged next.</p></div>
       ${this._gateWrap('on_call','Pro',oncallHtml)}`;
+    } catch (e) { console.error('loadIntOnCall:', e); this._showViewError('#int-oncall-content'); }
   },
 
   async loadSecApiKeys() {
     if (!window.trustloop) return;
+    try {
     const badge = $('#apikeys-plan-badge'); if (badge) badge.innerHTML = this._planBadge('api_keys','Pro');
     const keys = await window.trustloop.securityApiKeys();
     const keyRows = (keys||[]).map(k => {
@@ -1195,6 +1227,7 @@ const app = {
     $('#sec-apikeys-content').innerHTML = `<p class="page-kicker">Security</p>
       <div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">Workspace API keys</h2><p class="section-desc">Issue scoped bearer keys for automation and revoke them cleanly when no longer needed.</p></div>
       ${this._gateWrap('api_keys','Pro',apikeyContent)}`;
+    } catch (e) { console.error('loadSecApiKeys:', e); this._showViewError('#sec-apikeys-content'); }
   },
 
   async createApiKey() {
@@ -1217,6 +1250,7 @@ const app = {
 
   async loadSecAudit() {
     if (!window.trustloop) return;
+    try {
     const data = await window.trustloop.securityAudit();
     if (!data?.items?.length) { $('#sec-audit-content').innerHTML = `<p class="page-kicker">Security</p><div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">Audit log</h2><p class="section-desc">Privileged workspace actions will appear here as your team configures TrustLoop.</p></div><div class="settings-card"><p class="muted">No audit activity yet.</p></div>`; return; }
     const rows = data.items.map((e,i) => `<tr${i%2===1?' style="background:rgba(10,11,13,0.5)"':''}>
@@ -1228,10 +1262,12 @@ const app = {
     </tr>`).join('');
     $('#sec-audit-content').innerHTML = `<p class="page-kicker">Security</p>
       <div class="table-shell" style="overflow-x:auto"><table class="data-table"><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Summary</th><th>IP</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    } catch (e) { console.error('loadSecAudit:', e); this._showViewError('#sec-audit-content'); }
   },
 
   async loadSecSso() {
     if (!window.trustloop) return;
+    try {
     const badge = $('#sso-plan-badge'); if (badge) badge.innerHTML = this._planBadge('saml','Enterprise');
     const data = await window.trustloop.securitySso();
     const d = data || {};
@@ -1258,6 +1294,7 @@ const app = {
     $('#sec-sso-content').innerHTML = `<p class="page-kicker">Security</p>
       <div style="margin-bottom:8px"><h2 class="section-title" style="margin-bottom:2px">Enterprise single sign-on</h2><p class="section-desc">Connect your identity provider to enforce SAML-based authentication for all workspace members.</p></div>
       ${this._gateWrap('saml','Enterprise',ssoCard)}`;
+    } catch (e) { console.error('loadSecSso:', e); this._showViewError('#sec-sso-content'); }
   },
 
   async saveSso() {

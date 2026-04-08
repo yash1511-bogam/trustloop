@@ -20,15 +20,23 @@ let currentSession: { token: string; user: AuthUser } | null = null;
 export function getSession() { return currentSession; }
 export function setCurrentSession(s: { token: string; user: AuthUser }) { currentSession = s; }
 
+// Safe wrapper: catches errors in IPC handlers so the renderer gets null instead of a rejected promise
+function safeHandle(channel: string, handler: (...args: any[]) => Promise<any>): void {
+  safeHandle(channel, async (...args) => {
+    try { return await handler(...args); }
+    catch (err) { console.error(`[ipc] ${channel} error:`, err); return null; }
+  });
+}
+
 export function registerIpcHandlers(): void {
 
-  ipcMain.handle("open-external", async (_e, url: string) => shell.openExternal(url));
+  safeHandle("open-external", async (_e, url: string) => shell.openExternal(url));
 
   // ── Auth: same flow as src/app/api/auth/login ──
 
-  ipcMain.handle("auth:send-otp", async (_e, email: string) => sendOtp(email));
+  safeHandle("auth:send-otp", async (_e, email: string) => sendOtp(email));
 
-  ipcMain.handle("auth:verify-otp", async (_e, methodId: string, code: string) => {
+  safeHandle("auth:verify-otp", async (_e, methodId: string, code: string) => {
     const result = await verifyOtp(methodId, code);
     const user = await prisma.user.findFirst({
       where: { stytchUserId: result.stytchUserId },
@@ -46,16 +54,16 @@ export function registerIpcHandlers(): void {
     return { success: true, user: currentSession.user };
   });
 
-  ipcMain.handle("auth:session", async () => {
+  safeHandle("auth:session", async () => {
     if (!currentSession) return null;
     const user = await authenticateSession(currentSession.token);
     if (!user) { currentSession = null; return null; }
     return user;
   });
 
-  ipcMain.handle("auth:logout", async () => { currentSession = null; return true; });
+  safeHandle("auth:logout", async () => { currentSession = null; return true; });
 
-  ipcMain.handle("auth:oauth-start", async (_e, provider: "google" | "github", intent?: "login" | "register", workspaceName?: string) => {
+  safeHandle("auth:oauth-start", async (_e, provider: "google" | "github", intent?: "login" | "register", workspaceName?: string) => {
     const url = await getOAuthStartUrl(provider, intent, workspaceName);
     shell.openExternal(url);
     return true;
@@ -64,7 +72,7 @@ export function registerIpcHandlers(): void {
 
   // ── Registration: same flow as src/app/api/auth/register ──
 
-  ipcMain.handle("auth:register-start", async (_e, opts: { name: string; email: string; workspaceName: string }) => {
+  safeHandle("auth:register-start", async (_e, opts: { name: string; email: string; workspaceName: string }) => {
     // Check slug availability
     const slug = opts.workspaceName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const taken = await prisma.workspace.findUnique({ where: { slug }, select: { id: true } });
@@ -73,7 +81,7 @@ export function registerIpcHandlers(): void {
     return { methodId: result.methodId };
   });
 
-  ipcMain.handle("auth:register-verify", async (_e, methodId: string, code: string) => {
+  safeHandle("auth:register-verify", async (_e, methodId: string, code: string) => {
     try {
       const result = await verifyRegisterOtp(methodId, code);
       // Create workspace + user (same as register/verify/route.ts)
@@ -103,7 +111,7 @@ export function registerIpcHandlers(): void {
 
   // ── Dashboard: exact same queries as src/app/(app)/dashboard/page.tsx ──
 
-  ipcMain.handle("dashboard:data", async () => {
+  safeHandle("dashboard:data", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
 
@@ -169,7 +177,7 @@ export function registerIpcHandlers(): void {
 
   // ── Incidents list: same as src/app/(app)/incidents/page.tsx ──
 
-  ipcMain.handle("incidents:counts", async () => {
+  safeHandle("incidents:counts", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const cutoff = new Date(Date.now() - 7 * 86400000);
@@ -183,7 +191,7 @@ export function registerIpcHandlers(): void {
     return { total, open, p1, resolved7d };
   });
 
-  ipcMain.handle("incidents:list", async (_e, opts?: { status?: string; severity?: string; category?: string; owner?: string; q?: string; page?: number }) => {
+  safeHandle("incidents:list", async (_e, opts?: { status?: string; severity?: string; category?: string; owner?: string; q?: string; page?: number }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const page = opts?.page ?? 1;
@@ -219,7 +227,7 @@ export function registerIpcHandlers(): void {
     return { items, total: count, page, pages: Math.ceil(count / take), members };
   });
 
-  ipcMain.handle("incidents:get", async (_e, id: string) => {
+  safeHandle("incidents:get", async (_e, id: string) => {
     if (!currentSession) return null;
     return prisma.incident.findFirst({
       where: { id, workspaceId: currentSession.user.workspaceId },
@@ -233,7 +241,7 @@ export function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle("incidents:update-status", async (_e, id: string, status: string) => {
+  safeHandle("incidents:update-status", async (_e, id: string, status: string) => {
     if (!currentSession) return null;
     const data: any = { status };
     if (status === "RESOLVED") data.resolvedAt = new Date();
@@ -244,7 +252,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Workspace info ──
-  ipcMain.handle("workspace:info", async () => {
+  safeHandle("workspace:info", async () => {
     if (!currentSession) return null;
     return prisma.workspace.findUnique({
       where: { id: currentSession.user.workspaceId },
@@ -255,7 +263,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Analytics: same as src/app/(app)/analytics/page.tsx ──
-  ipcMain.handle("analytics:summary", async () => {
+  safeHandle("analytics:summary", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
@@ -302,7 +310,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Profile ──
-  ipcMain.handle("workspace:refresh-read-models", async () => {
+  safeHandle("workspace:refresh-read-models", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const now = new Date();
@@ -346,7 +354,7 @@ export function registerIpcHandlers(): void {
     return { success: true };
   });
 
-  ipcMain.handle("onboarding:dismiss", async () => {
+  safeHandle("onboarding:dismiss", async () => {
     if (!currentSession) return null;
     await prisma.workspace.update({
       where: { id: currentSession.user.workspaceId },
@@ -355,7 +363,7 @@ export function registerIpcHandlers(): void {
     return { ok: true };
   });
 
-  ipcMain.handle("profile:get", async () => {
+  safeHandle("profile:get", async () => {
     if (!currentSession) return null;
     return prisma.user.findUnique({
       where: { id: currentSession.user.id },
@@ -363,7 +371,7 @@ export function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle("profile:update", async (_e, data: { name?: string; phone?: string }) => {
+  safeHandle("profile:update", async (_e, data: { name?: string; phone?: string }) => {
     if (!currentSession) return null;
     const user = await prisma.user.update({
       where: { id: currentSession.user.id },
@@ -375,7 +383,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Workspace general ──
-  ipcMain.handle("workspace:general", async () => {
+  safeHandle("workspace:general", async () => {
     if (!currentSession) return null;
     return prisma.workspace.findUnique({
       where: { id: currentSession.user.workspaceId },
@@ -388,7 +396,7 @@ export function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle("workspace:update", async (_e, data: { name?: string; slug?: string; complianceMode?: boolean; statusPageEnabled?: boolean; slackChannelId?: string | null }) => {
+  safeHandle("workspace:update", async (_e, data: { name?: string; slug?: string; complianceMode?: boolean; statusPageEnabled?: boolean; slackChannelId?: string | null }) => {
     if (!currentSession) return null;
     const updateData: any = {};
     if (data.name !== undefined) updateData.name = data.name;
@@ -404,7 +412,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Team ──
-  ipcMain.handle("workspace:team", async () => {
+  safeHandle("workspace:team", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const [members, invites] = await Promise.all([
@@ -427,7 +435,7 @@ export function registerIpcHandlers(): void {
     };
   });
 
-  ipcMain.handle("team:invite", async (_e, data: { email: string; role: string }) => {
+  safeHandle("team:invite", async (_e, data: { email: string; role: string }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const token = require("crypto").randomBytes(32).toString("hex");
@@ -439,7 +447,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Billing ──
-  ipcMain.handle("workspace:billing", async () => {
+  safeHandle("workspace:billing", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const today = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
@@ -465,7 +473,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── AI Provider Keys ──
-  ipcMain.handle("integrations:ai", async () => {
+  safeHandle("integrations:ai", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const [keys, workflows] = await Promise.all([
@@ -483,7 +491,7 @@ export function registerIpcHandlers(): void {
     return { keys, workflows };
   });
 
-  ipcMain.handle("ai-keys:save", async (_e, data: { provider: string; apiKey: string }) => {
+  safeHandle("ai-keys:save", async (_e, data: { provider: string; apiKey: string }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const keyLast4 = last4(data.apiKey);
@@ -496,12 +504,12 @@ export function registerIpcHandlers(): void {
     return { ok: true };
   });
 
-  ipcMain.handle("ai-keys:test", async (_e, data: { provider: string; apiKey: string }) => {
+  safeHandle("ai-keys:test", async (_e, data: { provider: string; apiKey: string }) => {
     // Simple validation — key exists and has reasonable length
     return { ok: data.apiKey && data.apiKey.length > 10 };
   });
 
-  ipcMain.handle("workflows:save", async (_e, data: { workflowType: string; provider: string; model: string }) => {
+  safeHandle("workflows:save", async (_e, data: { workflowType: string; provider: string; model: string }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     await prisma.workflowSetting.upsert({
@@ -513,7 +521,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Webhooks ──
-  ipcMain.handle("integrations:webhooks", async () => {
+  safeHandle("integrations:webhooks", async () => {
     if (!currentSession) return null;
     return prisma.workspaceWebhookIntegration.findMany({
       where: { workspaceId: currentSession.user.workspaceId },
@@ -522,7 +530,7 @@ export function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle("webhooks:save-secret", async (_e, data: { type: string; secret: string }) => {
+  safeHandle("webhooks:save-secret", async (_e, data: { type: string; secret: string }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const keyLast4 = last4(data.secret);
@@ -535,7 +543,7 @@ export function registerIpcHandlers(): void {
     return { ok: true };
   });
 
-  ipcMain.handle("webhooks:rotate-secret", async (_e, type: string) => {
+  safeHandle("webhooks:rotate-secret", async (_e, type: string) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const newSecret = randomBytes(32).toString("hex");
@@ -547,7 +555,7 @@ export function registerIpcHandlers(): void {
     return { ok: true, secret: newSecret };
   });
 
-  ipcMain.handle("webhooks:toggle", async (_e, data: { type: string; isActive: boolean }) => {
+  safeHandle("webhooks:toggle", async (_e, data: { type: string; isActive: boolean }) => {
     if (!currentSession) return null;
     await prisma.workspaceWebhookIntegration.update({
       where: { workspaceId_type: { workspaceId: currentSession.user.workspaceId, type: data.type as any } },
@@ -557,7 +565,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── On-Call ──
-  ipcMain.handle("integrations:oncall", async () => {
+  safeHandle("integrations:oncall", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const quota = await prisma.workspaceQuota.findUnique({ where: { workspaceId: wid } }).catch(() => null);
@@ -570,7 +578,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Workspace overview (same as web app) ──
-  ipcMain.handle("workspace:overview", async () => {
+  safeHandle("workspace:overview", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const [keyCount, workflowCount, memberCount, inviteCount, workspace, webhookCount] = await Promise.all([
@@ -585,7 +593,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Incident create ──
-  ipcMain.handle("incidents:export-csv", async () => {
+  safeHandle("incidents:export-csv", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const incidents = await prisma.incident.findMany({
@@ -605,7 +613,7 @@ export function registerIpcHandlers(): void {
     return { ok: true, path: filePath };
   });
 
-  ipcMain.handle("incidents:create", async (_e, data: { title: string; description?: string; severity: string; customerName?: string; customerEmail?: string; channel?: string; category?: string; modelVersion?: string; sourceTicketRef?: string }) => {
+  safeHandle("incidents:create", async (_e, data: { title: string; description?: string; severity: string; customerName?: string; customerEmail?: string; channel?: string; category?: string; modelVersion?: string; sourceTicketRef?: string }) => {
     if (!currentSession) return null;
     return prisma.incident.create({
       data: {
@@ -627,7 +635,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Incident detail (same as web app [id]/page.tsx) ──
-  ipcMain.handle("incidents:detail", async (_e, id: string) => {
+  safeHandle("incidents:detail", async (_e, id: string) => {
     if (!currentSession) return null;
     const incident = await prisma.incident.findFirst({
       where: { id, workspaceId: currentSession.user.workspaceId },
@@ -647,7 +655,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Incident update (status, severity, owner, category) ──
-  ipcMain.handle("incidents:update", async (_e, id: string, data: { status?: string; severity?: string; ownerUserId?: string | null; category?: string | null }) => {
+  safeHandle("incidents:update", async (_e, id: string, data: { status?: string; severity?: string; ownerUserId?: string | null; category?: string | null }) => {
     if (!currentSession) return null;
     const updateData: any = {};
     if (data.status) { updateData.status = data.status; if (data.status === "RESOLVED") updateData.resolvedAt = new Date(); }
@@ -662,7 +670,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Status updates (customer-facing) ──
-  ipcMain.handle("incidents:publish-update", async (_e, incidentId: string, body: string) => {
+  safeHandle("incidents:publish-update", async (_e, incidentId: string, body: string) => {
     if (!currentSession) return null;
     const incident = await prisma.incident.findFirst({ where: { id: incidentId, workspaceId: currentSession.user.workspaceId } });
     if (!incident) return null;
@@ -673,7 +681,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Incident add event/note ──
-  ipcMain.handle("incidents:add-event", async (_e, incidentId: string, body: string, eventType?: string) => {
+  safeHandle("incidents:add-event", async (_e, incidentId: string, body: string, eventType?: string) => {
     if (!currentSession) return null;
     return prisma.incidentEvent.create({
       data: {
@@ -687,7 +695,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Quotas ──
-  ipcMain.handle("workspace:quotas", async () => {
+  safeHandle("workspace:quotas", async () => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const quota = await prisma.workspaceQuota.findUnique({ where: { workspaceId: wid } });
@@ -699,7 +707,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── SSO ──
-  ipcMain.handle("security:sso", async () => {
+  safeHandle("security:sso", async () => {
     if (!currentSession) return null;
     return prisma.workspace.findUnique({
       where: { id: currentSession.user.workspaceId },
@@ -707,7 +715,7 @@ export function registerIpcHandlers(): void {
     }).catch(() => null);
   });
 
-  ipcMain.handle("security:sso-save", async (_e, data: { samlEnabled: boolean; samlMetadataUrl: string | null }) => {
+  safeHandle("security:sso-save", async (_e, data: { samlEnabled: boolean; samlMetadataUrl: string | null }) => {
     if (!currentSession) return null;
     return prisma.workspace.update({
       where: { id: currentSession.user.workspaceId },
@@ -716,7 +724,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── API Keys ──
-  ipcMain.handle("security:apikeys", async () => {
+  safeHandle("security:apikeys", async () => {
     if (!currentSession) return null;
     return prisma.workspaceApiKey.findMany({
       where: { workspaceId: currentSession.user.workspaceId },
@@ -725,7 +733,7 @@ export function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle("apikeys:create", async (_e, data: { name: string; expiryOption: string }) => {
+  safeHandle("apikeys:create", async (_e, data: { name: string; expiryOption: string }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const keyPrefix = randomBytes(4).toString("hex");
@@ -742,7 +750,7 @@ export function registerIpcHandlers(): void {
     return { apiKey: rawKey };
   });
 
-  ipcMain.handle("apikeys:revoke", async (_e, id: string) => {
+  safeHandle("apikeys:revoke", async (_e, id: string) => {
     if (!currentSession) return null;
     return prisma.workspaceApiKey.update({
       where: { id, workspaceId: currentSession.user.workspaceId },
@@ -751,7 +759,7 @@ export function registerIpcHandlers(): void {
   });
 
   // ── Audit Log ──
-  ipcMain.handle("security:audit", async (_e, opts?: { page?: number }) => {
+  safeHandle("security:audit", async (_e, opts?: { page?: number }) => {
     if (!currentSession) return null;
     const wid = currentSession.user.workspaceId;
     const page = opts?.page ?? 1;
