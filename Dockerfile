@@ -41,6 +41,12 @@ ARG REMINDER_QUEUE_URL="https://sqs.us-east-1.amazonaws.com/000000000000/build"
 RUN pnpm run prisma:generate
 RUN pnpm run build
 
+# Bundle the SQS worker into a single JS file for the production image.
+# Only @prisma/client is external (native engine binary); everything else is bundled.
+RUN npx --yes esbuild scripts/worker.ts --bundle --platform=node --target=node22 \
+    --external:@prisma/client \
+    --outfile=dist/worker.js
+
 # Create a self-contained prisma CLI install for migrations in the runner.
 # npm (not pnpm) produces a flat node_modules that survives Docker COPY.
 RUN PRISMA_VER=$(node -e "console.log(require('./node_modules/prisma/package.json').version)") && \
@@ -65,6 +71,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /prisma-cli /prisma-cli
+COPY --from=builder /app/dist/worker.js ./worker.js
 
 RUN chown -R app:app /app
 USER app
