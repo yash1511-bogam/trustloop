@@ -107,7 +107,7 @@ export function MarketingLanding() {
   const showBackToTop = useTransform(scrollY, [600, 601], [0, 1]);
 
   return (
-    <div ref={scope} className="relative overflow-clip bg-[var(--color-void)]">
+    <div ref={scope} className="relative overflow-x-clip bg-[var(--color-void)]">
       <div className="fixed top-0 left-0 right-0 z-50 h-[15px] backdrop-blur-md bg-[var(--color-void)]/80" />
       <header
         className="sticky top-[15px] z-50 px-6"
@@ -289,7 +289,7 @@ export function MarketingLanding() {
         ) : null}
       </AnimatePresence>
 
-      <main id="top" className="marketing-shell pb-20">
+      <main id="top" className="marketing-shell">
         <section className="auth-grain-heavy relative -mt-[60px] flex h-[calc(100vh-35px)] flex-col items-center justify-center overflow-hidden rounded-2xl text-center pt-20" style={{ backgroundImage: "linear-gradient(to left, #030608, #080e11, #0c1a20)", width: "calc(100vw - 40px)", marginLeft: "calc(50% - 50vw + 20px)", marginTop: "-45px" }}>
           <div className="mx-auto flex max-w-[860px] flex-col items-center">
             <framerMotion.p

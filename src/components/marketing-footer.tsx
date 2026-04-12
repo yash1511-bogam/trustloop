@@ -55,9 +55,9 @@ export function MarketingFooter() {
 
         </div>
       </footer>
-      <div className="relative mx-auto" style={{ maxWidth: "960px" }}>
+      <div className="relative mx-auto w-full overflow-hidden" style={{ maxWidth: "960px", aspectRatio: "86 / 20.8" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/Logo/%E2%88%9E.svg" alt="" loading="lazy" className="block w-full opacity-10" style={{ clipPath: "inset(0 0 25% 0)", marginBottom: "-25%", maxWidth: "960px" }} draggable={false} onContextMenu={(e) => e.preventDefault()} />
+        <img src="/Logo/%E2%88%9E.svg" alt="" loading="lazy" className="absolute top-0 left-0 block w-full opacity-10" style={{ maxWidth: "960px" }} draggable={false} onContextMenu={(e) => e.preventDefault()} />
         <div
           className="pointer-events-none"
           style={{
@@ -68,13 +68,13 @@ export function MarketingFooter() {
             backgroundRepeat: "repeat",
             backgroundSize: "200px",
             WebkitMaskImage: "url(/Logo/%E2%88%9E.svg)",
-            WebkitMaskSize: "contain",
+            WebkitMaskSize: "100% auto",
             WebkitMaskRepeat: "no-repeat",
-            WebkitMaskPosition: "center",
+            WebkitMaskPosition: "top center",
             maskImage: "url(/Logo/%E2%88%9E.svg)",
-            maskSize: "contain",
+            maskSize: "100% auto",
             maskRepeat: "no-repeat",
-            maskPosition: "center",
+            maskPosition: "top center",
           }}
         />
       </div>
