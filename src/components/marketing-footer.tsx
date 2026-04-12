@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   GithubLogo,
   LinkedinLogo,
@@ -8,12 +9,14 @@ import {
 } from "@phosphor-icons/react";
 import { TrustLoopLogo } from "@/components/trustloop-logo";
 
+const Footer3DLogo = dynamic(() => import("@/components/footer-3d-logo").then((m) => ({ default: m.Footer3DLogo })), { ssr: false });
+
 export function MarketingFooter() {
   return (
     <>
-      <footer className="px-6 pb-10 pt-12 md:px-8">
+      <footer className="relative z-10 px-6 pb-10 pt-12 md:px-8">
         <div className="mx-auto max-w-[960px] border-t border-[var(--color-rim)] pt-10">
-          <div className="grid gap-y-8 gap-x-16 justify-items-center text-center sm:justify-items-start sm:text-left sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]">
+          <div className="grid gap-y-8 gap-x-16 justify-items-center text-center sm:justify-items-start sm:text-left sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto_auto]">
             <div>
               <TrustLoopLogo size={16} variant="full" />
               <p className="mt-3 max-w-[200px] text-[13px] leading-relaxed text-[var(--color-ghost)]">AI incident operations for teams that ship.</p>
@@ -23,6 +26,10 @@ export function MarketingFooter() {
                 <a className="text-[var(--color-ghost)] transition-colors hover:text-[var(--color-body)]" href="https://linkedin.com" rel="noreferrer" target="_blank"><LinkedinLogo size={16} weight="regular" /></a>
               </div>
               <p className="mt-4 text-[12px] text-[var(--color-ghost)]">© {new Date().getFullYear()} TrustLoop, Inc.</p>
+            </div>
+
+            <div className="hidden lg:flex items-center justify-center" style={{ margin: "0 -40px" }}>
+              <Footer3DLogo />
             </div>
 
             <div className="grid content-start gap-3">
@@ -55,29 +62,6 @@ export function MarketingFooter() {
 
         </div>
       </footer>
-      <div className="relative mx-auto w-full overflow-hidden" style={{ maxWidth: "960px", aspectRatio: "86 / 20.8" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/Logo/%E2%88%9E.svg" alt="" loading="lazy" className="absolute top-0 left-0 block w-full opacity-10" style={{ maxWidth: "960px" }} draggable={false} onContextMenu={(e) => e.preventDefault()} />
-        <div
-          className="pointer-events-none"
-          style={{
-            position: "absolute",
-            inset: 0,
-            opacity: 0.18,
-            backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='6' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-            backgroundRepeat: "repeat",
-            backgroundSize: "200px",
-            WebkitMaskImage: "url(/Logo/%E2%88%9E.svg)",
-            WebkitMaskSize: "100% auto",
-            WebkitMaskRepeat: "no-repeat",
-            WebkitMaskPosition: "top center",
-            maskImage: "url(/Logo/%E2%88%9E.svg)",
-            maskSize: "100% auto",
-            maskRepeat: "no-repeat",
-            maskPosition: "top center",
-          }}
-        />
-      </div>
     </>
   );
 }
