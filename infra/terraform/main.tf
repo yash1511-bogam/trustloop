@@ -418,7 +418,7 @@ resource "aws_ecs_task_definition" "worker" {
     name        = "trustloop-worker"
     image       = local.worker_image_uri
     essential   = true
-    command     = ["pnpm", "run", "worker"]
+    command     = ["node", "worker.js"]
     environment = local.common_env
     secrets     = local.secret_env
     logConfiguration = {
