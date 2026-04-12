@@ -143,7 +143,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
-    "electron": "^35.0.0",
+    "electron": "^39.8.5",
     "electron-builder": "^26.0.0",
     "eslint": "^10.1.0",
     "globals": "^17.4.0",
