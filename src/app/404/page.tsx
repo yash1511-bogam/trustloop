@@ -1,3 +1,5 @@
-import NotFound from "@/app/not-found";
+import NotFoundClient from "@/components/not-found-client";
 
-export default NotFound;
+export default function Custom404() {
+  return <NotFoundClient />;
+}
