@@ -43,7 +43,7 @@ RUN pnpm run build
 
 # Bundle the SQS worker into a single JS file for the production image.
 # Only @prisma/client is external (native engine binary); everything else is bundled.
-RUN npx --yes esbuild scripts/worker.ts --bundle --platform=node --target=node22 \
+RUN pnpm add -D esbuild && pnpm exec esbuild scripts/worker.ts --bundle --platform=node --target=node22 \
     --external:@prisma/client \
     --outfile=dist/worker.js
 
