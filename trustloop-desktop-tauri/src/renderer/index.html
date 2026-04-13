@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrustLoop</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="chart.umd.min.js"></script>
+  <script src="tauri-bridge.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <!-- ═══ Update Toast ═══ -->
+  <div id="update-toast" class="update-toast hidden">
+    <button class="update-toast-close" onclick="app.dismissUpdate()">✕</button>
+    <p id="update-toast-text" class="update-toast-text"></p>
+    <div class="update-toast-actions">
+      <button id="update-toast-action" class="btn-toast-action" onclick="app.handleUpdateAction()"></button>
+    </div>
+  </div>
+
+  <!-- ═══ Landing ═══ -->
+  <div id="screen-landing" class="screen active">
+    <div class="landing-drag"></div>
+    <div class="landing-fill">
+      <div class="logo-wordmark" id="landing-logo"></div>
+      <button class="btn-continue" id="btn-continue" onclick="app.showScreen('screen-auth')">Continue</button>
+    </div>
+  </div>
+
+  <!-- ═══ Auth (Login + Register combined) ═══ -->
+  <div id="screen-auth" class="screen">
+    <div class="landing-drag"></div>
+    <div class="auth-center">
+      <div class="auth-card">
+        <!-- Logo -->
+        <div class="auth-logo" id="auth-logo"></div>
+
+        <!-- Sign In / Sign Up toggle -->
+        <div class="auth-mode-tabs">
+          <button class="auth-mode-tab active" data-mode="login" onclick="app.switchAuthMode('login')">Sign In</button>
+          <button class="auth-mode-tab" data-mode="register" onclick="app.switchAuthMode('register')">Sign Up</button>
+        </div>
+
+        <!-- ══ Login panel ══ -->
+        <div class="auth-panels">
+        <div id="auth-login" class="auth-panel active">
+          <h1 class="auth-title">Welcome back</h1>
+          <p class="auth-subtitle">Sign in to resume your incident workflow.</p>
+
+          <div id="login-error" class="auth-error hidden"></div>
+          <div id="login-message" class="auth-success hidden"></div>
+
+          <!-- Method tabs -->
+          <div class="auth-tabs">
+            <button class="auth-tab active" data-tab="social" onclick="app.loginTab('social')">Social Login</button>
+            <button class="auth-tab" data-tab="email" onclick="app.loginTab('email')">Email Code</button>
+          </div>
+
+          <!-- Social -->
+          <div id="login-social" class="auth-tab-content active">
+            <div class="oauth-grid">
+              <button class="btn-oauth" onclick="app.oauthLogin('google','login')">
+                <svg class="oauth-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.67-.35-1.39-.35-2.09s.13-1.42.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                Google
+              </button>
+              <button class="btn-oauth" onclick="app.oauthLogin('github','login')">
+                <svg class="oauth-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                GitHub
+              </button>
+            </div>
+            <div class="auth-divider"><button class="auth-divider-btn" onclick="app.loginTab('email')">or use email OTP</button></div>
+          </div>
+
+          <!-- Email -->
+          <div id="login-email" class="auth-tab-content">
+            <form id="login-otp-form" onsubmit="return app.loginSendOtp(event)">
+              <input class="input" id="login-email-input" type="email" placeholder="Work email" required>
+              <button class="btn btn-primary w-full" id="login-send-btn" type="submit">Send verification code</button>
+            </form>
+            <form id="login-verify-form" class="hidden" onsubmit="return app.loginVerifyOtp(event)">
+              <input class="input code-input" id="login-code-input" placeholder="Verification code" inputmode="numeric" minlength="4" maxlength="12" required>
+              <button class="btn btn-primary w-full" type="submit">Verify and sign in</button>
+            </form>
+          </div>
+
+        </div>
+
+        <!-- ══ Register panel ══ -->
+        <div id="auth-register" class="auth-panel">
+          <h1 class="auth-title">Create your workspace</h1>
+          <p class="auth-subtitle">14-day free trial. No credit card required.</p>
+
+          <div id="register-error" class="auth-error hidden"></div>
+          <div id="register-message" class="auth-success hidden"></div>
+
+          <!-- OAuth -->
+          <div class="oauth-grid" style="margin-top:20px">
+            <button class="btn-oauth" onclick="app.oauthLogin('google','register')">
+              <svg class="oauth-icon" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1 .67-2.28 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.67-.35-1.39-.35-2.09s.13-1.42.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              Google
+            </button>
+            <button class="btn-oauth" onclick="app.oauthLogin('github','register')">
+              <svg class="oauth-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+              GitHub
+            </button>
+          </div>
+          <div class="auth-divider"><span>or use email OTP</span></div>
+
+          <form id="register-form" onsubmit="return app.registerStart(event)">
+            <input class="input" id="reg-company" placeholder="Company name" required minlength="2" maxlength="80">
+            <input class="input" id="reg-name" placeholder="Your name" required minlength="2">
+            <input class="input" id="reg-email" type="email" placeholder="Work email" required>
+            <button class="btn btn-primary w-full" id="reg-send-btn" type="submit">Send verification code</button>
+          </form>
+
+          <form id="register-verify-form" class="hidden" onsubmit="return app.registerVerify(event)">
+            <input class="input code-input" id="reg-code-input" placeholder="Verification code" inputmode="numeric" minlength="4" maxlength="12" required>
+            <button class="btn btn-primary w-full" type="submit">Verify and create workspace</button>
+          </form>
+
+          <p class="auth-terms">
+            By creating a workspace you agree to our <a href="#">Terms</a> & <a href="#">Privacy Policy</a>.
+          </p>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Dashboard ═══ -->
+  <div id="screen-dashboard" class="screen">
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="logo-wordmark logo-xs" id="sidebar-logo"></div>
+          <button class="sidebar-toggle-inner" onclick="app.toggleSidebar()" title="Toggle Sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+        </div>
+        <div class="sidebar-workspace">
+          <div class="sidebar-ws-name" id="sidebar-ws-name">Workspace</div>
+          <span class="sidebar-plan" id="sidebar-plan">STARTER</span>
+        </div>
+        <nav class="sidebar-nav">
+          <a class="nav-item active" data-page="dashboard" onclick="app.navTo('dashboard')">
+            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+            <span class="nav-label">Dashboard</span>
+          </a>
+          <a class="nav-item" data-page="incidents" onclick="app.navTo('incidents')">
+            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h2.49a2 2 0 0 0 1.92-1.46l2.35-8.36a.25.25 0 0 1 .48 0l5.52 19.64a.25.25 0 0 0 .48 0l2.35-8.36A2 2 0 0 1 19.52 12H22"/></svg>
+            <span class="nav-label">Incidents</span>
+          </a>
+          <a class="nav-item" data-page="analytics" onclick="app.navTo('analytics')">
+            <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12c.552 0 1.005-.449.95-.998a10 10 0 0 0-8.953-8.951c-.55-.055-.998.398-.998.95v8a1 1 0 0 0 1 1z"/><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/></svg>
+            <span class="nav-label">Analytics</span>
+          </a>
+
+          <div class="nav-group" data-group="Account">
+            <button class="nav-group-toggle" onclick="app.toggleGroup('Account')">
+              <span>Account</span>
+              <svg class="nav-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" data-page="profile" onclick="app.navTo('profile')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span class="nav-label">Profile</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-group="Workspace">
+            <button class="nav-group-toggle" onclick="app.toggleGroup('Workspace')">
+              <span>Workspace</span>
+              <svg class="nav-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" data-page="ws-overview" onclick="app.navTo('ws-overview')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg>
+                <span class="nav-label">Overview</span>
+              </a>
+              <a class="nav-item" data-page="ws-general" onclick="app.navTo('ws-general')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/></svg>
+                <span class="nav-label">General</span>
+              </a>
+              <a class="nav-item" data-page="ws-team" onclick="app.navTo('ws-team')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/></svg>
+                <span class="nav-label">Team</span>
+              </a>
+              <a class="nav-item" data-page="ws-billing" onclick="app.navTo('ws-billing')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/><path d="M5 15H15"/></svg>
+                <span class="nav-label">Billing</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-group="Integrations">
+            <button class="nav-group-toggle" onclick="app.toggleGroup('Integrations')">
+              <span>Integrations</span>
+              <svg class="nav-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" data-page="int-ai" onclick="app.navTo('int-ai')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/></svg>
+                <span class="nav-label">AI Providers</span>
+              </a>
+              <a class="nav-item" data-page="int-webhooks" onclick="app.navTo('int-webhooks')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"/><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06"/><path d="m12 6 3.13 5.73C15.66 12.7 16.9 13 18 13a4 4 0 0 1 0 8"/></svg>
+                <span class="nav-label">Webhooks</span>
+              </a>
+              <a class="nav-item" data-page="int-oncall" onclick="app.navTo('int-oncall')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                <span class="nav-label">On-Call</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="nav-group" data-group="Security">
+            <button class="nav-group-toggle" onclick="app.toggleGroup('Security')">
+              <span>Security</span>
+              <svg class="nav-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div class="nav-group-items">
+              <a class="nav-item" data-page="sec-apikeys" onclick="app.navTo('sec-apikeys')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5"/></svg>
+                <span class="nav-label">API Keys</span>
+              </a>
+              <a class="nav-item" data-page="sec-audit" onclick="app.navTo('sec-audit')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+                <span class="nav-label">Audit Log</span>
+              </a>
+              <a class="nav-item" data-page="sec-sso" onclick="app.navTo('sec-sso')">
+                <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+                <span class="nav-label">SAML SSO</span>
+              </a>
+            </div>
+          </div>
+        </nav>
+        <div class="sidebar-footer">
+          <button class="btn-logout" onclick="app.logout()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+            Sign out
+          </button>
+        </div>
+      </aside>
+      <main class="main-content">
+        <div class="collapsed-bar">
+          <button class="sidebar-toggle" onclick="app.toggleSidebar()" title="Toggle Sidebar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </button>
+        </div>
+        <div id="view-dashboard" class="view active">
+          <div class="page-head">
+            <h1 class="page-title">Dashboard</h1>
+            <div class="page-actions">
+              <button class="btn btn-ghost" onclick="app.navTo('analytics')">Analytics →</button>
+              <button class="btn btn-primary" onclick="app.showCreateIncidentDash()">+ New incident</button>
+            </div>
+          </div>
+          <div class="stat-grid" id="stat-grid"></div>
+          <div class="chart-row">
+            <div class="chart-card chart-wide"><div class="chart-head"><div><h2 class="chart-title">Incident velocity</h2><p class="chart-desc">Severity breakdown of your queue</p></div><div class="chart-badge">⚡ Live</div></div><div class="chart-body" id="velocity-chart"></div></div>
+            <div class="chart-card"><div class="chart-head"><div><h2 class="chart-title">Coverage</h2><p class="chart-desc">Triage & customer updates</p></div></div><div class="chart-body chart-center" id="coverage-chart"></div></div>
+          </div>
+          <div id="dash-create-drawer" class="hidden"></div>
+        </div>
+        <div id="view-incidents" class="view">
+          <div class="page-head">
+            <h1 class="page-title">Incidents</h1>
+            <div class="page-actions"><button class="btn btn-primary" onclick="app.showCreateIncident()">+ New incident</button></div>
+          </div>
+          <div class="stat-grid stat-grid-4" id="incident-stat-grid"></div>
+          <div id="incident-filters" class="filter-bar">
+            <div class="queue-head"><div><h2 class="section-title">Incident queue</h2><p class="section-desc">Primary responder view with live filters and severity-first sorting.</p></div><div class="page-actions"><button class="btn btn-ghost btn-sm" onclick="app.syncModels()">↻ Sync models</button><button class="btn btn-ghost btn-sm" onclick="app.exportCsv()">Export CSV</button></div></div>
+            <div class="filter-row">
+              <label class="field"><span class="field-label">Status</span><select class="input" id="filter-status"><option value="">All</option><option>NEW</option><option>INVESTIGATING</option><option>MONITORING</option><option>MITIGATED</option><option>RESOLVED</option></select></label>
+              <label class="field"><span class="field-label">Severity</span><select class="input" id="filter-severity"><option value="">All</option><option>P1</option><option>P2</option><option>P3</option><option>P4</option></select></label>
+              <label class="field"><span class="field-label">Category</span><select class="input" id="filter-category"><option value="">All</option><option>HALLUCINATION</option><option>BIAS</option><option>TOXICITY</option><option>PII_LEAK</option><option>REFUSAL</option><option>DRIFT</option><option>LATENCY</option><option>OTHER</option></select></label>
+              <label class="field"><span class="field-label">Owner</span><select class="input" id="filter-owner"><option value="">All</option></select></label>
+              <label class="field"><span class="field-label">Search</span><input class="input" id="filter-search" placeholder="Search incidents, tickets, or customers" onkeydown="if(event.key==='Enter')app.applyIncidentFilters()" /></label>
+              <div class="filter-actions">
+                <button class="btn btn-primary btn-sm" onclick="app.applyIncidentFilters()">Apply</button>
+                <button class="btn btn-ghost btn-sm" onclick="app.resetIncidentFilters()">Clear</button>
+              </div>
+            </div>
+          </div>
+          <div id="incidents-queue"></div>
+          <div class="pagination" id="incidents-pagination"></div>
+        </div>
+        <div id="view-analytics" class="view">
+          <div class="page-head">
+            <h1 class="page-title">Analytics</h1>
+            <div class="page-actions">
+              <button class="btn btn-ghost btn-sm" onclick="app.exportCsv()">Export CSV</button>
+              <button class="btn btn-primary btn-sm" onclick="app.refreshAnalytics()">↻ Refresh data</button>
+            </div>
+          </div>
+          <div id="analytics-operating" class="section-block"><h2 class="section-title">Current operating state</h2><p class="section-desc">The metrics leadership needs first when a response is active.</p><div class="stat-grid stat-grid-5" id="analytics-op-stats"></div></div>
+          <div id="analytics-coverage" class="section-block"><h2 class="section-title">Coverage and timing</h2><p class="section-desc">Response quality indicators across resolution, triage, and customer communications.</p><div class="stat-grid stat-grid-3" id="analytics-cov-stats"></div></div>
+          <div id="analytics-trend" class="section-block"><h2 class="section-title">14-day analytics trend</h2><p class="section-desc">Incident volume and severity patterns for weekly review and board-level reporting.</p>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>Incidents created vs resolved</h3><div id="legend-created-resolved" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-created-resolved"></canvas></div></div>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>Open incidents (end of day)</h3><div id="legend-open" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-open"></canvas></div></div>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>P1 incidents by day</h3><div id="legend-p1" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-p1"></canvas></div></div>
+            <div class="settings-card" style="margin-bottom:16px"><div class="chart-card-head"><h3>AI triage runs &amp; customer updates</h3><div id="legend-triage" class="chart-legend"></div></div><div class="exec-chart"><canvas id="chart-triage"></canvas></div></div>
+            <div id="analytics-content"></div>
+          </div>
+        </div>
+        <div id="view-profile" class="view">
+          <div class="page-head"><h1 class="page-title">Profile</h1></div>
+          <div id="profile-content" class="settings-content"></div>
+        </div>
+        <div id="view-ws-overview" class="view">
+          <div class="page-head"><h1 class="page-title">Workspace Overview</h1></div>
+          <div id="ws-overview-content" class="settings-content"></div>
+        </div>
+        <div id="view-ws-general" class="view">
+          <div class="page-head"><h1 class="page-title">General Settings</h1></div>
+          <div id="ws-general-content" class="settings-content"></div>
+        </div>
+        <div id="view-ws-team" class="view">
+          <div class="page-head"><h1 class="page-title">Team Members</h1></div>
+          <div id="ws-team-content" class="settings-content"></div>
+        </div>
+        <div id="view-ws-billing" class="view">
+          <div class="page-head"><h1 class="page-title">Billing</h1></div>
+          <div id="ws-billing-content" class="settings-content"></div>
+        </div>
+        <div id="view-int-ai" class="view">
+          <div class="page-head"><h1 class="page-title">AI Providers</h1></div>
+          <div id="int-ai-content" class="settings-content"></div>
+        </div>
+        <div id="view-int-webhooks" class="view">
+          <div class="page-head"><h1 class="page-title">Webhooks</h1></div>
+          <div id="int-webhooks-content" class="settings-content"></div>
+        </div>
+        <div id="view-int-oncall" class="view">
+          <div class="page-head"><h1 class="page-title">On-Call<span id="oncall-plan-badge"></span></h1></div>
+          <div id="int-oncall-content" class="settings-content"></div>
+        </div>
+        <div id="view-sec-apikeys" class="view">
+          <div class="page-head"><h1 class="page-title">API Keys<span id="apikeys-plan-badge"></span></h1></div>
+          <div id="sec-apikeys-content" class="settings-content"></div>
+        </div>
+        <div id="view-sec-audit" class="view">
+          <div class="page-head"><h1 class="page-title">Audit Log</h1></div>
+          <div id="sec-audit-content" class="settings-content"></div>
+        </div>
+        <div id="view-sec-sso" class="view">
+          <div class="page-head"><h1 class="page-title">SAML SSO<span id="sso-plan-badge"></span></h1></div>
+          <div id="sec-sso-content" class="settings-content"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities for TrustLoop Desktop",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open",
+    "dialog:default",
+    "notification:default",
+    "clipboard-manager:default",
+    "deep-link:default"
+  ]
+}

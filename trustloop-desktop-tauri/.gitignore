@@ -1,0 +1,9 @@
+node_modules/
+src-tauri/target/
+dist/
+out/
+*.dmg
+*.zip
+*.app
+.DS_Store
+WixTools/
