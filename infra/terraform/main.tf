@@ -321,7 +321,7 @@ resource "aws_lb_target_group" "web" {
 
   health_check {
     enabled             = true
-    path                = "/login"
+    path                = "/api/health"
     matcher             = "200-399"
     healthy_threshold   = 2
     unhealthy_threshold = 3
@@ -440,6 +440,8 @@ resource "aws_ecs_service" "web" {
   launch_type     = "FARGATE"
 
   force_new_deployment = true
+
+  health_check_grace_period_seconds = 120
 
   deployment_circuit_breaker {
     enable   = true
