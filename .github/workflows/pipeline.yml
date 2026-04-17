@@ -152,7 +152,11 @@ jobs:
         run: |
           CLUSTER=$(terraform output -raw ecs_cluster_name)
           echo "Waiting for staging services to stabilize..."
-          AWS_MAX_ATTEMPTS=60 aws ecs wait services-stable --cluster "$CLUSTER" --services "trustloop-staging-web" "trustloop-staging-worker"
+          for i in $(seq 1 3); do
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "trustloop-staging-web" "trustloop-staging-worker" && break
+            echo "Attempt $i/3 timed out, retrying..."
+            [ "$i" -eq 3 ] && { echo "Services did not stabilize"; exit 1; }
+          done
           echo "All staging services stable"
           APP_URL=$(terraform output -raw app_url)
           for ep in /api/health /login; do
@@ -239,7 +243,11 @@ jobs:
         working-directory: infra/terraform
         run: |
           CLUSTER=$(terraform output -raw ecs_cluster_name)
-          AWS_MAX_ATTEMPTS=60 aws ecs wait services-stable --cluster "$CLUSTER" --services "${PROJECT_NAME}-web" "${PROJECT_NAME}-worker"
+          for i in $(seq 1 3); do
+            aws ecs wait services-stable --cluster "$CLUSTER" --services "${PROJECT_NAME}-web" "${PROJECT_NAME}-worker" && break
+            echo "Attempt $i/3 timed out, retrying..."
+            [ "$i" -eq 3 ] && { echo "Services did not stabilize"; exit 1; }
+          done
 
       - name: Smoke test production
         working-directory: infra/terraform
