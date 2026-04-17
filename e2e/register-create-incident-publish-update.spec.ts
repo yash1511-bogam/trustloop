@@ -6,7 +6,7 @@ test("registers, creates an incident, runs triage, and publishes a customer upda
   const email = `e2e-${Date.now()}@example.com`;
 
   await page.goto("/register");
-  await page.getByPlaceholder("Workspace name").fill("E2E Demo Workspace");
+  await page.getByPlaceholder("Company name").fill("E2E Demo Workspace");
   await page.getByPlaceholder("Your name").fill("E2E Operator");
   await page.getByPlaceholder("Work email").fill(email);
   await page.getByRole("button", { name: "Send verification code" }).click();

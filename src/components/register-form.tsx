@@ -223,6 +223,7 @@ export function RegisterForm({
             onChange={(event) => setInviteCode(event.target.value)}
             disabled={Boolean(inviteToken)}
             required={!inviteToken}
+            readOnly={Boolean(initialInviteCode)}
           />
         </div>
         <button

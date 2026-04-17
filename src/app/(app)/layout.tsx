@@ -6,6 +6,8 @@ import { getWorkspacePlanTier } from "@/lib/plan-tier-cache";
 import { prisma } from "@/lib/prisma";
 import { listUserWorkspaceMemberships } from "@/lib/workspace-membership";
 
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({
   children,
 }: {

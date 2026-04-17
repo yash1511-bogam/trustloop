@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
       "incidents/:path*",
     ];
     return appPaths.map((p) => ({
-      source: `/:slug((?!api|_next|docs|status|login|register|forgot-access|choose-plan|changelog)[a-z0-9-]+)/${p}`,
+      source: `/:slug((?!api|_next|docs|status|login|register|invite|forgot-access|choose-plan|changelog)[a-z0-9-]+)/${p}`,
       destination: `/${p}`,
     }));
   },

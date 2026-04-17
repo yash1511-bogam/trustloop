@@ -15,8 +15,9 @@ const eslintConfig = defineConfig([
     "test-results/**",
     "next-env.d.ts",
     ".source/**",
-    // Desktop app — separate project with its own toolchain
+    // Desktop apps — separate projects with their own toolchain
     "trustloop-desktop/**",
+    "trustloop-desktop-tauri/**",
   ]),
 ]);
 

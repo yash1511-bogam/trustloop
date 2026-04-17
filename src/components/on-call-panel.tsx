@@ -21,15 +21,16 @@ type OnCallData = {
 
 export function OnCallPanel({ disabled }: { disabled?: boolean }) {
   const [data, setData] = useState<OnCallData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!disabled);
 
   useEffect(() => {
+    if (disabled) return;
     fetch("/api/settings/on-call")
       .then((res) => res.json())
       .then((d: OnCallData) => setData(d))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [disabled]);
 
   if (loading) {
     return (

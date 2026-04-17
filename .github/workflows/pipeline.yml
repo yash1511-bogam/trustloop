@@ -74,79 +74,10 @@ jobs:
           REMINDER_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/000000000000/ci-queue
         run: pnpm run build
 
-  # ── Stage 2: Build Desktop & Release ────────────────────────────────────────
-  build-desktop:
-    name: Build Desktop & Release
-    needs: web-build
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v5
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install root dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-        run: pnpm run prisma:generate
-
-      - name: Install desktop dependencies
-        working-directory: trustloop-desktop
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client for desktop
-        working-directory: trustloop-desktop
-        env:
-          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
-        run: pnpm prisma:generate
-
-      - name: TypeScript compile check
-        working-directory: trustloop-desktop
-        run: pnpm compile
-
-      - name: Validate renderer JS
-        working-directory: trustloop-desktop
-        run: node --check src/renderer/app.js
-
-      - name: Build desktop app
-        working-directory: trustloop-desktop
-        env:
-          NODE_ENV: production
-        run: pnpm build
-
-      - name: Get version
-        id: version
-        working-directory: trustloop-desktop
-        run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3.0.0
-        with:
-          tag_name: desktop-v${{ steps.version.outputs.version }}-${{ github.run_number }}
-          name: TrustLoop Desktop v${{ steps.version.outputs.version }} (Build ${{ github.run_number }})
-          draft: false
-          prerelease: ${{ github.ref != 'refs/heads/main' }}
-          files: |
-            trustloop-desktop/dist/*.dmg
-            trustloop-desktop/dist/*.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
-  # ── Stage 3: Deploy Staging ─────────────────────────────────────────────────
+  # ── Stage 2: Deploy Staging ─────────────────────────────────────────────────
   deploy-staging:
     name: Deploy Staging
-    needs: build-desktop
+    needs: web-build
     runs-on: ubuntu-latest
     environment: staging
     env:
@@ -230,7 +161,7 @@ jobs:
             else echo "❌ $ep → $STATUS"; exit 1; fi
           done
 
-  # ── Stage 4: Deploy Production ──────────────────────────────────────────────
+  # ── Stage 3: Deploy Production ──────────────────────────────────────────────
   deploy-production:
     name: Deploy Production
     needs: deploy-staging

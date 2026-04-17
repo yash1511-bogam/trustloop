@@ -38,7 +38,7 @@ async function seed(): Promise<void> {
       name: "Acme AI Apps",
       slug: "acme-ai",
       statusPageEnabled: true,
-      planTier: "growth",
+      planTier: "pro",
       timezone: "America/New_York",
     },
   });

@@ -54,7 +54,7 @@ export default async function RegisterPage({
   }>;
 }) {
   const params = await redirectToOAuthCallbackIfPresent(searchParams);
-  const auth = await getAuth();
+  const auth = await getAuth({ skipDevFallback: true });
   if (auth) redirect("/dashboard");
   const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 

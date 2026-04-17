@@ -1,0 +1,193 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - main [ref=e4]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - img "TrustLoop" [ref=e7]:
+          - img "T" [ref=e8]
+          - img "r" [ref=e9]
+          - img "u" [ref=e10]
+          - img "s" [ref=e11]
+          - img "t" [ref=e12]
+          - img "L" [ref=e13]
+          - img "∞" [ref=e14]
+          - img "p" [ref=e15]
+        - button "Collapse sidebar" [ref=e16]:
+          - img [ref=e17]
+      - generic [ref=e20]:
+        - generic [ref=e21]: Acme AI Apps
+        - generic [ref=e22]: PRO
+      - navigation "Primary navigation" [ref=e25]:
+        - generic [ref=e26]:
+          - link "Dashboard" [ref=e28] [cursor=pointer]:
+            - /url: /dashboard
+            - img [ref=e30]
+            - generic [ref=e36]: Dashboard
+          - link "Incidents" [ref=e38] [cursor=pointer]:
+            - /url: /incidents
+            - img [ref=e40]
+            - generic [ref=e42]: Incidents
+          - link "Analytics" [ref=e44] [cursor=pointer]:
+            - /url: /analytics
+            - img [ref=e46]
+            - generic [ref=e49]: Analytics
+        - button "Account" [ref=e51]:
+          - generic [ref=e52]: Account
+          - img [ref=e53]
+        - button "Workspace" [ref=e56]:
+          - generic [ref=e57]: Workspace
+          - img [ref=e58]
+        - button "Integrations" [ref=e61]:
+          - generic [ref=e62]: Integrations
+          - img [ref=e63]
+        - button "Security" [ref=e66]:
+          - generic [ref=e67]: Security
+          - img [ref=e68]
+      - button "Sign out" [ref=e71] [cursor=pointer]:
+        - img [ref=e72]
+        - text: Sign out
+    - generic [ref=e74]:
+      - generic [ref=e75]:
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - heading "Operational readiness checklist" [level=2] [ref=e79]
+              - paragraph [ref=e80]: Complete the essentials before your first customer-facing AI incident hits the queue.
+            - generic [ref=e83]:
+              - generic [ref=e84]: 2/5 complete
+              - button "Dismiss" [ref=e85] [cursor=pointer]:
+                - img [ref=e86]
+                - text: Dismiss
+          - list [ref=e88]:
+            - listitem [ref=e89]:
+              - link "Create your first incident Log an incident manually or route one in from a webhook." [ref=e90] [cursor=pointer]:
+                - /url: /incidents
+                - img [ref=e91]
+                - generic [ref=e94]:
+                  - paragraph [ref=e95]: Create your first incident
+                  - paragraph [ref=e96]: Log an incident manually or route one in from a webhook.
+            - listitem [ref=e97]:
+              - link "Run AI triage Let the system propose severity, owner, and safe next steps." [ref=e98] [cursor=pointer]:
+                - /url: /incidents
+                - img [ref=e99]
+                - generic [ref=e102]:
+                  - paragraph [ref=e103]: Run AI triage
+                  - paragraph [ref=e104]: Let the system propose severity, owner, and safe next steps.
+            - listitem [ref=e105]:
+              - link "Add an AI provider key Connect OpenAI, Gemini, or Anthropic before the next incident lands." [ref=e106] [cursor=pointer]:
+                - /url: /integrations/ai
+                - img [ref=e107]
+                - generic [ref=e110]:
+                  - paragraph [ref=e111]: Add an AI provider key
+                  - paragraph [ref=e112]: Connect OpenAI, Gemini, or Anthropic before the next incident lands.
+            - listitem [ref=e113]:
+              - link "Connect Slack Keep responders aligned with alerting and approved status updates." [ref=e114] [cursor=pointer]:
+                - /url: /integrations/webhooks
+                - img [ref=e115]
+                - generic [ref=e118]:
+                  - paragraph [ref=e119]: Connect Slack
+                  - paragraph [ref=e120]: Keep responders aligned with alerting and approved status updates.
+            - listitem [ref=e121]:
+              - link "Set up a webhook integration Accept incidents from Datadog, Sentry, PagerDuty, or custom sources." [ref=e122] [cursor=pointer]:
+                - /url: /integrations/webhooks
+                - img [ref=e123]
+                - generic [ref=e126]:
+                  - paragraph [ref=e127]: Set up a webhook integration
+                  - paragraph [ref=e128]: Accept incidents from Datadog, Sentry, PagerDuty, or custom sources.
+        - generic [ref=e130]:
+          - heading "Dashboard" [level=1] [ref=e132]
+          - generic [ref=e133]:
+            - link "Analytics" [ref=e134] [cursor=pointer]:
+              - /url: /analytics
+              - text: Analytics
+              - img [ref=e135]
+            - button "New incident" [ref=e137] [cursor=pointer]:
+              - img [ref=e138]
+              - text: New incident
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - generic [ref=e142]:
+              - img [ref=e144]
+              - generic [ref=e147]:
+                - img [ref=e148]
+                - text: +1 this week
+            - generic [ref=e150]: "6"
+            - generic [ref=e151]: Open incidents
+            - generic [ref=e152]: 3 P1 critical
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - img [ref=e156]
+              - generic [ref=e159]:
+                - img [ref=e160]
+                - text: None yet
+            - generic [ref=e162]: "0"
+            - generic [ref=e163]: Resolved (7d)
+            - generic [ref=e164]: 11 total all-time
+          - generic [ref=e165]:
+            - generic [ref=e166]:
+              - img [ref=e168]
+              - generic [ref=e171]:
+                - img [ref=e172]
+                - text: Above target
+            - generic [ref=e174]: 36.0h
+            - generic [ref=e175]: Avg resolution
+            - generic [ref=e176]: Last 30 days
+        - generic [ref=e177]:
+          - generic [ref=e178]:
+            - generic [ref=e179]:
+              - generic [ref=e180]:
+                - heading "Incident velocity" [level=2] [ref=e181]
+                - paragraph [ref=e182]: Severity breakdown of your queue
+              - generic [ref=e183]:
+                - img [ref=e184]
+                - generic [ref=e187]: Live
+            - img [ref=e189]:
+              - generic [ref=e191]: "0"
+              - generic [ref=e193]: "2"
+              - generic [ref=e195]: "3"
+              - generic [ref=e197]: "5"
+              - generic [ref=e199]: "6"
+              - generic [ref=e200]:
+                - generic [ref=e202]: "3"
+                - generic [ref=e203]: P1 Critical
+              - generic [ref=e204]:
+                - generic [ref=e206]: "6"
+                - generic [ref=e207]: Open
+              - generic [ref=e209]: Resolved
+              - generic [ref=e210]:
+                - generic [ref=e212]: "1"
+                - generic [ref=e213]: Created
+          - generic [ref=e214]:
+            - generic [ref=e215]:
+              - generic [ref=e216]:
+                - heading "Coverage" [level=2] [ref=e217]
+                - paragraph [ref=e218]: Triage & customer updates
+              - img [ref=e219]
+            - generic [ref=e223]:
+              - img [ref=e224]:
+                - generic [ref=e229]: 60%
+                - generic [ref=e230]: avg coverage
+              - generic [ref=e231]:
+                - generic [ref=e232]:
+                  - generic [ref=e234]: Triage
+                  - generic [ref=e235]: 70%
+                - generic [ref=e236]:
+                  - generic [ref=e238]: Updates
+                  - generic [ref=e239]: 50%
+      - status [ref=e240]
+  - button "Open Next.js Dev Tools" [ref=e246] [cursor=pointer]:
+    - img [ref=e247]
+  - alert [ref=e250]
+  - dialog "Cookie consent" [ref=e251]:
+    - paragraph [ref=e252]:
+      - text: We use cookies for essential functionality and analytics.
+      - link "Privacy Policy" [ref=e253] [cursor=pointer]:
+        - /url: /privacy
+    - generic [ref=e254]:
+      - button "Decline" [ref=e255] [cursor=pointer]
+      - button "Accept" [ref=e256] [cursor=pointer]
+```

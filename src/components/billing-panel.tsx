@@ -253,8 +253,6 @@ export function BillingPanel({
 
   // Fetch prices for all non-enterprise plans when interval changes
   useEffect(() => {
-    setPlanPrices({});
-    setAltPlanPrices({});
     let cancelled = false;
     async function fetchPricesForInterval(interval: BillingInterval) {
       const plans: PlanTier[] = ["starter", "pro"];
@@ -606,7 +604,7 @@ export function BillingPanel({
                     <span>{typeof effectiveCurrentBreakdown?.tax === "number" ? formatMoney(effectiveCurrentBreakdown.tax, effectiveCurrentBreakdown.currency) : <span className="text-[var(--color-ghost)] italic">Calculated at checkout</span>}</span>
                   </div>
                   <div className="pt-4 mt-2 border-t border-[var(--color-rim)] flex justify-between">
-                    <span className="font-medium text-[var(--color-title)]">Total due today</span>
+                    <span className="font-medium text-[var(--color-title)]">{isIntervalSwitch || isActiveUpgrade ? "New recurring price" : "Total due today"}</span>
                     <span className="font-medium text-[var(--color-title)]">{isExactSamePlanAndInterval ? formatMoney(0, "USD") : formatMoney(effectiveCurrentBreakdown?.totalAmount, effectiveCurrentBreakdown?.currency)}</span>
                   </div>
                   {preview?.recurringBreakdown && (

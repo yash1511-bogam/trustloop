@@ -38,6 +38,8 @@ const mono = JetBrains_Mono({
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
 
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

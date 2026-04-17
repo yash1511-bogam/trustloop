@@ -39,7 +39,7 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; token?: string; provider?: string; stytch_token_type?: string }>;
 }) {
   const params = await redirectToOAuthCallbackIfPresent(searchParams);
-  const auth = await getAuth();
+  const auth = await getAuth({ skipDevFallback: true });
   if (auth) redirect("/dashboard");
   const siteKey = isTurnstileEnabled() ? turnstileSiteKey() : null;
 

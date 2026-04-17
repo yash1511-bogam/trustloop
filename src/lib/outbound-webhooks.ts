@@ -1,6 +1,7 @@
 import { createHmac, randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
 import { decryptSecret, encryptSecret, last4 } from "@/lib/encryption";
+import { isWorkspaceFeatureAllowed } from "@/lib/feature-gate-server";
 import { prisma } from "@/lib/prisma";
 
 const BLOCKED_HOSTS = new Set([
@@ -168,6 +169,7 @@ export async function dispatchOutboundWebhookEvent(input: {
   incidentId?: string | null;
   payload: Record<string, unknown>;
 }): Promise<void> {
+  if (!(await isWorkspaceFeatureAllowed(input.workspaceId, "webhooks"))) return;
   await prisma.outboundWebhookOutbox.create({
     data: {
       workspaceId: input.workspaceId,

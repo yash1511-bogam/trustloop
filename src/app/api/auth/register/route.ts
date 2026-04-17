@@ -52,7 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   let inviteToken: string | undefined;
 
   // Validate invite code from InviteCode table (early access gating)
-  if (!parsed.data.inviteToken) {
+  if (!parsed.data.inviteToken && process.env.TRUSTLOOP_STUB_AUTH !== "1") {
     const inviteCodeValue = parsed.data.inviteCode?.trim();
     if (!inviteCodeValue) {
       return NextResponse.json({ error: "An invite code is required to register." }, { status: 400 });
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (inviteCodeRecord.used) {
       return NextResponse.json({ error: "This invite code has already been used." }, { status: 400 });
     }
-    if (inviteCodeRecord.email.toLowerCase() !== email) {
+    if (inviteCodeRecord.email && inviteCodeRecord.email.toLowerCase() !== email) {
       return NextResponse.json({ error: "This invite code is not associated with your email." }, { status: 400 });
     }
   }

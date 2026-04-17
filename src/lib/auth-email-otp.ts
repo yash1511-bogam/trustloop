@@ -28,6 +28,9 @@ function challengeEmailKey(scope: AuthOtpScope, email: string): string {
 }
 
 function generateOtp(): string {
+  if (process.env.TRUSTLOOP_STUB_AUTH === "1" && process.env.TRUSTLOOP_STUB_OTP_CODE) {
+    return process.env.TRUSTLOOP_STUB_OTP_CODE;
+  }
   return String(randomInt(100000, 999999));
 }
 

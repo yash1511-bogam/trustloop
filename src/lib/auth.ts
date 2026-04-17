@@ -44,11 +44,11 @@ function sessionCacheKey(sessionToken: string): string {
   return `session:auth:${digest}`;
 }
 
-export async function getAuth(): Promise<AuthContext | null> {
+export async function getAuth(options?: { skipDevFallback?: boolean }): Promise<AuthContext | null> {
   const store = await cookies();
   const sessionToken = store.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionToken) {
-    if (process.env.NODE_ENV === "development") {
+    if (process.env.NODE_ENV === "development" && !options?.skipDevFallback) {
       const devUser = await prisma.user.findFirst({
         where: { email: "demo@trustloop.local" },
         include: { workspace: true },
