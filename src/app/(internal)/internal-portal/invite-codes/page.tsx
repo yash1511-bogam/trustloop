@@ -16,18 +16,18 @@ export default function InviteCodesPage() {
   const load = useCallback((p: number, q: string) => {
     const params = new URLSearchParams({ page: String(p), limit: "20" });
     if (q) params.set("search", q);
-    fetch(`/api/_internal/invite-codes?${params}`).then((r) => r.json()).then(setData);
+    fetch(`/api/internal-portal/invite-codes?${params}`).then((r) => r.json()).then(setData);
   }, []);
 
   useEffect(() => { load(page, search); }, [page, search, load]);
 
   const create = async (body: unknown) => {
-    const r = await fetch("/api/_internal/invite-codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch("/api/internal-portal/invite-codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (r.ok) { setMsg("Created!"); load(page, search); } else setMsg("Error");
   };
 
   const send = async (code: string) => {
-    const r = await fetch("/api/_internal/invite-codes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+    const r = await fetch("/api/internal-portal/invite-codes/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
     setMsg(r.ok ? "Sent!" : "Error");
     load(page, search);
   };

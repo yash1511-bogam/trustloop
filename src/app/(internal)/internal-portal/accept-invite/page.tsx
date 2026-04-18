@@ -12,10 +12,10 @@ export default function AcceptInvitePage() {
 
   const accept = async () => {
     setStatus("loading");
-    const r = await fetch("/api/_internal/team/accept-invite", {
+    const r = await fetch("/api/internal-portal/team/accept-invite", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }),
     });
-    if (r.ok) { setStatus("success"); setTimeout(() => router.push("/_internal"), 1500); }
+    if (r.ok) { setStatus("success"); setTimeout(() => router.push("/internal-portal"), 1500); }
     else { setStatus("error"); setErrorMsg("Invalid or expired invite. Make sure you're logged in with the correct email."); }
   };
 

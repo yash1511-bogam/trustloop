@@ -5,17 +5,17 @@ import { usePathname } from "next/navigation";
 import type { InternalRole } from "@/lib/internal-auth";
 
 const NAV_ITEMS = [
-  { href: "/_internal", label: "Overview", roles: ["CEO", "SUPPORT", "TECH", "MARKETING"], exact: true },
-  { href: "/_internal/revenue", label: "Revenue", roles: ["CEO"] },
-  { href: "/_internal/workspaces", label: "Workspaces", roles: ["CEO", "SUPPORT", "TECH"] },
-  { href: "/_internal/users", label: "Users", roles: ["CEO", "SUPPORT"] },
-  { href: "/_internal/growth", label: "Growth", roles: ["CEO", "MARKETING"] },
-  { href: "/_internal/invite-codes", label: "Invite Codes", roles: ["CEO", "MARKETING"] },
-  { href: "/_internal/promo-codes", label: "Promo Codes", roles: ["CEO"] },
-  { href: "/_internal/team", label: "Team", roles: ["CEO"] },
-  { href: "/_internal/enterprise-leads", label: "Enterprise Leads", roles: ["CEO", "MARKETING"] },
-  { href: "/_internal/infrastructure", label: "Infrastructure", roles: ["CEO", "TECH"] },
-  { href: "/_internal/audit", label: "Audit Log", roles: ["CEO", "TECH"] },
+  { href: "/internal-portal", label: "Overview", roles: ["CEO", "SUPPORT", "TECH", "MARKETING"], exact: true },
+  { href: "/internal-portal/revenue", label: "Revenue", roles: ["CEO"] },
+  { href: "/internal-portal/workspaces", label: "Workspaces", roles: ["CEO", "SUPPORT", "TECH"] },
+  { href: "/internal-portal/users", label: "Users", roles: ["CEO", "SUPPORT"] },
+  { href: "/internal-portal/growth", label: "Growth", roles: ["CEO", "MARKETING"] },
+  { href: "/internal-portal/invite-codes", label: "Invite Codes", roles: ["CEO", "MARKETING"] },
+  { href: "/internal-portal/promo-codes", label: "Promo Codes", roles: ["CEO"] },
+  { href: "/internal-portal/team", label: "Team", roles: ["CEO"] },
+  { href: "/internal-portal/enterprise-leads", label: "Enterprise Leads", roles: ["CEO", "MARKETING"] },
+  { href: "/internal-portal/infrastructure", label: "Infrastructure", roles: ["CEO", "TECH"] },
+  { href: "/internal-portal/audit", label: "Audit Log", roles: ["CEO", "TECH"] },
 ] as const;
 
 export function InternalShell({

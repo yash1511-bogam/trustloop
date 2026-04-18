@@ -15,7 +15,7 @@ export default function UsersPage() {
   const load = useCallback((p: number, q: string) => {
     const params = new URLSearchParams({ page: String(p), limit: "20" });
     if (q) params.set("search", q);
-    fetch(`/api/_internal/users?${params}`).then((r) => r.json()).then(setData);
+    fetch(`/api/internal-portal/users?${params}`).then((r) => r.json()).then(setData);
   }, []);
 
   useEffect(() => { load(page, search); }, [page, search, load]);
@@ -40,7 +40,7 @@ export default function UsersPage() {
           searchPlaceholder="Search name or email..."
           onSearch={(q) => { setSearch(q); setPage(1); }}
           onPageChange={setPage}
-          onRowClick={(r) => router.push(`/_internal/workspaces/${r.workspaceId}`)}
+          onRowClick={(r) => router.push(`/internal-portal/workspaces/${r.workspaceId}`)}
         />
       </div>
     </div>

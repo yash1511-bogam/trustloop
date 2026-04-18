@@ -13,14 +13,14 @@ export default function WorkspaceDetailPage() {
   const [plan, setPlan] = useState("");
 
   useEffect(() => {
-    fetch(`/api/_internal/workspaces/${id}`).then((r) => r.ok ? r.json() : null).then(setWs);
+    fetch(`/api/internal-portal/workspaces/${id}`).then((r) => r.ok ? r.json() : null).then(setWs);
   }, [id]);
 
   if (!ws) return <p className="text-sm text-[var(--color-ghost)]">Loading...</p>;
 
   const act = async (url: string, method: string, body?: unknown) => {
     const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
-    if (r.ok) { setDialog(null); router.refresh(); fetch(`/api/_internal/workspaces/${id}`).then((r2) => r2.json()).then(setWs); }
+    if (r.ok) { setDialog(null); router.refresh(); fetch(`/api/internal-portal/workspaces/${id}`).then((r2) => r2.json()).then(setWs); }
   };
 
   const users = (ws.users ?? []) as Record<string, unknown>[];
@@ -28,7 +28,7 @@ export default function WorkspaceDetailPage() {
 
   return (
     <div>
-      <button onClick={() => router.push("/_internal/workspaces")} className="text-sm text-[#d4622b] hover:underline">← Back</button>
+      <button onClick={() => router.push("/internal-portal/workspaces")} className="text-sm text-[#d4622b] hover:underline">← Back</button>
       <div className="mt-4 flex items-center gap-3">
         <h1 className="text-xl font-bold text-[var(--color-title)]">{ws.name as string}</h1>
         <span className="rounded bg-[#17181c] px-2 py-0.5 text-xs text-[var(--color-ghost)]">{ws.planTier as string}</span>
@@ -46,7 +46,7 @@ export default function WorkspaceDetailPage() {
         </select>
         {plan && <button onClick={() => setDialog("upgrade")} className="rounded bg-[#d4622b] px-3 py-1 text-sm text-white">Apply</button>}
         {!ws.blockedAt && <button onClick={() => setDialog("block")} className="rounded border border-red-600 px-3 py-1 text-sm text-red-400">Block</button>}
-        {Boolean(ws.blockedAt) && <button onClick={() => act(`/api/_internal/workspaces/${id}/unblock`, "POST")} className="rounded border border-green-600 px-3 py-1 text-sm text-green-400">Unblock</button>}
+        {Boolean(ws.blockedAt) && <button onClick={() => act(`/api/internal-portal/workspaces/${id}/unblock`, "POST")} className="rounded border border-green-600 px-3 py-1 text-sm text-green-400">Unblock</button>}
         <button onClick={() => setDialog("delete")} className="rounded border border-red-800 px-3 py-1 text-sm text-red-600">Delete</button>
       </div>
 
@@ -103,7 +103,7 @@ export default function WorkspaceDetailPage() {
         <InternalConfirmDialog title="Block Workspace" description="This will immediately prevent all users from accessing this workspace."
           confirmLabel="Block" destructive
           onCancel={() => setDialog(null)}
-          onConfirm={() => { if (reason) act(`/api/_internal/workspaces/${id}/block`, "POST", { reason }); }}>
+          onConfirm={() => { if (reason) act(`/api/internal-portal/workspaces/${id}/block`, "POST", { reason }); }}>
           <input placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)}
             className="mt-2 w-full rounded border border-[var(--color-rim)] bg-[#0a0b0d] px-3 py-2 text-sm text-[var(--color-body)]" />
         </InternalConfirmDialog>
@@ -111,13 +111,13 @@ export default function WorkspaceDetailPage() {
       {dialog === "upgrade" && (
         <InternalConfirmDialog title={`Change plan to ${plan}`} description={`This will immediately change the workspace plan to ${plan} and update all quotas.`}
           confirmLabel="Change Plan" onCancel={() => setDialog(null)}
-          onConfirm={() => act(`/api/_internal/workspaces/${id}/upgrade`, "POST", { plan })} />
+          onConfirm={() => act(`/api/internal-portal/workspaces/${id}/upgrade`, "POST", { plan })} />
       )}
       {dialog === "delete" && (
         <InternalConfirmDialog title="Delete Workspace" description="This permanently deletes the workspace and all its data. Users will be rehomed or deleted."
           confirmLabel="Delete Forever" destructive confirmTypeName={ws.name as string}
           onCancel={() => setDialog(null)}
-          onConfirm={() => act(`/api/_internal/workspaces/${id}/delete`, "DELETE").then(() => router.push("/_internal/workspaces"))} />
+          onConfirm={() => act(`/api/internal-portal/workspaces/${id}/delete`, "DELETE").then(() => router.push("/internal-portal/workspaces"))} />
       )}
     </div>
   );

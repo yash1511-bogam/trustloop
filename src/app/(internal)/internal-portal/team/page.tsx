@@ -9,11 +9,11 @@ export default function TeamPage() {
   const [form, setForm] = useState({ email: "", name: "", role: "SUPPORT" });
   const [msg, setMsg] = useState("");
 
-  const load = () => fetch("/api/_internal/team").then((r) => r.json()).then((d) => setMembers(d.members ?? []));
+  const load = () => fetch("/api/internal-portal/team").then((r) => r.json()).then((d) => setMembers(d.members ?? []));
   useEffect(() => { load(); }, []);
 
   const invite = async () => {
-    const r = await fetch("/api/_internal/team/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const r = await fetch("/api/internal-portal/team/invite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     const d = await r.json();
     setMsg(r.ok ? `Invited ${form.email}` : d.error ?? "Error");
     if (r.ok) setForm({ email: "", name: "", role: "SUPPORT" });
@@ -21,17 +21,17 @@ export default function TeamPage() {
   };
 
   const revoke = async (id: string) => {
-    await fetch(`/api/_internal/team/${id}/revoke`, { method: "POST" });
+    await fetch(`/api/internal-portal/team/${id}/revoke`, { method: "POST" });
     load();
   };
 
   const reinstate = async (id: string) => {
-    await fetch(`/api/_internal/team/${id}/reinstate`, { method: "POST" });
+    await fetch(`/api/internal-portal/team/${id}/reinstate`, { method: "POST" });
     load();
   };
 
   const changeRole = async (id: string, role: string) => {
-    await fetch(`/api/_internal/team/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
+    await fetch(`/api/internal-portal/team/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role }) });
     load();
   };
 

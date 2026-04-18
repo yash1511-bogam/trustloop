@@ -28,7 +28,7 @@ export function proxy(request: NextRequest): NextResponse {
 
   // ── Internal portal gate ───────────────────────────────────────────────────
   // Kill switch: enterprise self-hosted instances never set INTERNAL_PORTAL_ENABLED
-  if (pathname.startsWith("/_internal") || pathname.startsWith("/api/_internal")) {
+  if (pathname.startsWith("/internal-portal") || pathname.startsWith("/api/internal-portal")) {
     if (process.env.INTERNAL_PORTAL_ENABLED !== "true") {
       return new NextResponse(null, { status: 404 });
     }

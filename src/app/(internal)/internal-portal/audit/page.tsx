@@ -13,7 +13,7 @@ export default function AuditPage() {
   const load = useCallback((p: number, q: string) => {
     const params = new URLSearchParams({ page: String(p), limit: "50" });
     if (q) params.set("action", q);
-    fetch(`/api/_internal/audit-logs?${params}`).then((r) => r.json()).then(setData);
+    fetch(`/api/internal-portal/audit-logs?${params}`).then((r) => r.json()).then(setData);
   }, []);
 
   useEffect(() => { load(page, search); }, [page, search, load]);

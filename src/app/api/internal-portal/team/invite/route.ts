@@ -27,7 +27,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const inviteToken = randomBytes(16).toString("hex");
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  const acceptUrl = `${baseUrl}/_internal/accept-invite?token=${inviteToken}`;
+  const acceptUrl = `${baseUrl}/internal-portal/accept-invite?token=${inviteToken}`;
 
   if (existing && existing.status === "REVOKED") {
     await prisma.internalTeamMember.update({

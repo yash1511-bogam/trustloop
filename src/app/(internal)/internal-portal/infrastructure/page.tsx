@@ -7,7 +7,7 @@ export default function InfrastructurePage() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
-    fetch("/api/_internal/infrastructure").then((r) => r.ok ? r.json() : null).then(setData);
+    fetch("/api/internal-portal/infrastructure").then((r) => r.ok ? r.json() : null).then(setData);
   }, []);
 
   if (!data) return <p className="text-sm text-[var(--color-ghost)]">Loading...</p>;

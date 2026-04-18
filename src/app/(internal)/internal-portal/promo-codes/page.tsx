@@ -9,7 +9,7 @@ export default function PromoCodesPage() {
   const [form, setForm] = useState({ code: "", description: "", discountPercent: "", discountAmount: "", maxUses: "", validUntil: "" });
   const [msg, setMsg] = useState("");
 
-  const load = () => fetch("/api/_internal/promo-codes").then((r) => r.json()).then((d) => setCodes(d.codes ?? []));
+  const load = () => fetch("/api/internal-portal/promo-codes").then((r) => r.json()).then((d) => setCodes(d.codes ?? []));
   useEffect(() => { load(); }, []);
 
   const create = async () => {
@@ -18,13 +18,13 @@ export default function PromoCodesPage() {
     if (form.discountAmount) body.discountAmount = Number(form.discountAmount);
     if (form.maxUses) body.maxUses = Number(form.maxUses);
     if (form.validUntil) body.validUntil = form.validUntil;
-    const r = await fetch("/api/_internal/promo-codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch("/api/internal-portal/promo-codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     setMsg(r.ok ? "Created!" : "Error");
     load();
   };
 
   const toggle = async (id: string, isActive: boolean) => {
-    await fetch(`/api/_internal/promo-codes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !isActive }) });
+    await fetch(`/api/internal-portal/promo-codes/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: !isActive }) });
     load();
   };
 

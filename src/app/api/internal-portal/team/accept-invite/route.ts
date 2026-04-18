@@ -26,7 +26,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
   await sendInternalTeamWelcomeEmail({
     toEmail: member.email, name: member.name || auth.user.name,
-    role: member.role, portalUrl: `${baseUrl}/_internal`,
+    role: member.role, portalUrl: `${baseUrl}/internal-portal`,
   }).catch(() => {});
 
   return NextResponse.json({ ok: true, role: member.role });

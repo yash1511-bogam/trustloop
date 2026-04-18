@@ -8,7 +8,7 @@ export default function RevenuePage() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
 
   useEffect(() => {
-    fetch("/api/_internal/revenue").then((r) => (r.ok ? r.json() : null)).then(setData);
+    fetch("/api/internal-portal/revenue").then((r) => (r.ok ? r.json() : null)).then(setData);
   }, []);
 
   if (data === null) return <p className="text-sm text-[var(--color-ghost)]">Loading...</p>;

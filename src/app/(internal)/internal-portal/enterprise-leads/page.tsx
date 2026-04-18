@@ -10,7 +10,7 @@ export default function EnterpriseLeadsPage() {
   const [page, setPage] = useState(1);
 
   const load = useCallback((p: number) => {
-    fetch(`/api/_internal/enterprise-leads?page=${p}&limit=20`).then((r) => r.json()).then(setData);
+    fetch(`/api/internal-portal/enterprise-leads?page=${p}&limit=20`).then((r) => r.json()).then(setData);
   }, []);
 
   useEffect(() => { load(page); }, [page, load]);
