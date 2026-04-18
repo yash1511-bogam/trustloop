@@ -164,6 +164,10 @@ jobs:
             if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then echo "✅ $ep → $STATUS"
             else echo "❌ $ep → $STATUS"; exit 1; fi
           done
+          # Internal portal should return 404 for unauthenticated requests
+          INT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL/_internal" || echo "000")
+          if [ "$INT_STATUS" = "404" ]; then echo "✅ /_internal → 404 (gated correctly)"
+          else echo "❌ /_internal → $INT_STATUS (expected 404)"; exit 1; fi
 
   # ── Stage 3: Deploy Production ──────────────────────────────────────────────
   deploy-production:
@@ -259,5 +263,9 @@ jobs:
             if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then echo "✅ $ep → $STATUS"
             else echo "❌ $ep → $STATUS"; FAILED=1; fi
           done
+          # Internal portal should return 404 for unauthenticated requests
+          INT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL/_internal" || echo "000")
+          if [ "$INT_STATUS" = "404" ]; then echo "✅ /_internal → 404 (gated correctly)"
+          else echo "❌ /_internal → $INT_STATUS (expected 404)"; FAILED=1; fi
           if [ "$FAILED" = "1" ]; then exit 1; fi
           echo "🚀 Deployed successfully to $APP_URL"

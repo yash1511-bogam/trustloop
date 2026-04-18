@@ -36,6 +36,7 @@ type SessionUserRecord = {
   stytchUserId: string;
   workspace: {
     name: string;
+    blockedAt: Date | null;
   };
 };
 
@@ -76,6 +77,12 @@ export async function getAuth(options?: { skipDevFallback?: boolean }): Promise<
   if (cached) {
     const parsedExpiry = new Date(cached.expiresAtIso);
     if (parsedExpiry.getTime() > Date.now()) {
+      // Check if workspace was blocked since session was cached
+      const blocked = await redisGetJson<boolean>(`workspace:blocked:${cached.user.workspaceId}`);
+      if (blocked) {
+        await redisDelete(cacheKey);
+        return null;
+      }
       return {
         user: cached.user,
       };
@@ -107,6 +114,11 @@ export async function getAuth(options?: { skipDevFallback?: boolean }): Promise<
   }
 
   if (!user) {
+    return null;
+  }
+
+  // Workspace blocked — deny access
+  if (user.workspace.blockedAt) {
     return null;
   }
 

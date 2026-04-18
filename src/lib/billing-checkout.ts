@@ -100,7 +100,7 @@ export function buildBillingCheckoutPayload(input: BuildBillingCheckoutInput) {
       allow_currency_selection: true,
       allow_customer_editing_email: false,
       allow_customer_editing_name: true,
-      allow_discount_code: false,
+      allow_discount_code: true,
       allow_phone_number_collection: true,
       allow_tax_id: true,
       redirect_immediately: true,

@@ -24,6 +24,36 @@ const SECURITY_HEADERS: Record<string, string> = {
 };
 
 export function proxy(request: NextRequest): NextResponse {
+  const { pathname } = request.nextUrl;
+
+  // ── Internal portal gate ───────────────────────────────────────────────────
+  // Kill switch: enterprise self-hosted instances never set INTERNAL_PORTAL_ENABLED
+  if (pathname.startsWith("/_internal") || pathname.startsWith("/api/_internal")) {
+    if (process.env.INTERNAL_PORTAL_ENABLED !== "true") {
+      return new NextResponse(null, { status: 404 });
+    }
+    // Optional Tailscale IP check (disabled by default)
+    if (process.env.INTERNAL_REQUIRE_TAILSCALE === "true") {
+      const xff = request.headers.get("x-forwarded-for");
+      const ip = xff ? xff.split(",")[0]?.trim() : request.headers.get("x-real-ip")?.trim();
+      if (ip) {
+        const parts = ip.split(".");
+        if (parts.length === 4) {
+          const n = parts.reduce((acc, o) => (acc << 8) + (Number(o) | 0), 0) >>> 0;
+          // Tailscale CGNAT: 100.64.0.0/10 = 100.64.0.0 – 100.127.255.255
+          if (n < 1681915904 || n > 1686110207) {
+            return new NextResponse(null, { status: 404 });
+          }
+        } else {
+          return new NextResponse(null, { status: 404 });
+        }
+      } else {
+        return new NextResponse(null, { status: 404 });
+      }
+    }
+  }
+
+  // ── Existing proxy logic ───────────────────────────────────────────────────
   const host = request.headers.get("host") ?? request.headers.get("x-forwarded-host");
   const APP_HOST = new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").hostname;
   const hostBase = host?.split(":")[0] ?? "";

@@ -55,6 +55,7 @@ const CRITICAL_EMAIL_TYPES = new Set<EmailNotificationType>([
   EmailNotificationType.AUTH_RECOVERY,
   EmailNotificationType.EARLY_ACCESS_CONFIRMATION,
   EmailNotificationType.PAYMENT_FAILURE_REMINDER,
+  EmailNotificationType.INTERNAL_TEAM_INVITE,
 ]);
 
 function isCriticalEmail(type: EmailNotificationType): boolean {
@@ -996,6 +997,146 @@ export async function sendEnterpriseContactEmail(input: {
       `Back to dashboard: ${baseUrl}/dashboard`,
       "",
       "— The TrustLoop Team",
+    ].join("\n"),
+  });
+}
+
+// ── Internal Admin Portal Emails ─────────────────────────────────────────────
+
+export async function sendInternalTeamInviteEmail(input: {
+  toEmail: string;
+  inviterName: string;
+  role: string;
+  acceptUrl: string;
+}): Promise<LoggedEmailResult> {
+  return sendLoggedEmail({
+    workspaceId: "system",
+    type: EmailNotificationType.INTERNAL_TEAM_INVITE,
+    toEmail: input.toEmail,
+    subject: "You're invited to the TrustLoop internal portal",
+    html: [
+      "<p>Hi,</p>",
+      `<p>${input.inviterName} has invited you to join the <strong>TrustLoop internal portal</strong> as <strong>${input.role}</strong>.</p>`,
+      "<p>This portal is for the TrustLoop team only. You'll need a TrustLoop account with this email address to accept.</p>",
+      `<p style="text-align:center;margin:24px 0;"><a href="${input.acceptUrl}" style="display:inline-block;padding:12px 32px;background:#d4622b;color:#fff;font-weight:bold;border-radius:8px;text-decoration:none;">Accept Invite</a></p>`,
+      '<p style="font-size:13px;color:#8a8b95;">If you weren\'t expecting this, you can safely ignore this email.</p>',
+    ].join(""),
+    text: [
+      "Hi,",
+      "",
+      `${input.inviterName} has invited you to join the TrustLoop internal portal as ${input.role}.`,
+      "",
+      `Accept invite: ${input.acceptUrl}`,
+      "",
+      "If you weren't expecting this, you can safely ignore this email.",
+    ].join("\n"),
+  });
+}
+
+export async function sendInternalTeamWelcomeEmail(input: {
+  toEmail: string;
+  name: string | null;
+  role: string;
+  portalUrl: string;
+}): Promise<LoggedEmailResult> {
+  const greeting = input.name ? `Hi ${input.name},` : "Hi,";
+  return sendLoggedEmail({
+    workspaceId: "system",
+    type: EmailNotificationType.INTERNAL_TEAM_WELCOME,
+    toEmail: input.toEmail,
+    subject: "Welcome to the TrustLoop internal portal",
+    html: [
+      `<p>${greeting}</p>`,
+      `<p>You now have access to the TrustLoop internal portal as <strong>${input.role}</strong>.</p>`,
+      `<p><a href="${input.portalUrl}">Open the internal portal</a></p>`,
+    ].join(""),
+    text: [
+      greeting,
+      "",
+      `You now have access to the TrustLoop internal portal as ${input.role}.`,
+      `Open the portal: ${input.portalUrl}`,
+    ].join("\n"),
+  });
+}
+
+export async function sendWorkspaceBlockedEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  reason: string;
+}): Promise<LoggedEmailResult> {
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.INTERNAL_WORKSPACE_BLOCKED,
+    toEmail: input.toEmail,
+    subject: "Your TrustLoop workspace has been suspended",
+    html: [
+      "<p>Hi,</p>",
+      `<p>Your workspace <strong>${input.workspaceName}</strong> has been suspended for the following reason:</p>`,
+      `<p style="padding:16px;background:#101113;border:1px solid #232428;border-radius:8px;color:#e84242;font-weight:600;">${input.reason}</p>`,
+      "<p>While suspended, team members cannot access the workspace. If you believe this is an error, please reply to this email.</p>",
+    ].join(""),
+    text: [
+      "Hi,",
+      "",
+      `Your workspace ${input.workspaceName} has been suspended.`,
+      `Reason: ${input.reason}`,
+      "",
+      "While suspended, team members cannot access the workspace. If you believe this is an error, please reply to this email.",
+    ].join("\n"),
+  });
+}
+
+export async function sendWorkspaceUnblockedEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.INTERNAL_WORKSPACE_UNBLOCKED,
+    toEmail: input.toEmail,
+    subject: "Your TrustLoop workspace has been restored",
+    html: [
+      "<p>Hi,</p>",
+      `<p>Your workspace <strong>${input.workspaceName}</strong> has been restored. You and your team can access it again immediately.</p>`,
+      `<p><a href="${baseUrl}/dashboard">Go to your dashboard</a></p>`,
+    ].join(""),
+    text: [
+      "Hi,",
+      "",
+      `Your workspace ${input.workspaceName} has been restored. You and your team can access it again immediately.`,
+      `Go to your dashboard: ${baseUrl}/dashboard`,
+    ].join("\n"),
+  });
+}
+
+export async function sendPlanUpgradedByAdminEmail(input: {
+  workspaceId: string;
+  toEmail: string;
+  workspaceName: string;
+  previousPlan: string;
+  newPlan: string;
+}): Promise<LoggedEmailResult> {
+  const baseUrl = appBaseUrl();
+  return sendLoggedEmail({
+    workspaceId: input.workspaceId,
+    type: EmailNotificationType.INTERNAL_PLAN_UPGRADED,
+    toEmail: input.toEmail,
+    subject: `Your TrustLoop plan has been updated to ${input.newPlan}`,
+    html: [
+      "<p>Hi,</p>",
+      `<p>The plan for <strong>${input.workspaceName}</strong> has been updated from <strong>${input.previousPlan}</strong> to <strong>${input.newPlan}</strong>.</p>`,
+      "<p>Your new plan limits and features are active immediately.</p>",
+      `<p><a href="${baseUrl}/workspace/billing">View your plan</a></p>`,
+    ].join(""),
+    text: [
+      "Hi,",
+      "",
+      `The plan for ${input.workspaceName} has been updated from ${input.previousPlan} to ${input.newPlan}.`,
+      "Your new plan limits and features are active immediately.",
+      `View your plan: ${baseUrl}/workspace/billing`,
     ].join("\n"),
   });
 }

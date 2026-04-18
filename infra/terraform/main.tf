@@ -24,6 +24,7 @@ locals {
     { name = "REMINDER_QUEUE_NAME", value = aws_sqs_queue.reminder.name },
     { name = "REMINDER_QUEUE_URL", value = aws_sqs_queue.reminder.url },
     { name = "REMINDER_STALE_MINUTES", value = "240" },
+    { name = "INTERNAL_PORTAL_ENABLED", value = "true" },
   ]
 
   secret_keys = [

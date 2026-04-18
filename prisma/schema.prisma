@@ -102,6 +102,11 @@ enum EmailNotificationType {
   EARLY_ACCESS_INVITE
   EARLY_ACCESS_CONFIRMATION
   ENTERPRISE_CONTACT
+  INTERNAL_TEAM_INVITE
+  INTERNAL_TEAM_WELCOME
+  INTERNAL_WORKSPACE_BLOCKED
+  INTERNAL_WORKSPACE_UNBLOCKED
+  INTERNAL_PLAN_UPGRADED
 }
 
 enum EmailDeliveryStatus {
@@ -211,6 +216,9 @@ model Workspace {
   statusSubscribers               StatusPageSubscriber[]
   scheduledDeletionAt             DateTime?
   onboardingDismissedAt           DateTime?
+  blockedAt                       DateTime?
+  blockReason                     String?
+  blockedByEmail                  String?
 }
 
 model User {
@@ -898,4 +906,56 @@ model OutboundWebhookOutbox {
 
   @@index([processAt, attempts])
   @@index([workspaceId])
+}
+
+enum InternalRole {
+  CEO
+  SUPPORT
+  TECH
+  MARKETING
+}
+
+enum InternalTeamStatus {
+  INVITED
+  ACTIVE
+  REVOKED
+}
+
+model InternalTeamMember {
+  id          String             @id @default(cuid())
+  email       String             @unique
+  name        String?
+  role        InternalRole
+  status      InternalTeamStatus @default(INVITED)
+  invitedBy   String?
+  inviteToken String?            @unique
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([email])
+  @@index([inviteToken])
+  @@index([status])
+}
+
+model PromoCode {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  description     String?
+  discountPercent Int?
+  discountAmount  Int?
+  currency        String    @default("USD")
+  maxUses         Int?
+  usedCount       Int       @default(0)
+  validFrom       DateTime  @default(now())
+  validUntil      DateTime?
+  dodoDiscountId  String?
+  isActive        Boolean   @default(true)
+  createdByEmail  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([code])
+  @@index([isActive, validUntil])
 }
