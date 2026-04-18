@@ -218,7 +218,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       const inviteCodeRecord = await prisma.inviteCode.findUnique({
         where: { code: inviteCodeValue },
       });
-      if (!inviteCodeRecord || inviteCodeRecord.used || inviteCodeRecord.email.toLowerCase() !== email) {
+      if (!inviteCodeRecord || inviteCodeRecord.used || (inviteCodeRecord.email && inviteCodeRecord.email.toLowerCase() !== email)) {
         return buildRedirectWithClear(request, "/register", {
           email,
           error: "invite_code_invalid",
