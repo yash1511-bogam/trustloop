@@ -5,7 +5,7 @@ import { z } from "zod";
 import { appUrl } from "@/lib/app-url";
 import { recordAuditLog } from "@/lib/audit";
 import { quotasForPlan } from "@/lib/billing-plan";
-import { setSessionCookie } from "@/lib/cookies";
+import { setSessionCookie, setActiveSlugCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, scheduleWelcomeEmail, upsertEmailSubscription } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { createSampleIncidentsForWorkspace } from "@/lib/onboarding-demo";
@@ -194,6 +194,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         : appUrl("/dashboard", request).toString();
       const response = NextResponse.redirect(dashboardUrl);
       setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+      if (slug) setActiveSlugCookie(response, slug);
       clearOAuthContextCookie(response);
       return response;
     }
@@ -287,6 +288,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         if (isDesktop) return buildDesktopRedirect(request, authResult);
         const response = NextResponse.redirect(dashUrl);
         setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+        if (created.workspace.slug) setActiveSlugCookie(response, created.workspace.slug);
         clearOAuthContextCookie(response);
         return response;
       }
@@ -394,6 +396,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (isDesktop) return buildDesktopRedirect(request, authResult);
     const response = NextResponse.redirect(newDashUrl);
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+    if (newSlug) setActiveSlugCookie(response, newSlug);
     clearOAuthContextCookie(response);
     return response;
   } catch (error) {

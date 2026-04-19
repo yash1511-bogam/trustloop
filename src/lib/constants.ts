@@ -1,6 +1,7 @@
 export const APP_NAME = "TrustLoop";
 
 export const SESSION_COOKIE_NAME = "trustloop_session";
+export const ACTIVE_SLUG_COOKIE_NAME = "tl_active_slug";
 export const SESSION_CACHE_TTL_SECONDS = 30;
 
 export const STYTCH_OTP_EXPIRATION_MINUTES = Number(

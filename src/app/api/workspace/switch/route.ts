@@ -4,6 +4,7 @@ import { invalidateSessionAuthCache } from "@/lib/auth";
 import { recordAuditLog } from "@/lib/audit";
 import { requireApiAuthAndRateLimit, withRateLimitHeaders } from "@/lib/api-guard";
 import { SESSION_COOKIE_NAME } from "@/lib/constants";
+import { setActiveSlugCookie } from "@/lib/cookies";
 import { badRequest, forbidden, notFound } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { setActiveWorkspaceForUser } from "@/lib/workspace-membership";
@@ -51,11 +52,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     summary: `Switched active workspace to ${switched.workspace.name}.`,
   });
 
-  return withRateLimitHeaders(
+  const response = withRateLimitHeaders(
     NextResponse.json({
       workspace: switched.workspace,
       role: switched.membershipRole,
     }),
     access.rateLimit,
   );
+  if (switched.workspace.slug) {
+    setActiveSlugCookie(response, switched.workspace.slug);
+  }
+  return response;
 }

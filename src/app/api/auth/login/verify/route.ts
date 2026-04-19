@@ -6,7 +6,7 @@ import {
 } from "@/lib/auth-email-otp";
 import { issueAppSession } from "@/lib/app-session";
 import { enforceAuthRateLimit } from "@/lib/auth-rate-limit";
-import { setSessionCookie } from "@/lib/cookies";
+import { setSessionCookie, setActiveSlugCookie } from "@/lib/cookies";
 import { badRequest, notFound } from "@/lib/http";
 import { workspacePath } from "@/lib/workspace-url";
 import { log } from "@/lib/logger";
@@ -80,6 +80,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       }),
     );
     setSessionCookie(response, session.sessionToken, session.expiresAt);
+    if (slug) {
+      setActiveSlugCookie(response, slug);
+    }
     return response;
   } catch (error) {
     log.auth.error("Failed to verify login OTP", {

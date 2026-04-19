@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { slugFromSubdomain } from "@/lib/workspace-url";
-import { SESSION_COOKIE_NAME } from "@/lib/constants";
+import { SESSION_COOKIE_NAME, ACTIVE_SLUG_COOKIE_NAME } from "@/lib/constants";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
@@ -82,6 +82,17 @@ export function proxy(request: NextRequest): NextResponse {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
+    }
+
+    // Redirect to correct subdomain if URL slug doesn't match active workspace
+    if (!pathname.startsWith("/api/") && request.cookies.get(SESSION_COOKIE_NAME)?.value) {
+      const activeSlug = request.cookies.get(ACTIVE_SLUG_COOKIE_NAME)?.value;
+      if (activeSlug && activeSlug !== subdomainSlug) {
+        const domain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
+        const proto = domain.startsWith("localhost") ? "http" : "https";
+        const url = new URL(`${proto}://${activeSlug}.${domain}${pathname}${request.nextUrl.search}`);
+        return NextResponse.redirect(url);
+      }
     }
   }
 

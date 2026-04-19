@@ -10,7 +10,7 @@ import { issueAppSession } from "@/lib/app-session";
 import { recordAuditLog } from "@/lib/audit";
 import { requestIpAddress } from "@/lib/api-key-scopes";
 import { quotasForPlan } from "@/lib/billing-plan";
-import { setSessionCookie } from "@/lib/cookies";
+import { setSessionCookie, setActiveSlugCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, scheduleWelcomeEmail, upsertEmailSubscription } from "@/lib/email";
 import { badRequest } from "@/lib/http";
 import { log } from "@/lib/logger";
@@ -264,6 +264,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     setSessionCookie(response, session.sessionToken, session.expiresAt);
+    if (created.workspace.slug) {
+      setActiveSlugCookie(response, created.workspace.slug);
+    }
 
     recordAuditLog({
       workspaceId: created.workspace.id,

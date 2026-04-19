@@ -3,7 +3,7 @@ import { AiProvider, Role, WorkflowType } from "@prisma/client";
 import { z } from "zod";
 import { recordAuditLog } from "@/lib/audit";
 import { quotasForPlan } from "@/lib/billing-plan";
-import { setSessionCookie } from "@/lib/cookies";
+import { setSessionCookie, setActiveSlugCookie } from "@/lib/cookies";
 import { sendGettingStartedGuideEmail, scheduleWelcomeEmail } from "@/lib/email";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -130,5 +130,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const response = NextResponse.json({ redirectTo });
   setSessionCookie(response, pending.sessionToken, new Date(pending.expiresAt));
+  if (created.workspace.slug) {
+    setActiveSlugCookie(response, created.workspace.slug);
+  }
   return response;
 }

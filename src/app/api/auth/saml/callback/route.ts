@@ -4,7 +4,7 @@ import { appUrl } from "@/lib/app-url";
 import { recordAuditLog } from "@/lib/audit";
 import { isFeatureAllowed } from "@/lib/feature-gate";
 import { resolveEffectivePlanTier } from "@/lib/billing-plan";
-import { setSessionCookie } from "@/lib/cookies";
+import { setSessionCookie, setActiveSlugCookie } from "@/lib/cookies";
 import { log } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { authenticateSamlToken, isSamlSsoSupported } from "@/lib/stytch";
@@ -247,12 +247,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       userId = created.id;
     }
 
-    await ensureWorkspaceSlug(prisma, workspace.id, workspace.name);
+    const samlSlug = await ensureWorkspaceSlug(prisma, workspace.id, workspace.name);
 
     recordAuditLog({ workspaceId: workspace.id, actorUserId: userId, action: "auth.saml_callback", targetType: "user", targetId: userId, summary: `SAML sign-in completed for ${normalizedEmail}` }).catch(() => {});
 
     const response = NextResponse.redirect(appUrl("/dashboard", request));
     setSessionCookie(response, authResult.sessionToken, authResult.expiresAt);
+    if (samlSlug) setActiveSlugCookie(response, samlSlug);
     clearSamlContextCookie(response);
 
     log.auth.info("SAML sign-in completed", {
