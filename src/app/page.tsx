@@ -1,4 +1,6 @@
+import { redirect } from "next/navigation";
 import { MarketingLanding } from "@/components/marketing-landing";
+import { getAuth } from "@/lib/auth";
 import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
@@ -94,6 +96,9 @@ export default async function LandingPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   await redirectToOAuthCallbackIfPresent(searchParams);
+
+  const auth = await getAuth({ skipDevFallback: true });
+  if (auth) redirect("/dashboard");
 
   return (
     <>

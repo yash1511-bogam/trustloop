@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { slugFromSubdomain } from "@/lib/workspace-url";
+import { SESSION_COOKIE_NAME } from "@/lib/constants";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "DENY",
@@ -72,6 +73,16 @@ export function proxy(request: NextRequest): NextResponse {
     url.pathname = "/_custom-status";
     url.searchParams.set("domain", hostBase);
     return NextResponse.rewrite(url);
+  }
+
+  // Redirect authenticated users on subdomains away from public pages to dashboard
+  if (subdomainSlug) {
+    const isPublicPage = pathname === "/" || pathname === "/login" || pathname === "/register";
+    if (isPublicPage && request.cookies.get(SESSION_COOKIE_NAME)?.value) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   const response = NextResponse.next();
