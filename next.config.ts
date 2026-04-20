@@ -36,6 +36,12 @@ const nextConfig: NextConfig = {
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
       ],
     },
+    {
+      source: "/",
+      headers: [
+        { key: "Link", value: "</.well-known/api-catalog>; rel=\"api-catalog\", </api/docs>; rel=\"service-desc\", </docs>; rel=\"service-doc\", </.well-known/agent-card.json>; rel=\"describedby\"" },
+      ],
+    },
   ],
 };
 

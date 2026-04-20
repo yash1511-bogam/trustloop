@@ -126,6 +126,9 @@ export default async function RootLayout({
         <Script id="sw-register" strategy="afterInteractive">
           {`if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => null)); }`}
         </Script>
+        <Script id="webmcp" strategy="afterInteractive">
+          {`(function(){if(!navigator.modelContext||!navigator.modelContext.registerTool)return;navigator.modelContext.registerTool({name:"check-status",description:"Check the operational status and health of TrustLoop services.",inputSchema:{type:"object",properties:{}},async execute(){const r=await fetch("/api/health");return r.json()}});navigator.modelContext.registerTool({name:"search-docs",description:"Search TrustLoop documentation for a given query.",inputSchema:{type:"object",properties:{query:{type:"string",description:"Search query"}},required:["query"]},async execute(p){const r=await fetch("/docs?q="+encodeURIComponent(p.query));return{url:r.url,status:r.status}}});navigator.modelContext.registerTool({name:"view-api-spec",description:"Retrieve the TrustLoop OpenAPI specification.",inputSchema:{type:"object",properties:{}},async execute(){const r=await fetch("/api/docs");return r.json()}})})();`}
+        </Script>
       </body>
     </html>
   );

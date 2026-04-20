@@ -24,8 +24,57 @@ const SECURITY_HEADERS: Record<string, string> = {
   ].join("; "),
 };
 
+const HOMEPAGE_MARKDOWN = `# TrustLoop — AI Incident Operations
+
+TrustLoop is an incident operations platform for AI product teams. Detect incidents, triage with AI, coordinate responders, publish customer updates, and keep leadership informed.
+
+## Features
+
+- **Incident Intake** — Dashboards, support teams, Slack, and signed webhooks
+- **AI Triage** — Workspace-scoped keys across OpenAI, Gemini, and Anthropic
+- **Customer Updates** — Approval controls and full audit history
+- **Async Automation** — SQS-backed reminders that keep incidents moving
+- **Multi-Channel Publishing** — App, Slack, push, email, and public status pages
+- **Plans & Billing** — Quotas, feature gates, and billing per workspace
+- **Executive Reporting** — Exports and operational visibility
+
+## API
+
+- OpenAPI spec: [/api/docs](/api/docs)
+- Documentation: [/docs](/docs)
+- Health check: [/api/health](/api/health)
+
+## Discovery
+
+- API Catalog: [/.well-known/api-catalog](/.well-known/api-catalog)
+- MCP Server Card: [/.well-known/mcp/server-card.json](/.well-known/mcp/server-card.json)
+- A2A Agent Card: [/.well-known/agent-card.json](/.well-known/agent-card.json)
+- Agent Skills: [/.well-known/agent-skills/index.json](/.well-known/agent-skills/index.json)
+
+## Links
+
+- [Login](/login)
+- [Register](/register)
+- [Documentation](/docs)
+- [Changelog](/changelog)
+- [Contact Sales](/contact-sales)
+`;
+
 export function proxy(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
+
+  // ── Markdown content negotiation ───────────────────────────────────────────
+  const accept = request.headers.get("accept") ?? "";
+  if (pathname === "/" && accept.includes("text/markdown")) {
+    const tokens = HOMEPAGE_MARKDOWN.split(/\s+/).length;
+    return new NextResponse(HOMEPAGE_MARKDOWN, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "x-markdown-tokens": String(tokens),
+      },
+    });
+  }
 
   // ── Internal portal gate ───────────────────────────────────────────────────
   // Kill switch: enterprise self-hosted instances never set INTERNAL_PORTAL_ENABLED
