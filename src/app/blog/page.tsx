@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageShell } from "@/components/page-shell";
+import { breadcrumbSchema, SeoSchemas } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
   title: "Blog — TrustLoop",
@@ -10,6 +11,8 @@ export const metadata: Metadata = {
 
 export default function BlogPage() {
   return (
+    <>
+    <SeoSchemas schemas={[breadcrumbSchema([{ name: "Blog", path: "/blog" }])]} />
     <PageShell kicker="Blog" title="Long-form writing is coming soon." subtitle="Product updates and incident best practices from the TrustLoop team.">
       <p className="max-w-[560px] text-[15px] leading-7 text-[var(--color-subtext)]">
         In the meantime, the changelog covers what is shipping now and the security page outlines how the platform is built.
@@ -27,5 +30,6 @@ export default function BlogPage() {
         </form>
       </div>
     </PageShell>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageShell } from "@/components/page-shell";
+import { articleSchema, breadcrumbSchema, SeoSchemas } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
   title: "About — TrustLoop",
@@ -9,6 +10,11 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
+    <>
+    <SeoSchemas schemas={[
+      articleSchema({ headline: "About — TrustLoop", description: "Learn about the team and mission behind TrustLoop.", path: "/about", datePublished: "2026-01-15", dateModified: "2026-03-15" }),
+      breadcrumbSchema([{ name: "About", path: "/about" }]),
+    ]} />
     <PageShell kicker="About" title="TrustLoop was built for the moment everything goes sideways.">
       <div className="grid gap-5 text-[15px] leading-7 text-[var(--color-subtext)]">
         <p>
@@ -48,5 +54,6 @@ export default function AboutPage() {
         <a className="mt-4 inline-block text-sm text-[var(--color-signal)] hover:underline" href="mailto:hello@yashbogam.me">hello@yashbogam.me</a>
       </section>
     </PageShell>
+    </>
   );
 }

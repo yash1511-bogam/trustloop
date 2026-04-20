@@ -36,7 +36,7 @@ const mono = JetBrains_Mono({
   weight: ["400", "500"],
 });
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.yashbogam.me";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +73,7 @@ export const metadata: Metadata = {
       "Unify incident intake, AI triage, ownership, and customer communication for production AI products.",
     images: [
       {
-        url: "/social-preview.svg",
+        url: "/social-preview.png",
         width: 1200,
         height: 630,
         alt: "TrustLoop platform preview",
@@ -85,7 +85,7 @@ export const metadata: Metadata = {
     title: "TrustLoop | AI Incident Operations SaaS",
     description:
       "AI incident operations platform for software teams shipping customer-facing AI.",
-    images: ["/social-preview.svg"],
+    images: ["/social-preview.png"],
   },
   robots: {
     index: true,

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PageShell } from "@/components/page-shell";
+import { articleSchema, breadcrumbSchema, SeoSchemas } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
   title: "Changelog — TrustLoop",
@@ -102,6 +103,11 @@ const tagClass: Record<string, string> = {
 
 export default function ChangelogPage() {
   return (
+    <>
+    <SeoSchemas schemas={[
+      articleSchema({ headline: "Changelog — TrustLoop", description: "What's new and improved in TrustLoop.", path: "/changelog", datePublished: "2026-01-15", dateModified: "2026-04-20" }),
+      breadcrumbSchema([{ name: "Changelog", path: "/changelog" }]),
+    ]} />
     <PageShell kicker="Product updates" title="Changelog" subtitle="What's new and improved in TrustLoop.">
       <div className="space-y-6">
         {entries.map((entry) => (
@@ -119,5 +125,6 @@ export default function ChangelogPage() {
         ))}
       </div>
     </PageShell>
+    </>
   );
 }

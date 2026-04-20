@@ -5,6 +5,7 @@ import {
   ShieldCheck,
 } from "@phosphor-icons/react/dist/ssr";
 import { PageShell } from "@/components/page-shell";
+import { articleSchema, breadcrumbSchema, SeoSchemas } from "@/lib/seo-schemas";
 
 export const metadata: Metadata = {
   title: "Security — TrustLoop",
@@ -32,6 +33,11 @@ const sections = [
 
 export default function SecurityPage() {
   return (
+    <>
+    <SeoSchemas schemas={[
+      articleSchema({ headline: "Security — TrustLoop", description: "How TrustLoop protects your data with encryption, access control, and infrastructure discipline.", path: "/security", datePublished: "2026-01-15", dateModified: "2026-03-15" }),
+      breadcrumbSchema([{ name: "Security", path: "/security" }]),
+    ]} />
     <PageShell kicker="Security" title="Built for teams handling sensitive AI data." subtitle="Encryption, access control, and infrastructure discipline without losing response speed.">
       <div className="grid gap-5 md:grid-cols-3">
         {sections.map((section) => (
@@ -50,5 +56,6 @@ export default function SecurityPage() {
         </p>
       </section>
     </PageShell>
+    </>
   );
 }

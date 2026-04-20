@@ -3,7 +3,24 @@ import { MarketingLanding } from "@/components/marketing-landing";
 import { getAuth } from "@/lib/auth";
 import { redirectToOAuthCallbackIfPresent } from "@/lib/oauth-callback-redirect";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.ai";
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://trustloop.yashbogam.me";
+
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "TrustLoop",
+  url: appUrl,
+  logo: `${appUrl}/512.png`,
+  description: "AI incident operations platform for software teams shipping customer-facing AI.",
+  contactPoint: {
+    "@type": "ContactPoint",
+    email: "hello@yashbogam.me",
+    contactType: "sales",
+  },
+  sameAs: [
+    "https://github.com/yash1511-bogam/trustloop",
+  ],
+};
 
 const softwareSchema = {
   "@context": "https://schema.org",
@@ -90,6 +107,43 @@ const faqSchema = {
   ],
 };
 
+const speakableSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "TrustLoop | AI Incident Operations",
+  speakable: {
+    "@type": "SpeakableSpecification",
+    cssSelector: ["#faq", "h1", ".hero-description"],
+  },
+  url: appUrl,
+};
+
+const pricingSchema = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: "TrustLoop",
+  description: "AI incident operations platform for software teams.",
+  brand: { "@type": "Organization", name: "TrustLoop" },
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Starter",
+      price: "49",
+      priceCurrency: "USD",
+      priceSpecification: { "@type": "UnitPriceSpecification", price: "49", priceCurrency: "USD", billingDuration: "P1M" },
+      url: `${appUrl}/register?plan=starter&interval=monthly`,
+    },
+    {
+      "@type": "Offer",
+      name: "Pro",
+      price: "149",
+      priceCurrency: "USD",
+      priceSpecification: { "@type": "UnitPriceSpecification", price: "149", priceCurrency: "USD", billingDuration: "P1M" },
+      url: `${appUrl}/register?plan=pro&interval=monthly`,
+    },
+  ],
+};
+
 export default async function LandingPage({
   searchParams,
 }: {
@@ -104,6 +158,12 @@ export default async function LandingPage({
     <>
       <script
         dangerouslySetInnerHTML={{
+          __html: JSON.stringify(organizationSchema),
+        }}
+        type="application/ld+json"
+      />
+      <script
+        dangerouslySetInnerHTML={{
           __html: JSON.stringify(softwareSchema),
         }}
         type="application/ld+json"
@@ -111,6 +171,18 @@ export default async function LandingPage({
       <script
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(faqSchema),
+        }}
+        type="application/ld+json"
+      />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(speakableSchema),
+        }}
+        type="application/ld+json"
+      />
+      <script
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(pricingSchema),
         }}
         type="application/ld+json"
       />
